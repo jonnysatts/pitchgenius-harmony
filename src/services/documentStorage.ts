@@ -55,17 +55,23 @@ export const uploadDocumentToStorage = async (
 
   try {
     // Create a path with user ID and project ID to organize files
+    // Sanitize filename to prevent issues with special characters
     const fileName = encodeURIComponent(file.name.replace(/[^\x00-\x7F]/g, '_'));
-    const storagePath = `${userId}/${projectId}/${fileName}`;
+    const storagePath = `${userId}/${projectId}/${fileName}_${Date.now()}`;
     
     console.log(`Attempting to upload file to storage path: ${storagePath}`);
+    console.log(`File type: ${file.type}, File size: ${file.size} bytes`);
     
-    // Upload the file to Supabase Storage
+    // For PDF files, explicitly set the content type
+    const contentType = file.type === 'application/pdf' ? 'application/pdf' : file.type;
+    
+    // Upload the file to Supabase Storage with explicit content type
     const { data, error } = await supabase.storage
       .from('project_documents')
       .upload(storagePath, file, {
         cacheControl: '3600',
-        upsert: true
+        upsert: true,
+        contentType: contentType
       });
       
     if (error) {

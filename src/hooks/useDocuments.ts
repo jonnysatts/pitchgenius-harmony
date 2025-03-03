@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Document } from "@/lib/types";
 import { calculateDocumentPriority } from "@/services/documentService";
@@ -19,6 +18,12 @@ export const useDocuments = (projectId: string, userId: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Track failed documents for better error reporting
+  const [failedUploads, setFailedUploads] = useState<{
+    filename: string;
+    error: string;
+  }[]>([]);
 
   // Fetch existing documents when component mounts
   useEffect(() => {
@@ -69,6 +74,9 @@ export const useDocuments = (projectId: string, userId: string) => {
       return;
     }
     
+    // Reset failed uploads
+    setFailedUploads([]);
+    
     // Check if adding these files would exceed max files
     // We add this check early to prevent starting uploads that would exceed the limit
     const maxFiles = 20; // Same as in the FileUpload component 
@@ -85,8 +93,15 @@ export const useDocuments = (projectId: string, userId: string) => {
     setError(null);
     const newDocuments: Document[] = [];
     let failedUploads = 0;
+    let failedDocuments: {filename: string; error: string}[] = [];
     
     try {
+      // Check for authentication first to prevent trying every file
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new AuthenticationError();
+      }
+      
       for (const file of files) {
         try {
           // Calculate priority
@@ -139,11 +154,20 @@ export const useDocuments = (projectId: string, userId: string) => {
             errorMessage = `Database error: ${fileError.message}`;
           } else if (fileError instanceof AuthenticationError) {
             errorMessage = "You need to be logged in to upload documents";
-            // Break the loop as auth errors will affect all uploads
-            break;
+            // Add to failed documents but don't break the loop - others might succeed
+            failedDocuments.push({
+              filename: file.name,
+              error: errorMessage
+            });
+            continue;
           } else if (fileError instanceof Error) {
             errorMessage = fileError.message;
           }
+          
+          failedDocuments.push({
+            filename: file.name,
+            error: errorMessage
+          });
           
           toast({
             title: `Error uploading ${file.name}`,
@@ -167,6 +191,11 @@ export const useDocuments = (projectId: string, userId: string) => {
           description: `Failed to upload ${failedUploads} document${failedUploads !== 1 ? 's' : ''}`,
           variant: "destructive",
         });
+      }
+      
+      // Set failed uploads for user reference
+      if (failedDocuments.length > 0) {
+        setFailedUploads(failedDocuments);
       }
     } catch (err) {
       console.error('Error in batch document upload:', err);
@@ -236,6 +265,7 @@ export const useDocuments = (projectId: string, userId: string) => {
     documents,
     isLoading,
     error,
+    failedUploads,
     handleFilesSelected,
     handleRemoveDocument
   };

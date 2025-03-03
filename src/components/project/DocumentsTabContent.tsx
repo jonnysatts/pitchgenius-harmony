@@ -4,7 +4,7 @@ import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
 import DocumentList from "@/components/project/DocumentList";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2 } from "lucide-react";
+import { Brain, Loader2, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,6 +27,14 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   onRemoveDocument,
   onAnalyzeDocuments,
 }) => {
+  // Only disable the Analyze button if:
+  // 1. There are no documents OR
+  // 2. AI processing is currently happening OR
+  // 3. Documents are currently being loaded/uploaded
+  const analyzeButtonDisabled = documents.length === 0 || 
+                               aiStatus.status === 'processing' || 
+                               isLoading;
+  
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg border">
@@ -49,8 +57,8 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Project Documents</h2>
           <Button 
-            onClick={onAnalyzeDocuments} 
-            disabled={documents.length === 0 || aiStatus.status === 'processing' || isLoading}
+            onClick={onAnalyzeDocuments}
+            disabled={analyzeButtonDisabled}
             className="flex items-center gap-2"
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain size={16} />}
@@ -86,6 +94,15 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
             <p className="text-slate-600">
               <span className="font-semibold">{documents.length}</span> document{documents.length !== 1 ? 's' : ''} uploaded. 
               All documents will be analyzed in detail when you click "Analyze with AI".
+            </p>
+          </div>
+        )}
+        
+        {!isLoading && documents.length === 0 && (
+          <div className="flex items-center justify-center py-8 flex-col">
+            <AlertCircle className="h-8 w-8 text-slate-400 mb-2" />
+            <p className="text-slate-600 text-center">
+              No documents have been uploaded yet. Please upload documents to analyze.
             </p>
           </div>
         )}

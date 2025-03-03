@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -45,13 +44,21 @@ export const useFileUpload = ({
       return `File exceeds maximum size of ${maxFileSizeMB}MB`;
     }
     
-    // Check file type
-    const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
-    if (!acceptedFileTypes.includes(fileExtension) && !acceptedFileTypes.includes('*')) {
-      return `File type not accepted. Accepted types: ${acceptedFileTypes.join(', ')}`;
+    // Check file type - improve PDF detection
+    if (file.type === 'application/pdf') {
+      // PDF is explicitly allowed
+      return null;
     }
     
-    return null;
+    // For other files, check by extension
+    const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
+    
+    // If we accept all files or this specific extension
+    if (acceptedFileTypes.includes('*') || acceptedFileTypes.includes(fileExtension)) {
+      return null;
+    }
+    
+    return `File type not accepted. Accepted types: ${acceptedFileTypes.join(', ')}`;
   };
   
   const simulateUploadProgress = (fileName: string) => {
@@ -95,6 +102,13 @@ export const useFileUpload = ({
     // This just validates the current batch being uploaded
     
     filesArray.forEach(file => {
+      // Add extra logging for PDF files
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        console.log(`Processing PDF file: ${file.name}`);
+        console.log(`PDF MIME type: ${file.type}`);
+        console.log(`PDF file size: ${file.size} bytes`);
+      }
+      
       const error = validateFile(file);
       
       if (error) {
