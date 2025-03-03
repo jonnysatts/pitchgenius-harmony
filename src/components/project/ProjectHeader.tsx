@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Project } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, CheckCircle2, XCircle, KeyRound, LoaderCircle } from "lucide-react";
+import { InfoIcon, CheckCircle2, XCircle, KeyRound, LoaderCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { testSupabaseConnection } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,7 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
         description: "Checking connection to Supabase and access to secrets...",
       });
 
+      console.log("Starting API connection test...");
       const result = await testSupabaseConnection();
       console.log("Test connection result:", result);
       
@@ -63,6 +64,7 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
         });
       }
     } catch (error: any) {
+      console.error("Error in handleTestApiConnection:", error);
       setApiConnectionResult({
         success: false,
         message: `Error: ${error.message || "Unknown error"}`
@@ -122,6 +124,16 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            
+            {!apiConnectionResult.success && (
+              <div className="mt-2 flex items-start gap-1 text-amber-700">
+                <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500" />
+                <div className="text-xs">
+                  <p>Make sure your Edge Function is deployed properly and check the Edge Function logs in Supabase dashboard.</p>
+                  <p className="mt-1">If you recently deployed the function, it may take a few moments to become available.</p>
+                </div>
               </div>
             )}
           </div>

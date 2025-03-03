@@ -11,6 +11,7 @@ console.log('Test connection function loaded')
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request')
     return new Response(null, { headers: corsHeaders })
   }
 
@@ -29,9 +30,13 @@ serve(async (req) => {
     const results = {}
     let allKeysFound = true
     
+    console.log('Checking for environment variables...')
+    
     for (const key of keys) {
       const value = Deno.env.get(key)
       const exists = !!value
+      console.log(`Checking ${key}: ${exists ? 'Found' : 'Not found'}`)
+      
       results[key] = {
         exists,
         // For security, only show first few chars of the actual key
@@ -45,13 +50,22 @@ serve(async (req) => {
     
     console.log(`Keys check results: ${allKeysFound ? 'All keys found' : 'Some keys missing'}`)
     
+    const responseData = {
+      message: 'Connection test successful',
+      timestamp: new Date().toISOString(),
+      environmentChecks: results,
+      allKeysFound
+    }
+    
+    console.log('Sending response:', JSON.stringify({
+      message: responseData.message,
+      allKeysFound: responseData.allKeysFound,
+      keysFound: Object.keys(results).filter(k => results[k].exists),
+      keysMissing: Object.keys(results).filter(k => !results[k].exists)
+    }))
+    
     return new Response(
-      JSON.stringify({
-        message: 'Connection test successful',
-        timestamp: new Date().toISOString(),
-        environmentChecks: results,
-        allKeysFound
-      }),
+      JSON.stringify(responseData),
       { 
         headers: {
           'Content-Type': 'application/json',

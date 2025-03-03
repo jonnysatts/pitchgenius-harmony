@@ -18,11 +18,12 @@ export const testSupabaseConnection = async () => {
     
     // Add detailed logging to help debug the issue
     console.log(`Supabase URL: ${SUPABASE_URL}`);
+    console.log(`Supabase Anon Key: ${SUPABASE_PUBLISHABLE_KEY.substring(0, 10)}...`);
     console.log('Invoking test-connection function...');
     
     const { data, error } = await supabase.functions.invoke('test-connection', {
       method: 'POST',
-      body: { test: true },
+      body: { test: true, timestamp: new Date().toISOString() },
     });
     
     if (error) {
