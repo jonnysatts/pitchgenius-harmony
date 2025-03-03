@@ -1,16 +1,17 @@
 
 import React, { useState } from "react";
-import { StrategicInsight, AIProcessingStatus, NarrativeSection, InsightCategory } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Layers, Lightbulb, Users, TrendingUp, FileSliders } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StrategicInsight, AIProcessingStatus } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 import InsightsStats from "@/components/project/InsightsStats";
 import InsightsEmptyState from "@/components/project/InsightsEmptyState";
 import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
-import InsightsCategoryGroup from "@/components/project/InsightsCategoryGroup";
 import InsightsNavigation from "@/components/project/InsightsNavigation";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import ViewModeSwitcher, { ViewMode } from "@/components/project/insights/ViewModeSwitcher";
+import StrategicAnalysisView from "@/components/project/insights/StrategicAnalysisView";
+import NarrativeFrameworkView from "@/components/project/insights/NarrativeFrameworkView";
+import EnhancedStrategyView from "@/components/project/insights/EnhancedStrategyView";
+import InsightsHeader from "@/components/project/insights/InsightsHeader";
+import { strategicCategories, narrativeSections } from "@/components/project/insights/constants";
 
 interface InsightsTabContentProps {
   insights: StrategicInsight[];
@@ -26,93 +27,6 @@ interface InsightsTabContentProps {
   onNavigateToDocuments: () => void;
   onNavigateToPresentation: () => void;
   onRetryAnalysis?: () => void;
-}
-
-// Define the strategic categories for Phase 1 (Analysis)
-const strategicCategories: {id: InsightCategory, label: string, description: string, icon: React.ElementType}[] = [
-  {
-    id: "business_challenges",
-    label: "Business Challenges",
-    description: "Current obstacles the client faces and their relevance to gaming",
-    icon: TrendingUp
-  },
-  {
-    id: "audience_gaps",
-    label: "Audience Engagement Gaps",
-    description: "Underserved audience segments and gaming-specific opportunities",
-    icon: Users
-  },
-  {
-    id: "competitive_threats",
-    label: "Competitive Gaming Landscape",
-    description: "Competitors' gaming initiatives and market differentiation opportunities",
-    icon: TrendingUp
-  },
-  {
-    id: "gaming_opportunities",
-    label: "Gaming Integration Opportunities",
-    description: "Specific tactical and strategic opportunities aligned with Games Age principles",
-    icon: Lightbulb
-  },
-  {
-    id: "strategic_recommendations",
-    label: "Strategic Recommendations",
-    description: "Quick wins and long-term initiatives with expected outcomes",
-    icon: FileSliders
-  },
-  {
-    id: "key_narratives",
-    label: "Key Cultural Insights",
-    description: "Gaming culture connections and brand positioning opportunities",
-    icon: Layers
-  }
-];
-
-// Define the narrative sections for Phase 2 (Narrative Building)
-const narrativeSections: {id: NarrativeSection, label: string, description: string, sourceCategories: InsightCategory[]}[] = [
-  {
-    id: "gaming_revolution",
-    label: "Gaming Revolution Context",
-    description: "Establishing gaming as a mainstream cultural force",
-    sourceCategories: ["competitive_threats", "key_narratives"]
-  },
-  {
-    id: "client_landscape",
-    label: "Client's Current Landscape",
-    description: "Assessment of challenges and opportunities in the gaming context",
-    sourceCategories: ["business_challenges", "audience_gaps"]
-  },
-  {
-    id: "cultural_insight",
-    label: "Gaming Cultural Insight",
-    description: "Key strategic insights connecting client to gaming culture",
-    sourceCategories: ["key_narratives", "audience_gaps"]
-  },
-  {
-    id: "solution_path",
-    label: "Strategic Solution Path",
-    description: "Strategic approach to addressing client challenges through gaming",
-    sourceCategories: ["business_challenges", "gaming_opportunities", "strategic_recommendations"]
-  },
-  {
-    id: "tangible_vision",
-    label: "Tangible Vision",
-    description: "Concrete activation concepts and implementation details",
-    sourceCategories: ["gaming_opportunities", "strategic_recommendations"]
-  },
-  {
-    id: "proof_of_concept",
-    label: "Proof of Concept",
-    description: "Case studies, ROI metrics, and next steps",
-    sourceCategories: ["strategic_recommendations"]
-  }
-];
-
-// Tabs for insights view modes
-enum ViewMode {
-  STRATEGIC_ANALYSIS = "strategic_analysis",
-  NARRATIVE_FRAMEWORK = "narrative_framework",
-  ENHANCED_ELEMENTS = "enhanced_elements"
 }
 
 const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
@@ -132,40 +46,11 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
 }) => {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.STRATEGIC_ANALYSIS);
-  const [activeSection, setActiveSection] = useState<string>("all_insights");
   
   // Determine if Claude is in the intensive processing phase
   const isClaudeProcessing = aiStatus?.status === 'processing' && 
                             aiStatus.progress >= 30 && 
                             aiStatus.progress < 60;
-  
-  // Group insights by category for Strategic Analysis view
-  const insightsByCategory = insights.reduce((groups, insight) => {
-    const category = insight.category || 'other';
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(insight);
-    return groups;
-  }, {} as Record<string, StrategicInsight[]>);
-  
-  // Group insights by narrative section for Narrative Framework view
-  const insightsByNarrativeSection = insights.reduce((sections, insight) => {
-    // Find matching narrative sections based on insight category
-    const matchingSections = narrativeSections.filter(section => 
-      section.sourceCategories.includes(insight.category as InsightCategory)
-    );
-    
-    // Add the insight to each matching section
-    matchingSections.forEach(section => {
-      if (!sections[section.id]) {
-        sections[section.id] = [];
-      }
-      sections[section.id].push(insight);
-    });
-    
-    return sections;
-  }, {} as Record<string, StrategicInsight[]>);
   
   // Calculate stats
   const acceptedCount = Object.values(reviewedInsights).filter(status => status === 'accepted').length;
@@ -201,19 +86,11 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
 
   return (
     <div className="bg-white p-6 rounded-lg border">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Strategic Insights</h2>
-        
-        {allInsightsReviewed && (
-          <Button 
-            onClick={handleProceedToPresentation} 
-            className="flex items-center gap-2"
-          >
-            Proceed to Presentation
-            <ArrowRight size={16} />
-          </Button>
-        )}
-      </div>
+      <InsightsHeader 
+        title="Strategic Insights" 
+        showProceedButton={allInsightsReviewed}
+        onProceedToPresentation={handleProceedToPresentation}
+      />
       
       {/* Show error or fallback message if applicable */}
       <InsightsErrorAlert 
@@ -237,256 +114,40 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         <InsightsEmptyState onNavigateToDocuments={onNavigateToDocuments} />
       ) : (
         <div className="mt-6">
-          {/* View Mode Selector - Fixed the onValueChange to use the handler function */}
-          <Tabs value={viewMode} onValueChange={handleViewModeChange} className="mb-6">
-            <TabsList className="grid grid-cols-3 w-full max-w-lg mb-2">
-              <TabsTrigger value={ViewMode.STRATEGIC_ANALYSIS}>
-                Strategic Analysis
-              </TabsTrigger>
-              <TabsTrigger value={ViewMode.NARRATIVE_FRAMEWORK}>
-                Narrative Framework
-              </TabsTrigger>
-              <TabsTrigger value={ViewMode.ENHANCED_ELEMENTS}>
-                Enhanced Strategy
-              </TabsTrigger>
-            </TabsList>
-            
-            <p className="text-sm text-muted-foreground px-2">
-              {viewMode === ViewMode.STRATEGIC_ANALYSIS && 
-                "Review insights organized by strategic analysis categories"}
-              {viewMode === ViewMode.NARRATIVE_FRAMEWORK && 
-                "Build your strategic narrative using insights mapped to presentation sections"}
-              {viewMode === ViewMode.ENHANCED_ELEMENTS && 
-                "Enhance your strategy with gaming-specific frameworks and models"}
-            </p>
-          </Tabs>
+          {/* View Mode Selector */}
+          <ViewModeSwitcher 
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+          />
           
           {/* Strategic Analysis View */}
           {viewMode === ViewMode.STRATEGIC_ANALYSIS && (
-            <Tabs defaultValue="all_insights" value={activeSection} onValueChange={setActiveSection}>
-              <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
-                <TabsTrigger value="all_insights" className="whitespace-nowrap">
-                  All Insights
-                </TabsTrigger>
-                {strategicCategories.map((category) => (
-                  <TabsTrigger 
-                    key={category.id} 
-                    value={category.id}
-                    className="whitespace-nowrap"
-                  >
-                    {category.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {/* Display the description of the current category */}
-              <div className="mb-6 px-4 py-3 bg-muted rounded-md">
-                <p className="text-sm text-muted-foreground">
-                  {activeSection === "all_insights" 
-                    ? "Review all strategic insights across categories" 
-                    : strategicCategories.find(c => c.id === activeSection)?.description}
-                </p>
-              </div>
-              
-              <TabsContent value="all_insights" className="space-y-10">
-                {Object.entries(insightsByCategory).map(([category, categoryInsights]) => (
-                  <InsightsCategoryGroup
-                    key={category}
-                    category={category}
-                    insights={categoryInsights}
-                    reviewedInsights={reviewedInsights}
-                    onAcceptInsight={onAcceptInsight}
-                    onRejectInsight={onRejectInsight}
-                    onUpdateInsight={onUpdateInsight}
-                    section="All Insights"
-                  />
-                ))}
-              </TabsContent>
-              
-              {/* Create a tab content for each category */}
-              {strategicCategories.map((category) => (
-                <TabsContent key={category.id} value={category.id} className="space-y-10">
-                  {insightsByCategory[category.id] && insightsByCategory[category.id].length > 0 ? (
-                    <InsightsCategoryGroup
-                      key={category.id}
-                      category={category.id}
-                      insights={insightsByCategory[category.id]}
-                      reviewedInsights={reviewedInsights}
-                      onAcceptInsight={onAcceptInsight}
-                      onRejectInsight={onRejectInsight}
-                      onUpdateInsight={onUpdateInsight}
-                      section={category.label}
-                    />
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground">No insights found for this category.</p>
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
+            <StrategicAnalysisView 
+              insights={insights}
+              reviewedInsights={reviewedInsights}
+              strategicCategories={strategicCategories}
+              onAcceptInsight={onAcceptInsight}
+              onRejectInsight={onRejectInsight}
+              onUpdateInsight={onUpdateInsight}
+            />
           )}
           
           {/* Narrative Framework View */}
           {viewMode === ViewMode.NARRATIVE_FRAMEWORK && (
-            <Tabs defaultValue={narrativeSections[0].id} className="space-y-4">
-              <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
-                {narrativeSections.map((section) => (
-                  <TabsTrigger 
-                    key={section.id} 
-                    value={section.id}
-                    className="whitespace-nowrap"
-                  >
-                    {section.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {narrativeSections.map((section) => (
-                <TabsContent key={section.id} value={section.id} className="space-y-6">
-                  <div className="mb-4 px-4 py-3 bg-muted rounded-md">
-                    <p className="text-sm text-muted-foreground">
-                      {section.description}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <strong>Draws from:</strong> {section.sourceCategories.map(cat => 
-                        strategicCategories.find(c => c.id === cat)?.label
-                      ).join(", ")}
-                    </p>
-                  </div>
-                  
-                  {insightsByNarrativeSection[section.id] && insightsByNarrativeSection[section.id].length > 0 ? (
-                    // Group by original category within the narrative section
-                    Object.entries(
-                      insightsByNarrativeSection[section.id].reduce((groups, insight) => {
-                        const category = insight.category || 'other';
-                        if (!groups[category]) {
-                          groups[category] = [];
-                        }
-                        groups[category].push(insight);
-                        return groups;
-                      }, {} as Record<string, StrategicInsight[]>)
-                    ).map(([category, categoryInsights]) => (
-                      <InsightsCategoryGroup
-                        key={`${section.id}-${category}`}
-                        category={category}
-                        insights={categoryInsights}
-                        reviewedInsights={reviewedInsights}
-                        onAcceptInsight={onAcceptInsight}
-                        onRejectInsight={onRejectInsight}
-                        onUpdateInsight={onUpdateInsight}
-                        section={section.label}
-                      />
-                    ))
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground">No insights mapped to this narrative section yet.</p>
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
+            <NarrativeFrameworkView 
+              insights={insights}
+              reviewedInsights={reviewedInsights}
+              narrativeSections={narrativeSections}
+              strategicCategories={strategicCategories}
+              onAcceptInsight={onAcceptInsight}
+              onRejectInsight={onRejectInsight}
+              onUpdateInsight={onUpdateInsight}
+            />
           )}
           
           {/* Enhanced Strategy Elements View */}
           {viewMode === ViewMode.ENHANCED_ELEMENTS && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Gaming Audience Pyramid */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gaming Audience Pyramid</CardTitle>
-                  <CardDescription>
-                    Mapping client opportunities across gaming audience segments
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 rounded-lg text-center">
-                      <div className="w-0 h-0 border-l-[100px] border-r-[100px] border-b-[160px] border-l-transparent border-r-transparent border-b-slate-200 mx-auto relative">
-                        <div className="absolute -bottom-[160px] -left-[100px] w-[200px]">
-                          <div className="p-2 bg-slate-300 text-xs mb-1">Creators</div>
-                          <div className="p-2 bg-slate-200 text-xs mb-1">Committed</div>
-                          <div className="p-2 bg-slate-100 text-xs mb-1">Regular</div>
-                          <div className="p-2 bg-white text-xs border border-slate-100">Casual</div>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-600">
-                      No audience mapping insights available yet. Create insights with audience segment 
-                      tags to populate this framework.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Engagement Spectrum */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Engagement Spectrum</CardTitle>
-                  <CardDescription>
-                    Plotting strategy across gaming engagement levels
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                      <span className="text-sm font-medium">Spectate</span>
-                      <span className="text-xs text-slate-500">Awareness</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                      <span className="text-sm font-medium">Participate</span>
-                      <span className="text-xs text-slate-500">Engagement</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                      <span className="text-sm font-medium">Create</span>
-                      <span className="text-xs text-slate-500">Contribution</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                      <span className="text-sm font-medium">Advocate</span>
-                      <span className="text-xs text-slate-500">Evangelism</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-2">
-                      No engagement insights available yet. Create insights with engagement level 
-                      tags to populate this framework.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Physical-Digital Integration */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Physical-Digital Integration</CardTitle>
-                  <CardDescription>
-                    Fortress venue integration and omnichannel experiences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-slate-50 rounded-lg space-y-4">
-                    <p className="text-sm text-center text-slate-600">
-                      No physical-digital integration insights available yet.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Community-First Strategy */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Community-First Strategy</CardTitle>
-                  <CardDescription>
-                    Building authentic relationships with gaming communities
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-slate-50 rounded-lg space-y-4">
-                    <p className="text-sm text-center text-slate-600">
-                      No community strategy insights available yet.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <EnhancedStrategyView />
           )}
           
           {/* Bottom button for navigating to presentation */}
