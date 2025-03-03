@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Project } from '@/lib/types';
 import { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
-import { ArrowRight, Globe, Server } from 'lucide-react';
+import { ArrowRight, Globe, Server, RefreshCw } from 'lucide-react';
 
 interface WebsiteAnalysisControlsProps {
   project: Project;
@@ -43,9 +43,24 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
             className="w-full md:w-auto"
             size="lg"
           >
-            <Globe className="mr-2 h-4 w-4" />
-            {isAnalyzing ? "Analyzing Website..." : hasInsights ? "Refresh Website Analysis" : "Start Website Analysis"}
-            {!isAnalyzing && <ArrowRight className="ml-2 h-4 w-4" />}
+            {isAnalyzing ? (
+              <>
+                <Globe className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing Website...
+              </>
+            ) : hasInsights ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Website Analysis
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            ) : (
+              <>
+                <Globe className="mr-2 h-4 w-4" />
+                Start Website Analysis
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
           </Button>
           
           <p className="text-sm text-gray-500">
