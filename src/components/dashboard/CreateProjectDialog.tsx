@@ -1,12 +1,12 @@
-
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProjectFormData {
   title: string;
@@ -30,6 +30,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   onCreateProject
 }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleCreateProject = () => {
     try {
@@ -52,14 +53,20 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         return;
       }
 
-      // Call the parent function to create the project
-      onCreateProject();
-      
       // Show success toast
       toast({
-        title: "Project created",
-        description: "Your new project has been created successfully.",
+        title: "Creating project",
+        description: "Your new project is being created...",
       });
+      
+      // Close the dialog
+      setIsOpen(false);
+      
+      // Navigate to the new project page with params
+      navigate(`/projects/new?title=${encodeURIComponent(projectData.title)}&client=${encodeURIComponent(projectData.clientName)}&industry=${projectData.clientIndustry}`);
+      
+      // Call the parent function to reset the form
+      onCreateProject();
     } catch (error) {
       console.error("Error creating project:", error);
       toast({

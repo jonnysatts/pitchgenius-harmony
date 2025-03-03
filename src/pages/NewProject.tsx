@@ -1,21 +1,75 @@
 
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { MOCK_PROJECTS } from "@/data/mockProjects";
 import { useToast } from "@/hooks/use-toast";
+import { Project } from "@/lib/types";
 
 const NewProject = () => {
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   useEffect(() => {
-    // Simulate API call delay
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    // Get project details from URL search params
+    const projectTitle = searchParams.get('title') || 'New Project';
+    const clientName = searchParams.get('client') || 'Client';
+    const clientIndustry = (searchParams.get('industry') || 'retail') as Project['clientIndustry'];
     
-    return () => clearTimeout(timer);
-  }, []);
+    // Create a new project with a unique ID
+    const createNewProject = () => {
+      // Simulate API call delay
+      setTimeout(() => {
+        // In a real app, this would call an API to create a project
+        // For now, we'll create a mock project with a new ID
+        const newProject: Project = {
+          id: `new_${Date.now()}`,
+          title: projectTitle,
+          clientName: clientName,
+          clientIndustry: clientIndustry,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: "1", // Current user ID
+          collaborators: [],
+          status: "draft"
+        };
+        
+        // In a real app, we would save this to a database
+        // For now, we'll just navigate to the first mock project, but with the new title
+        // This simulates that we've created a new project
+        
+        toast({
+          title: "Project created",
+          description: `${projectTitle} has been created successfully`,
+        });
+        
+        // Navigate to the first mock project
+        const firstProject = MOCK_PROJECTS[0];
+        if (firstProject) {
+          // Navigate to the first project but with a message that we are using a mock for demo purposes
+          navigate(`/projects/${firstProject.id}`, { 
+            state: { 
+              newProjectTitle: projectTitle,
+              newProjectClient: clientName,
+              mockProjectWarning: true 
+            } 
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Unable to create a new project. No demo projects available.",
+            variant: "destructive"
+          });
+          navigate("/dashboard");
+        }
+        
+        setLoading(false);
+      }, 1500);
+    };
+    
+    createNewProject();
+  }, [searchParams, toast, navigate]);
   
   if (loading) {
     return (
@@ -29,22 +83,8 @@ const NewProject = () => {
     );
   }
   
-  // Find the first project to redirect to
-  const firstProject = MOCK_PROJECTS[0];
-  
-  if (!firstProject) {
-    toast({
-      title: "Error",
-      description: "Unable to create a new project. No demo projects available.",
-      variant: "destructive"
-    });
-    
-    // Redirect to dashboard if no projects exist
-    return <Navigate to="/dashboard" />;
-  }
-  
-  // Redirect to the first project
-  return <Navigate to={`/projects/${firstProject.id}`} />;
+  // This point shouldn't be reached as we navigate away in the useEffect
+  return null;
 };
 
 export default NewProject;
