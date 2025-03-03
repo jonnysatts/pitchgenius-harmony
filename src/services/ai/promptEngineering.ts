@@ -2,6 +2,7 @@
 /**
  * Module for managing AI prompts and prompt engineering
  */
+import { Document, Project } from "@/lib/types";
 
 // Gaming industry specialist prompt to guide the AI
 export const GAMING_SPECIALIST_PROMPT = `You are the world's leading marketing strategist, specializing in the gaming industry and entertainment-driven brand activations. You work exclusively for **Games Age**, the strategic gaming division of **Fortress**, the largest gaming and esports entertainment complex in the Southern Hemisphere.
@@ -94,6 +95,30 @@ Based on analyzing this website, here are key points to consider:
 
 Use this website as a critical resource to understand their brand voice, visual identity, and current market positioning.
 Consider how all 11 parts of our narrative framework can be informed by insights from their website.`;
+};
+
+/**
+ * Generate website-based research prompt for preliminary insights
+ */
+export const generateWebsiteResearchPrompt = (clientWebsite: string, clientIndustry: string): string => {
+  return `
+## 🔍 Website Research Task
+Thoroughly analyze the client website (${clientWebsite}) and generate preliminary strategic insights for a gaming marketing strategy.
+
+Focus areas:
+1. Identify the client's current brand positioning, tone, and visual identity
+2. Determine their target audience demographics and psychographics
+3. Analyze their current digital marketing approaches and channels
+4. Find opportunities where gaming could enhance their existing customer journey
+5. Explore their competitors (if visible on site) and how gaming could differentiate this client
+6. Look for content themes that could translate well to gaming contexts
+7. Identify potential challenges in their industry that gaming could help address
+
+Industry context: The client is in the ${clientIndustry} industry.
+
+Your analysis will be used to generate preliminary strategic insights before we receive primary documentation.
+These insights should be marked as "website-derived" to distinguish them from insights derived from client-provided materials.
+`;
 };
 
 /**

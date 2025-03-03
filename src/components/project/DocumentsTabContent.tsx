@@ -4,9 +4,10 @@ import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
 import DocumentList from "@/components/project/DocumentList";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2, AlertCircle } from "lucide-react";
+import { Brain, Loader2, AlertCircle, Globe } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DocumentsTabContentProps {
   documents: Document[];
@@ -16,6 +17,8 @@ interface DocumentsTabContentProps {
   onFilesSelected: (files: File[]) => void;
   onRemoveDocument: (documentId: string) => void;
   onAnalyzeDocuments: () => void;
+  onAnalyzeWebsite?: () => void;
+  isAnalyzingWebsite?: boolean;
   hasDocuments?: boolean;
 }
 
@@ -27,6 +30,8 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   onFilesSelected,
   onRemoveDocument,
   onAnalyzeDocuments,
+  onAnalyzeWebsite,
+  isAnalyzingWebsite = false,
   hasDocuments,
 }) => {
   // Only disable the Analyze button if:
@@ -42,6 +47,15 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
                             aiStatus.status === 'processing' && 
                             aiStatus.progress >= 30 && 
                             aiStatus.progress < 60;
+  
+  // Can analyze website if:
+  // 1. Website URL exists
+  // 2. Not currently analyzing website
+  // 3. Not in the middle of document analysis
+  const canAnalyzeWebsite = 
+    !!project?.clientWebsite && 
+    !isAnalyzingWebsite && 
+    !(aiStatus && aiStatus.status === 'processing');
   
   return (
     <div className="space-y-6">
@@ -60,6 +74,50 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
           disabled={isLoading}
         />
       </div>
+      
+      {/* Website Analysis Card */}
+      {project?.clientWebsite && onAnalyzeWebsite && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Website Analysis</CardTitle>
+                <CardDescription>Generate preliminary insights based on the client's website</CardDescription>
+              </div>
+              
+              <Button 
+                onClick={onAnalyzeWebsite}
+                disabled={!canAnalyzeWebsite}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                {isAnalyzingWebsite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe size={16} />}
+                {isAnalyzingWebsite ? 'Analyzing...' : 'Analyze Website'}
+              </Button>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="text-sm text-slate-600 flex items-center">
+              <Globe size={14} className="mr-2 text-slate-400" />
+              <span className="font-medium text-slate-700 mr-1">Website URL:</span> 
+              <a 
+                href={project.clientWebsite.startsWith('http') ? project.clientWebsite : `https://${project.clientWebsite}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline truncate"
+              >
+                {project.clientWebsite}
+              </a>
+            </div>
+            
+            <p className="text-xs text-slate-500 mt-2">
+              This will analyze the client's website to extract brand positioning, target audience, and potential gaming opportunities.
+              Website-derived insights will be marked as preliminary research.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="bg-white p-6 rounded-lg border">
         <div className="flex justify-between items-center mb-4">

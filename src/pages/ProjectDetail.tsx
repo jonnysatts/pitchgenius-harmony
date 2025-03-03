@@ -44,7 +44,10 @@ const ProjectDetail = () => {
     handleUpdateInsight,
     handleNavigateToPresentation,
     handleRetryAnalysis,
-    isNewProject
+    isNewProject,
+    // Add the new website analysis functionality
+    isAnalyzingWebsite,
+    handleAnalyzeWebsite
   } = useProjectDetail(projectId || '', user?.id || '', project || {} as Project);
   
   // Set up the AI configuration
@@ -97,9 +100,11 @@ const ProjectDetail = () => {
         isNewProject={isNewProject}
         isLoading={isLoading}
         acceptedInsights={acceptedInsights}
+        isAnalyzingWebsite={isAnalyzingWebsite}
         handleFilesSelected={handleFilesSelected}
         handleRemoveDocument={handleRemoveDocument}
         handleAnalyzeDocuments={handleAnalyzeProjectDocuments}
+        handleAnalyzeWebsite={handleAnalyzeWebsite}
         handleAcceptInsight={handleAcceptInsight}
         handleRejectInsight={handleRejectInsight}
         handleUpdateInsight={handleUpdateInsight}

@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect } from "react";
 import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
@@ -8,6 +9,7 @@ import { useAiStatus } from "./ai/useAiStatus";
 import { useAiGeneration } from "./ai/useAiGeneration";
 import { useAiResults } from "./ai/useAiResults";
 import { useFallbackInsights } from "./ai/useFallbackInsights";
+import { useWebsiteAnalysis } from "./ai/useWebsiteAnalysis";
 
 export const useAiAnalysis = (project: Project) => {
   // Initialize all the smaller hooks
@@ -17,7 +19,8 @@ export const useAiAnalysis = (project: Project) => {
     error,
     setError,
     handleCompletionToast,
-    persistInsights
+    persistInsights,
+    addInsights
   } = useAiResults(project);
   
   const {
@@ -46,6 +49,13 @@ export const useAiAnalysis = (project: Project) => {
     completeProcessing, 
     setUsingFallbackInsights
   );
+  
+  // Add the new website analysis hook
+  const {
+    isAnalyzing,
+    websiteInsights,
+    analyzeWebsite
+  } = useWebsiteAnalysis(project, addInsights, setError);
 
   // Check for stored insights & setup processing status
   useEffect(() => {
@@ -167,6 +177,10 @@ export const useAiAnalysis = (project: Project) => {
     handleAnalyzeDocuments,
     retryAnalysis,
     setInsights,
-    setError
+    setError,
+    // Export the new website analysis functionality
+    isAnalyzingWebsite: isAnalyzing,
+    websiteInsights,
+    analyzeWebsite
   };
 };

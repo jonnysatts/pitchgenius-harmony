@@ -21,3 +21,15 @@ export const prepareDocumentContents = (documents: Document[], project: Project)
     };
   });
 };
+
+/**
+ * Prepare website content for AI processing
+ */
+export const prepareWebsiteContent = (url: string, project: Project): any => {
+  return {
+    url: url,
+    industry: project.clientIndustry,
+    // In a real implementation, this would contain scraped text content from the website
+    content: `This is simulated content scraped from the website ${url}. In a production environment, this would be the actual content scraped from the client's website, including text from key pages like Home, About, Products/Services, and Contact pages.`
+  };
+};

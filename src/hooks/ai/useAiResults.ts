@@ -44,6 +44,30 @@ export const useAiResults = (project: Project) => {
     setInsights(newInsights);
     persistInsights(newInsights, usingFallback);
   }, [persistInsights]);
+  
+  // Add new insights to existing ones
+  const addInsights = useCallback((newInsights: StrategicInsight[]) => {
+    if (newInsights.length === 0) return;
+    
+    setInsights(currentInsights => {
+      // Filter out any duplicates based on content.title
+      const existingTitles = new Set(currentInsights.map(insight => 
+        insight.content && insight.content.title ? insight.content.title : ''
+      ));
+      
+      const filteredNewInsights = newInsights.filter(insight => 
+        insight.content && insight.content.title && !existingTitles.has(insight.content.title)
+      );
+      
+      // Combine existing and new insights
+      const combinedInsights = [...currentInsights, ...filteredNewInsights];
+      
+      // Persist the combined insights
+      persistInsights(combinedInsights);
+      
+      return combinedInsights;
+    });
+  }, [persistInsights]);
 
   // Show completion toast based on insight generation results
   const handleCompletionToast = useCallback((usingFallbackInsights: boolean) => {
@@ -69,6 +93,7 @@ export const useAiResults = (project: Project) => {
     error,
     setError,
     handleCompletionToast,
-    persistInsights
+    persistInsights,
+    addInsights
   };
 };

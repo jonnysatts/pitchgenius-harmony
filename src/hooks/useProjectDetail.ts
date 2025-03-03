@@ -28,7 +28,11 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     processingComplete,
     usingFallbackInsights,
     handleAnalyzeDocuments,
-    retryAnalysis
+    retryAnalysis,
+    // Add website analysis functionality
+    isAnalyzingWebsite,
+    websiteInsights,
+    analyzeWebsite
   } = useAiAnalysis(project);
   
   // Handle insights review
@@ -55,6 +59,12 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     if (documents.length === 0) return;
     handleAnalyzeDocuments(documents, setActiveTab);
   }, [documents, handleAnalyzeDocuments]);
+  
+  // Handle website analysis
+  const handleAnalyzeWebsite = useCallback(() => {
+    if (!project.clientWebsite) return;
+    analyzeWebsite();
+  }, [project.clientWebsite, analyzeWebsite]);
   
   // Navigate to documents tab
   const handleNavigateToDocuments = useCallback(() => {
@@ -99,7 +109,11 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     handleNavigateToDocuments,
     handleNavigateToPresentation,
     handleRetryAnalysis,
-    isNewProject
+    isNewProject,
+    // Add website analysis functionality
+    isAnalyzingWebsite,
+    websiteInsights,
+    handleAnalyzeWebsite
   };
 };
 
