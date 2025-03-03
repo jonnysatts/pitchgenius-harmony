@@ -63,25 +63,14 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   navigateToPresentation,
   onRetryAnalysis
 }) => {
-  // Improved website insights filtering
+  // Improved website insights filtering with explicit source markers
   const websiteInsights = insights.filter(insight => {
-    // Check if the insight has the 'website' source or any website-related markers
-    return insight.source === 'website' || 
-      insight.content?.source === 'Website analysis' || 
-      (insight.content?.summary && typeof insight.content.summary === 'string' && 
-       insight.content.summary.includes('[Website-derived]'));
+    // Check if the insight has the explicit 'website' source marker
+    return insight.source === 'website';
   });
   
-  // Document-derived insights (exclude website insights)
-  const documentInsights = insights.filter(insight => {
-    const isWebsiteInsight = 
-      insight.source === 'website' || 
-      insight.content?.source === 'Website analysis' || 
-      (insight.content?.summary && typeof insight.content.summary === 'string' && 
-       insight.content.summary.includes('[Website-derived]'));
-    
-    return !isWebsiteInsight;
-  });
+  // All insights that are NOT explicitly marked as website insights are document insights
+  const documentInsights = insights.filter(insight => insight.source !== 'website');
   
   // Debug logging
   console.log("ProjectDetailContent - Total insights:", insights.length);
@@ -95,13 +84,6 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
       setActiveTab(value);
     }
   };
-  
-  // Log insight categories for debugging
-  useEffect(() => {
-    if (websiteInsights.length > 0) {
-      console.log("Website insights categories:", websiteInsights.map(i => i.category));
-    }
-  }, [websiteInsights]);
   
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">

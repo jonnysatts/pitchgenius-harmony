@@ -87,9 +87,22 @@ export const normalizeWebsiteCategory = (apiCategory: string): WebsiteInsightCat
     }
   }
   
-  // Default to company_positioning if no match found
-  console.warn(`No category mapping found for "${apiCategory}", defaulting to company_positioning`);
-  return 'company_positioning';
+  // If still no match, distribute to different categories more evenly
+  // using a deterministic but distributed approach
+  const sum = normalizedCategory.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const categoryIndex = sum % 6; // 6 is the number of defined categories
+  
+  const categoryList: WebsiteInsightCategory[] = [
+    'company_positioning',
+    'competitive_landscape',
+    'key_partnerships',
+    'public_announcements',
+    'consumer_engagement',
+    'product_service_fit'
+  ];
+  
+  console.log(`No direct mapping for "${apiCategory}", assigning to ${categoryList[categoryIndex]} (based on string hash)`);
+  return categoryList[categoryIndex];
 };
 
 /**

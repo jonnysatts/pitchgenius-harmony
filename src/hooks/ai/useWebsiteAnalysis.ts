@@ -1,100 +1,77 @@
 
-import { useState, useCallback } from "react";
-import { Project, StrategicInsight } from "@/lib/types";
-import { analyzeClientWebsite } from "@/services/ai";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from 'react';
+import { Project, StrategicInsight } from '@/lib/types';
+import { analyzeWebsite } from '@/services/ai/websiteAnalysis';
+import { addWebsiteSourceMarker } from '@/services/ai/promptEngineering';
+import { toast } from '@/hooks/use-toast';
 
 export const useWebsiteAnalysis = (
   project: Project,
-  addInsights: (newInsights: StrategicInsight[]) => void,
+  addInsights: (insights: StrategicInsight[]) => void,
   setError: (error: string | null) => void
 ) => {
-  const { toast } = useToast();
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [websiteInsights, setWebsiteInsights] = useState<StrategicInsight[]>([]);
 
-  const analyzeWebsite = useCallback(async () => {
-    // Skip if no website URL is provided
+  const analyzeWebsiteUrl = useCallback(async () => {
     if (!project.clientWebsite) {
-      toast({
-        title: "No website provided",
-        description: "Please add a client website URL to analyze",
-        variant: "destructive"
-      });
-      return false;
+      setError('No website URL provided for analysis');
+      return;
     }
 
     try {
       setIsAnalyzing(true);
-      setError(null);
-      
-      // Show toast that analysis is starting
       toast({
-        title: "Analyzing website",
-        description: `Researching ${project.clientWebsite} for strategic insights...`,
+        title: 'Analyzing Website',
+        description: `Starting website analysis for ${project.clientWebsite}`,
       });
 
-      const result = await analyzeClientWebsite(project);
+      const result = await analyzeWebsite(project);
       
       if (result.insights && result.insights.length > 0) {
-        // Store the insights locally
-        setWebsiteInsights(result.insights);
+        // Explicitly mark all insights as website-derived
+        const markedInsights = result.insights.map(insight => addWebsiteSourceMarker(insight));
         
-        // Add the insights to the main insights collection
-        addInsights(result.insights);
+        console.log(`Website analysis generated ${markedInsights.length} insights`);
+        console.log('Website insight categories:', markedInsights.map(i => i.category));
         
-        // Show success toast with instruction to check Web Insights tab
+        setWebsiteInsights(markedInsights);
+        addInsights(markedInsights);
+        
         toast({
-          title: "Website analysis complete",
-          description: `Generated ${result.insights.length} insights from website research. View them in the Web Insights tab.`,
+          title: 'Website Analysis Complete',
+          description: `Generated ${markedInsights.length} insights from ${project.clientWebsite}`,
         });
-        
-        // If there was an error but we still got insights, show warning
-        if (result.error) {
-          setError(result.error);
-          // Only show error toast if it's not just saying we used sample insights
-          if (!result.error.includes("Using sample website insights")) {
-            toast({
-              title: "Website analysis partial success",
-              description: result.error,
-              variant: "destructive"
-            });
-          }
-        }
-        
-        return true;
       } else {
-        // Show error toast
+        setError('No insights were generated from website analysis');
         toast({
-          title: "Website analysis failed",
-          description: result.error || "No insights could be generated from the website",
-          variant: "destructive"
+          title: 'Website Analysis Issue',
+          description: 'Could not generate insights from the website',
+          variant: 'destructive',
         });
-        
-        setError(result.error || "Failed to generate insights from website");
-        return false;
+      }
+      
+      if (result.error) {
+        setError(result.error);
       }
     } catch (err) {
-      console.error("Error analyzing website:", err);
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      
-      setError(`Error analyzing website: ${errorMessage}`);
-      
+      console.error('Error analyzing website:', err);
+      setError(`Error analyzing website: ${err instanceof Error ? err.message : String(err)}`);
       toast({
-        title: "Website analysis failed",
-        description: errorMessage,
-        variant: "destructive"
+        title: 'Website Analysis Error',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
       });
-      
-      return false;
     } finally {
       setIsAnalyzing(false);
     }
-  }, [project, addInsights, setError, toast]);
+  }, [project, addInsights, setError]);
 
   return {
     isAnalyzing,
     websiteInsights,
-    analyzeWebsite
+    analyzeWebsite: analyzeWebsiteUrl,
   };
 };
+
+export default useWebsiteAnalysis;

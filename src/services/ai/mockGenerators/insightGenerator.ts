@@ -37,6 +37,8 @@ export const generateDetailedInsight = (
         }))
       : undefined,
     dataPoints: industrySpecificContent.dataPoints,
+    // Add explicit source for document-based insights
+    source: 'document_analysis'
   };
   
   return {
@@ -44,6 +46,9 @@ export const generateDetailedInsight = (
     category,
     content,
     confidence,
-    needsReview
+    needsReview,
+    // Set an explicit document source marker (different from website source)
+    source: 'document'
   };
 };
+

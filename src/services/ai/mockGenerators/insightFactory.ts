@@ -19,16 +19,19 @@ export const generateComprehensiveInsights = (project: Project, documents: Docum
     "key_narratives"
   ];
   
-  // Generate 2-3 detailed insights per category
+  // Generate 2-3 detailed insights per category (more comprehensive)
   const insights: StrategicInsight[] = [];
   
   categories.forEach(category => {
-    const insightsCount = Math.floor(Math.random() * 2) + 2; // 2-3 insights per category
+    // Increase to 3-4 insights per category for more comprehensive analysis
+    const insightsCount = Math.floor(Math.random() * 2) + 3; // 3-4 insights per category
     
     for (let i = 0; i < insightsCount; i++) {
       insights.push(generateDetailedInsight(category, project, documents));
     }
   });
   
+  console.log(`Generated ${insights.length} mock insights across ${categories.length} categories`);
   return insights;
 };
+

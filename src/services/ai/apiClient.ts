@@ -31,7 +31,7 @@ export const callClaudeApi = async (
         clientWebsite: project.clientWebsite,
         projectTitle: project.title,
         documentContents,
-        processingMode: 'quick', // Use quick mode to reduce processing time
+        processingMode: 'comprehensive', // Changed from 'quick' to 'comprehensive' for more detailed analysis
         includeComprehensiveDetails: true,
         maximumResponseTime: 110, // Tell Claude to try to respond within 110 seconds (just under our 2-minute timeout)
         systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext // Add the gaming specialist prompt with website context
@@ -52,9 +52,19 @@ export const callClaudeApi = async (
       throw new Error('No insights returned from Claude AI');
     }
     
-    console.log('Successfully received insights from Anthropic:', data);
+    // Add explicit source marker to all insights
+    const markedInsights = data.insights.map((insight: StrategicInsight) => {
+      return {
+        ...insight,
+        source: 'document'  // Explicitly mark as document-derived
+      };
+    });
+    
+    console.log('Successfully received insights from Anthropic:', markedInsights.length);
+    console.log('Insight categories:', markedInsights.map((i: StrategicInsight) => i.category));
+    
     return { 
-      insights: data.insights || [],
+      insights: markedInsights || [],
       error: undefined
     };
   } catch (apiError: any) {
@@ -78,8 +88,15 @@ export const createTimeoutPromise = (
     setTimeout(() => {
       console.log('API request taking too long, falling back to mock insights');
       const mockInsights = generateComprehensiveInsights(project, documents);
+      
+      // Ensure all mock insights are marked as document-derived
+      const markedInsights = mockInsights.map(insight => ({
+        ...insight,
+        source: 'document'
+      }));
+      
       resolve({ 
-        insights: mockInsights, 
+        insights: markedInsights, 
         error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please use the Retry Analysis button." 
       });
     }, timeoutMs); // timeout in milliseconds

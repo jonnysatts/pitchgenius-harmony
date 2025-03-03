@@ -12,7 +12,17 @@ export const GAMING_SPECIALIST_PROMPT = `You are a Gaming Strategy Specialist AI
 4. Identifying opportunities for brands to connect with gaming audiences
 5. Evaluating ROI potential for gaming-related initiatives
 
-For each document analyzed, extract key information and develop strategic insights that could help the client leverage gaming for their business goals. Focus on practical, achievable recommendations that consider the client's industry, target audience, and business objectives.`;
+For each document analyzed, extract key information and develop strategic insights that could help the client leverage gaming for their business goals. Focus on practical, achievable recommendations that consider the client's industry, target audience, and business objectives.
+
+IMPORTANT: When generating insights, create at least 2-3 insights for EACH of the following categories:
+- business_challenges
+- audience_gaps
+- competitive_threats
+- gaming_opportunities
+- strategic_recommendations
+- key_narratives
+
+Ensure each insight has a clear category, title, summary, and detailed recommendations.`;
 
 /**
  * Generate context from a website URL for the AI system prompt
@@ -53,3 +63,28 @@ IMPORTANT:
 - If you can't find information for a particular category, that's fine, but make sure to use the other categories appropriately
 - Each insight must be categorized using only the provided category names`;
 };
+
+/**
+ * Generate an explicit marker for website-derived insights to distinguish them from document insights
+ */
+export const addWebsiteSourceMarker = (insight: any): any => {
+  if (!insight) return insight;
+  
+  // Deep clone the insight to avoid mutation issues
+  const markedInsight = JSON.parse(JSON.stringify(insight));
+  
+  // Add a clear source marker
+  markedInsight.source = 'website';
+  
+  // Also add a marker in the content if it exists
+  if (markedInsight.content) {
+    if (typeof markedInsight.content.summary === 'string') {
+      markedInsight.content.summary = `[Website-derived] ${markedInsight.content.summary}`;
+    }
+    
+    markedInsight.content.source = 'Website analysis';
+  }
+  
+  return markedInsight;
+};
+
