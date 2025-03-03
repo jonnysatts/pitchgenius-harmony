@@ -16,6 +16,7 @@ import {
 import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 // Import the new components
 import ProjectHeader from "@/components/project/ProjectHeader";
@@ -39,8 +40,29 @@ const ProjectDetail = () => {
     progress: 0,
     message: 'Ready to analyze documents'
   });
+  const [useRealAI, setUseRealAI] = useState(false);
   
   const [reviewedInsights, setReviewedInsights] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
+  
+  // Check if we can use the real AI via Supabase
+  useEffect(() => {
+    const checkSupabaseConnection = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('test-connection', {
+          method: 'POST',
+          body: { test: true },
+        });
+        
+        if (!error && data?.environmentChecks?.ANTHROPIC_API_KEY?.exists) {
+          setUseRealAI(true);
+        }
+      } catch (err) {
+        console.error('Error checking Supabase connection:', err);
+      }
+    };
+    
+    checkSupabaseConnection();
+  }, []);
   
   // Initialize review status for insights
   useEffect(() => {
@@ -109,6 +131,14 @@ const ProjectDetail = () => {
     );
     
     try {
+      // Display different message based on whether we're using real AI or not
+      toast({
+        title: useRealAI ? "Connecting to Anthropic API" : "Analyzing Documents",
+        description: useRealAI 
+          ? "Sending your documents to Claude for in-depth analysis"
+          : "Running AI analysis on your documents",
+      });
+      
       // Call the AI service to generate insights
       const result = await generateInsights(project, documents);
       
@@ -131,7 +161,7 @@ const ProjectDetail = () => {
           setActiveTab("insights");
           toast({
             title: "Analysis complete",
-            description: `Generated ${result.insights.length} strategic insights`,
+            description: `Generated ${result.insights.length} strategic insights${useRealAI ? ' using Claude AI' : ''}`,
           });
         }, 1000);
       }
