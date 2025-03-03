@@ -11,22 +11,45 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Add a function to test the connection to Supabase and check if we can access the secret
+// Test the connection to Supabase and check if we can access the secrets
 export const testSupabaseConnection = async () => {
   try {
+    console.log('Testing Supabase connection and secret access...');
+    
     const { data, error } = await supabase.functions.invoke('test-connection', {
       body: { test: true }
     });
     
     if (error) {
       console.error('Error testing Supabase connection:', error);
-      return { success: false, error };
+      return { 
+        success: false, 
+        error,
+        message: `Failed to connect to Supabase: ${error.message}` 
+      };
     }
     
     console.log('Supabase connection test result:', data);
-    return { success: true, data };
+    
+    // Check specifically for ANTHROPIC_API_KEY
+    const anthropicKeyExists = data?.environmentChecks?.ANTHROPIC_API_KEY?.exists;
+    
+    return { 
+      success: true, 
+      data,
+      allKeysFound: data?.allKeysFound,
+      keysStatus: data?.environmentChecks,
+      anthropicKeyExists,
+      message: anthropicKeyExists 
+        ? "Successfully connected to Supabase and verified access to ANTHROPIC_API_KEY"
+        : "Connected to Supabase but ANTHROPIC_API_KEY was not found in secrets"
+    };
   } catch (error) {
     console.error('Exception testing Supabase connection:', error);
-    return { success: false, error };
+    return { 
+      success: false, 
+      error,
+      message: `Exception during Supabase connection test: ${error.message}` 
+    };
   }
 };

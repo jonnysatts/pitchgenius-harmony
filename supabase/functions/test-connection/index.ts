@@ -1,63 +1,80 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// This function tests if we can access the Supabase secrets
-// and makes a minimal API call to demonstrate connectivity
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+console.log('Test connection function loaded')
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
   try {
-    // Verify we can access the environment variables
-    const apiKeys = {
-      // Check which API keys are available
-      hasOpenAiKey: !!Deno.env.get('OPEN_API_KEY'),
-      hasAnthropicKey: !!Deno.env.get('ANTHROPIC_API_KEY'),
-      hasGoogleClientEmail: !!Deno.env.get('GOOGLE_CLIENT_EMAIL'),
-      hasGooglePrivateKey: !!Deno.env.get('GOOGLE_PRIVATE_KEY'),
-      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
-      hasSupabaseAnonKey: !!Deno.env.get('SUPABASE_ANON_KEY'),
-      hasSupabaseServiceRoleKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
-      hasSupabaseDbUrl: !!Deno.env.get('SUPABASE_DB_URL'),
-    };
+    console.log('Received test connection request')
     
-    // If Anthropic API key is available, make a minimal test request
-    let anthropicTest = null;
-    if (apiKeys.hasAnthropicKey) {
-      const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-      try {
-        // Just test if the API key format is valid (begins with 'sk-')
-        // We're not making an actual API call to avoid costs
-        anthropicTest = {
-          keyValid: anthropicKey?.startsWith('sk-') || false,
-          keyLength: anthropicKey?.length,
-        };
-      } catch (error) {
-        anthropicTest = { error: error.message };
+    // Check for environment variables
+    const keys = [
+      'ANTHROPIC_API_KEY',
+      'OPEN_API_KEY',
+      'SUPABASE_URL',
+      'SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY'
+    ]
+    
+    const results = {}
+    let allKeysFound = true
+    
+    for (const key of keys) {
+      const value = Deno.env.get(key)
+      const exists = !!value
+      results[key] = {
+        exists,
+        // For security, only show first few chars of the actual key
+        preview: exists ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}` : null
+      }
+      
+      if (!exists) {
+        allKeysFound = false
       }
     }
     
+    console.log(`Keys check results: ${allKeysFound ? 'All keys found' : 'Some keys missing'}`)
+    
     return new Response(
       JSON.stringify({
-        success: true,
-        message: "Supabase connection test successful",
-        availableKeys: apiKeys,
-        anthropicTest,
+        message: 'Connection test successful',
         timestamp: new Date().toISOString(),
+        environmentChecks: results,
+        allKeysFound
       }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200,
-      },
+      { 
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
     )
   } catch (error) {
+    console.error('Error in test connection function:', error.message)
+    
     return new Response(
       JSON.stringify({
-        success: false,
-        error: error.message || "Unknown error occurred",
-        stack: error.stack,
+        error: error.message,
+        timestamp: new Date().toISOString()
       }),
-      {
-        headers: { 'Content-Type': 'application/json' },
+      { 
         status: 500,
-      },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
     )
   }
 })

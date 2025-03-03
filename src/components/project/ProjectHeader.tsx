@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Project } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, CheckCircle2, XCircle } from "lucide-react";
+import { InfoIcon, CheckCircle2, XCircle, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { testSupabaseConnection } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
   const [apiConnectionResult, setApiConnectionResult] = useState<{
     success?: boolean;
     message?: string;
+    keysDetails?: Record<string, any>;
   } | null>(null);
   
   const newProjectTitle = location.state?.newProjectTitle;
@@ -36,20 +37,22 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
       if (result.success) {
         setApiConnectionResult({
           success: true,
-          message: "Successfully connected to Supabase and accessed API keys"
+          message: result.message || "Successfully connected to Supabase",
+          keysDetails: result.keysStatus
         });
         toast({
           title: "API Connection Successful",
-          description: "Successfully connected to Supabase and verified API access",
+          description: result.message || "Successfully connected to Supabase",
         });
       } else {
         setApiConnectionResult({
           success: false,
-          message: `Failed to connect: ${result.error?.message || "Unknown error"}`
+          message: `Failed to connect: ${result.error?.message || result.message || "Unknown error"}`,
+          keysDetails: result.keysStatus
         });
         toast({
           title: "API Connection Failed",
-          description: `Could not verify Supabase connection: ${result.error?.message || "Unknown error"}`,
+          description: `Could not verify Supabase connection: ${result.error?.message || result.message || "Unknown error"}`,
           variant: "destructive"
         });
       }
@@ -86,9 +89,36 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
             <CheckCircle2 className="h-4 w-4 text-green-500" /> : 
             <XCircle className="h-4 w-4 text-red-500" />
           }
-          <AlertDescription className={apiConnectionResult.success ? 'text-green-700' : 'text-red-700'}>
-            {apiConnectionResult.message}
-          </AlertDescription>
+          <div className="w-full">
+            <AlertDescription className={apiConnectionResult.success ? 'text-green-700' : 'text-red-700'}>
+              {apiConnectionResult.message}
+            </AlertDescription>
+            
+            {apiConnectionResult.keysDetails && (
+              <div className="mt-2 text-sm">
+                <h4 className="font-semibold mb-1 flex items-center gap-1">
+                  <KeyRound size={14} /> API Keys Status:
+                </h4>
+                <ul className="space-y-1">
+                  {Object.entries(apiConnectionResult.keysDetails).map(([key, details]: [string, any]) => (
+                    <li key={key} className="flex items-center gap-1">
+                      {details.exists ? 
+                        <CheckCircle2 className="h-3 w-3 text-green-500" /> : 
+                        <XCircle className="h-3 w-3 text-red-500" />
+                      }
+                      <span className="font-mono text-xs">{key}:</span>
+                      <span className={details.exists ? 'text-green-600' : 'text-red-600'}>
+                        {details.exists ? 
+                          <span className="font-mono text-xs">{details.preview}</span> : 
+                          'Not found'
+                        }
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </Alert>
       )}
       
@@ -102,7 +132,7 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
           variant="outline"
           size="sm"
         >
-          {testingApi ? "Testing..." : "Test API Connection"}
+          {testingApi ? "Testing..." : "Test Supabase Secrets"}
         </Button>
       </div>
       
