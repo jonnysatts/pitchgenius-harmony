@@ -20,6 +20,7 @@ interface DocumentsTabContentProps {
   onAnalyzeWebsite?: () => void;
   isAnalyzingWebsite?: boolean;
   hasDocuments?: boolean;
+  websiteUrl?: string; // Added the missing websiteUrl property
 }
 
 const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({

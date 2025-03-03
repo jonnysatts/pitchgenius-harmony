@@ -45,10 +45,3 @@ For each insight, provide:
 
 Your insights should be practical, aligned with the client's industry and brand, and focused on achievable recommendations that would provide real business value.`;
 };
-
-// Export all prompt engineering utilities
-export {
-  generateWebsiteResearchPrompt,
-  generateWebsiteContext,
-  GAMING_SPECIALIST_PROMPT
-};
