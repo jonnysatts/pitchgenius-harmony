@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { Project, Document } from "@/lib/types";
 import { useDocuments } from "@/hooks/documents/useDocuments";
@@ -27,6 +26,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     error: aiError,
     processingComplete,
     usingFallbackInsights,
+    insufficientContent,
     handleAnalyzeDocuments,
     retryAnalysis,
     // Add website analysis functionality
@@ -77,6 +77,11 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     setActiveTab("presentation");
   }, []);
   
+  // Navigate to web insights tab
+  const handleNavigateToWebInsights = useCallback(() => {
+    setActiveTab("webinsights");
+  }, []);
+  
   // Automatically navigate to insights tab when document processing completes
   useEffect(() => {
     if (processingComplete && activeTab === "documents") {
@@ -114,6 +119,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     aiStatus,
     aiError,
     usingFallbackInsights,
+    insufficientContent,
     reviewedInsights,
     needsReviewCount,
     overallConfidence,
@@ -128,6 +134,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     handleUpdateInsight,
     handleNavigateToDocuments,
     handleNavigateToPresentation,
+    handleNavigateToWebInsights,
     handleRetryAnalysis,
     isNewProject,
     // Add website analysis functionality

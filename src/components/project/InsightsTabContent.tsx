@@ -26,11 +26,13 @@ interface InsightsTabContentProps {
   needsReviewCount?: number;
   usingFallbackInsights?: boolean;
   aiStatus?: AIProcessingStatus;
+  insufficientContent?: boolean;
   onAcceptInsight: (insightId: string) => void;
   onRejectInsight: (insightId: string) => void;
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   onNavigateToDocuments?: () => void;
   onNavigateToPresentation?: () => void;
+  onNavigateToWebInsights?: () => void;
   onRetryAnalysis?: () => void;
 }
 
@@ -43,11 +45,13 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   needsReviewCount = 0,
   usingFallbackInsights = false,
   aiStatus,
+  insufficientContent = false,
   onAcceptInsight,
   onRejectInsight,
   onUpdateInsight,
   onNavigateToDocuments,
   onNavigateToPresentation,
+  onNavigateToWebInsights,
   onRetryAnalysis
 }) => {
   // Only show document insights, not website insights
@@ -144,8 +148,10 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         </div>
       ) : (
         <InsightsEmptyState 
-          onNavigateToDocuments={onNavigateToDocuments} 
-          onRetryAnalysis={onRetryAnalysis} 
+          onNavigateToDocuments={onNavigateToDocuments}
+          onRetryAnalysis={onRetryAnalysis}
+          onAnalyzeWebsite={onNavigateToWebInsights}
+          insufficientContent={insufficientContent}
         />
       )}
     </div>

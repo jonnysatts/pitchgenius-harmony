@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from "react";
 import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
@@ -41,7 +40,9 @@ export const useAiAnalysis = (project: Project) => {
   const {
     useRealAI,
     setUseRealAI,
-    generateProjectInsights
+    generateProjectInsights,
+    insufficientContent,
+    setInsufficientContent
   } = useAiGeneration(
     project, 
     setInsights, 
@@ -99,6 +100,19 @@ export const useAiAnalysis = (project: Project) => {
 
   // Define the completion callback
   const handleProcessingComplete = useCallback((setActiveTab: (tab: string) => void) => {
+    // If there's insufficient content and no insights, offer to do website analysis
+    if (insufficientContent && insights.length === 0) {
+      toast({
+        title: "Document Analysis Complete",
+        description: "Not enough information in documents. Try website analysis instead.",
+        variant: "default"
+      });
+      
+      // Stay on insights tab to see the message
+      setActiveTab("insights");
+      return;
+    }
+    
     handleCompletionToast(usingFallbackInsights);
     
     // Ensure insights are persisted with fallback status
@@ -106,7 +120,7 @@ export const useAiAnalysis = (project: Project) => {
     
     // Navigate to insights tab
     setActiveTab("insights");
-  }, [handleCompletionToast, usingFallbackInsights, persistInsights, insights]);
+  }, [handleCompletionToast, usingFallbackInsights, persistInsights, insights, insufficientContent]);
 
   // Main function to analyze documents
   const handleAnalyzeDocuments = async (documents: Document[], setActiveTab: (tab: string) => void) => {
@@ -173,6 +187,7 @@ export const useAiAnalysis = (project: Project) => {
     useRealAI,
     processingComplete,
     usingFallbackInsights,
+    insufficientContent,
     setUseRealAI,
     handleAnalyzeDocuments,
     retryAnalysis,

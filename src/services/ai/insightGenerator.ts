@@ -14,12 +14,32 @@ import { prepareDocumentContents } from "./promptUtils";
 export const generateInsights = async (
   project: Project, 
   documents: Document[]
-): Promise<{ insights: StrategicInsight[], error?: string }> => {
+): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
   try {
     console.log(`Processing ${documents.length} documents for project ${project.id}`);
     
+    // Check for empty or minimal document content
+    if (documents.length === 0) {
+      return {
+        insights: [],
+        insufficientContent: true,
+        error: "No documents provided for analysis. Please upload documents or try website analysis."
+      };
+    }
+    
     // Prepare document contents
     const documentContents = prepareDocumentContents(documents, project);
+    
+    // Check for very small document contents (likely insufficient for analysis)
+    const totalContentSize = documentContents.reduce((total, doc) => total + (doc.content?.length || 0), 0);
+    if (totalContentSize < 200) { // Arbitrary small threshold
+      console.log('Document content appears too limited for meaningful analysis');
+      return {
+        insights: [],
+        insufficientContent: true,
+        error: "The uploaded documents contain very little content for analysis. Consider uploading more detailed documents or try website analysis."
+      };
+    }
 
     // Check if we're in development mode without Supabase or if Supabase connection failed
     const useRealApi = await checkSupabaseConnection();
@@ -40,10 +60,21 @@ export const generateInsights = async (
     
     try {
       // Race between the actual API call and the timeout
-      return await Promise.race([
+      const result = await Promise.race([
         callClaudeApi(project, documents, documentContents),
         timeoutPromise
       ]);
+      
+      // Pass through the insufficientContent flag if it exists
+      if (result.insufficientContent) {
+        return {
+          insights: [],
+          insufficientContent: true,
+          error: result.error
+        };
+      }
+      
+      return result;
     } catch (apiError: any) {
       console.log('Falling back to mock insights generator due to API error');
       const mockInsights = generateComprehensiveInsights(project, documents);

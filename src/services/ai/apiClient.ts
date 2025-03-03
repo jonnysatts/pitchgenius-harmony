@@ -15,7 +15,7 @@ export const callClaudeApi = async (
   project: Project,
   documents: Document[],
   documentContents: any[]
-): Promise<{ insights: StrategicInsight[], error?: string }> => {
+): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
   console.log('Making API call to Supabase Edge Function for Claude analysis...');
   
   const documentIds = documents.map(doc => doc.id);
@@ -45,6 +45,16 @@ export const callClaudeApi = async (
       console.error(`Edge Function error: ${errorMessage} (Status: ${statusCode})`);
       
       throw new Error(`Edge Function returned a non-2xx status code: ${statusCode} - ${errorMessage}`);
+    }
+    
+    // Check if the response indicates insufficient content
+    if (data && data.insufficientContent === true) {
+      console.log('Claude AI reported insufficient document content for meaningful insights');
+      return {
+        insights: [],
+        insufficientContent: true,
+        error: "Not enough information in documents to generate meaningful insights. Consider uploading more detailed documents or try website analysis."
+      };
     }
     
     // Check if we received valid insights from the API
