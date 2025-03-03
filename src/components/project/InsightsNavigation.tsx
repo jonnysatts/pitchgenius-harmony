@@ -17,11 +17,11 @@ const InsightsNavigation: React.FC<InsightsNavigationProps> = ({
   return (
     <div className="flex justify-center mt-8">
       <Button 
-        onClick={onNavigateToPresentation} 
-        className="flex items-center gap-2"
+        onClick={onNavigateToPresentation}
         size="lg"
+        className="flex items-center gap-2"
       >
-        Proceed to Presentation
+        Proceed to Presentation Builder
         <ArrowRight size={16} />
       </Button>
     </div>

@@ -1,60 +1,99 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Project } from "@/lib/types";
-import { calculateOverallConfidence, countInsightsNeedingReview } from "@/services/ai";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback, useEffect } from "react";
+import { Project, Document } from "@/lib/types";
+import { useDocuments } from "@/hooks/documents/useDocuments";
+import { useAiAnalysis } from "@/hooks/useAiAnalysis";
+import useInsightsReview from "@/hooks/useInsightsReview";
 
-export const useProjectDetail = (
-  project: Project | null,
-  projectId: string | undefined,
-  insights: any[],
-  processingComplete: boolean
-) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("documents");
+export const useProjectDetail = (projectId: string, userId: string, project: Project) => {
+  const [activeTab, setActiveTab] = useState<string>("documents");
   
-  // If project not found, redirect to dashboard
-  useEffect(() => {
-    if (!project && projectId) {
-      toast({
-        title: "Project not found",
-        description: "The project you're looking for doesn't exist or has been deleted.",
-        variant: "destructive"
-      });
-      navigate("/dashboard");
-    }
-  }, [project, projectId, navigate, toast]);
+  // Handle documents for the project
+  const {
+    documents,
+    isLoading: documentsLoading,
+    error: documentsError,
+    failedUploads,
+    handleFilesSelected,
+    handleRemoveDocument
+  } = useDocuments(projectId, userId);
   
-  // If analysis is complete, navigate to insights tab
+  // Handle AI analysis of documents
+  const {
+    insights,
+    aiStatus,
+    error: aiError,
+    processingComplete,
+    usingFallbackInsights,
+    handleAnalyzeDocuments,
+    retryAnalysis
+  } = useAiAnalysis(project);
+  
+  // Handle insights review
+  const {
+    reviewedInsights,
+    needsReviewCount,
+    overallConfidence,
+    acceptedInsights,
+    rejectedInsights,
+    handleAcceptInsight,
+    handleRejectInsight
+  } = useInsightsReview(insights);
+  
+  // Set up retry analysis handler
+  const handleRetryAnalysis = useCallback(() => {
+    const retryHandler = retryAnalysis(setActiveTab);
+    retryHandler(documents);
+  }, [retryAnalysis, documents, setActiveTab]);
+  
+  // Handle document analysis
+  const handleAnalyzeProjectDocuments = useCallback(() => {
+    if (documents.length === 0) return;
+    handleAnalyzeDocuments(documents, setActiveTab);
+  }, [documents, handleAnalyzeDocuments]);
+  
+  // Navigate to documents tab
+  const handleNavigateToDocuments = useCallback(() => {
+    setActiveTab("documents");
+  }, []);
+  
+  // Navigate to presentation tab
+  const handleNavigateToPresentation = useCallback(() => {
+    setActiveTab("presentation");
+  }, []);
+  
+  // Automatically navigate to insights tab when processing completes
   useEffect(() => {
-    if (processingComplete && insights.length > 0) {
+    if (processingComplete) {
       setActiveTab("insights");
     }
-  }, [processingComplete, insights.length]);
-  
-  // Calculate stats from insights
-  const overallConfidence = calculateOverallConfidence(insights);
-  const needsReviewCount = countInsightsNeedingReview(insights);
-  
-  // Navigation helpers
-  const navigateToPresentation = () => {
-    setActiveTab("presentation");
-    toast({
-      title: "Proceeding to presentation",
-      description: "Now you can create a presentation based on your accepted insights"
-    });
-  };
-  
-  const isNewProject = project?.id.startsWith('new_');
+  }, [processingComplete]);
   
   return {
     activeTab,
     setActiveTab,
-    overallConfidence,
+    documents,
+    documentsLoading,
+    documentsError,
+    failedUploads,
+    insights,
+    aiStatus,
+    aiError,
+    usingFallbackInsights,
+    reviewedInsights,
     needsReviewCount,
-    navigateToPresentation,
-    isNewProject
+    overallConfidence,
+    acceptedInsights,
+    rejectedInsights,
+    handleFilesSelected,
+    handleRemoveDocument,
+    handleAnalyzeProjectDocuments,
+    handleAcceptInsight,
+    handleRejectInsight,
+    handleNavigateToDocuments,
+    handleNavigateToPresentation,
+    handleRetryAnalysis
   };
 };
+
+export default useProjectDetail;

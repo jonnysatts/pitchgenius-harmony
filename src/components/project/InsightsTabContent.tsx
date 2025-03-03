@@ -62,7 +62,26 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   
   // Check if all insights have been reviewed (none are pending)
   const allInsightsReviewed = insights.length > 0 && 
-    Object.values(reviewedInsights).every(status => status === 'accepted' || status === 'rejected');
+    insights.every(insight => reviewedInsights[insight.id] === 'accepted' || reviewedInsights[insight.id] === 'rejected');
+  
+  // Handler for the Proceed to Presentation button
+  const handleProceedToPresentation = () => {
+    // Log a message before navigating
+    console.log('Proceeding to presentation with:', { 
+      acceptedInsights: acceptedCount,
+      rejectedInsights: rejectedCount,
+      totalInsights: insights.length
+    });
+    
+    // Show a toast notification
+    toast({
+      title: "Proceeding to Presentation",
+      description: `Building presentation with ${acceptedCount} strategic insights`,
+    });
+    
+    // Navigate to the presentation tab
+    onNavigateToPresentation();
+  };
   
   return (
     <div className="bg-white p-6 rounded-lg border">
@@ -71,7 +90,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         
         {allInsightsReviewed && (
           <Button 
-            onClick={onNavigateToPresentation} 
+            onClick={handleProceedToPresentation} 
             className="flex items-center gap-2"
           >
             Proceed to Presentation
@@ -116,7 +135,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
           {/* Bottom button for navigating to presentation */}
           <InsightsNavigation 
             showButton={allInsightsReviewed} 
-            onNavigateToPresentation={onNavigateToPresentation} 
+            onNavigateToPresentation={handleProceedToPresentation} 
           />
         </div>
       )}
