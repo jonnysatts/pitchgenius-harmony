@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { Project, Document } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
@@ -114,6 +113,12 @@ export const useAiAnalysis = (project: Project) => {
       // Start monitoring
       monitorProgress(setActiveTab);
       
+      // Add a toast notification for retry attempt
+      toast({
+        title: "Retrying Claude AI Analysis",
+        description: `Analyzing ${documents.length} documents again with Claude AI...`,
+      });
+      
       // Try to generate insights
       const success = await generateProjectInsights(documents);
       
@@ -122,7 +127,7 @@ export const useAiAnalysis = (project: Project) => {
         generateFallbackInsights(documents);
       }
     };
-  }, [setError, setUsingFallbackInsights, setAiStatus, startProcessing, handleProcessingComplete, generateProjectInsights, generateFallbackInsights]);
+  }, [setError, setUsingFallbackInsights, setAiStatus, startProcessing, handleProcessingComplete, generateProjectInsights, generateFallbackInsights, toast]);
 
   return {
     insights,

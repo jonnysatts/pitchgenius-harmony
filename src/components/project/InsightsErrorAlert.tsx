@@ -17,12 +17,6 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
 }) => {
   if (!error && !usingFallbackInsights) return null;
   
-  const handleRetryAnalysis = () => {
-    if (onRetryAnalysis) {
-      onRetryAnalysis();
-    }
-  };
-
   return (
     <Alert variant="default" className="mb-4">
       <AlertTriangle className="h-4 w-4" />
@@ -30,12 +24,12 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
         <div>
           {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
         </div>
-        {(error?.includes("timeout") || error?.includes("Claude AI")) && onRetryAnalysis && (
+        {onRetryAnalysis && (
           <Button 
             size="sm" 
             variant="outline" 
             className="flex items-center gap-1"
-            onClick={handleRetryAnalysis}
+            onClick={onRetryAnalysis}
           >
             <RefreshCw size={14} />
             Retry Analysis
