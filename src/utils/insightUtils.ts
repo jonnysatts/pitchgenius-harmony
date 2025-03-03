@@ -49,3 +49,68 @@ export const formatCategoryTitle = (category: string): string => {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };
+
+/**
+ * Calculate category distribution metrics
+ */
+export const getCategoryDistribution = (insights: StrategicInsight[]): Record<string, number> => {
+  return insights.reduce((distribution, insight) => {
+    const category = insight.category || 'other';
+    distribution[category] = (distribution[category] || 0) + 1;
+    return distribution;
+  }, {} as Record<string, number>);
+};
+
+/**
+ * Calculate confidence level distribution
+ */
+export const getConfidenceDistribution = (insights: StrategicInsight[]): Record<string, number> => {
+  const ranges = {
+    'very_high': 0, // 90-100
+    'high': 0,      // 80-89
+    'medium': 0,    // 70-79
+    'low': 0,       // 60-69
+    'very_low': 0   // <60
+  };
+  
+  insights.forEach(insight => {
+    const confidence = insight.confidence;
+    if (confidence >= 90) ranges.very_high++;
+    else if (confidence >= 80) ranges.high++;
+    else if (confidence >= 70) ranges.medium++;
+    else if (confidence >= 60) ranges.low++;
+    else ranges.very_low++;
+  });
+  
+  return ranges;
+};
+
+/**
+ * Calculate priority level distribution
+ */
+export const getPriorityDistribution = (insights: StrategicInsight[]): Record<string, number> => {
+  return insights.reduce((distribution, insight) => {
+    const priority = insight.priorityLevel || 'unspecified';
+    distribution[priority] = (distribution[priority] || 0) + 1;
+    return distribution;
+  }, {} as Record<string, number>);
+};
+
+/**
+ * Calculate review status distribution
+ */
+export const getReviewStatusDistribution = (
+  reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>
+): Record<string, number> => {
+  const statusCount = {
+    accepted: 0,
+    rejected: 0,
+    pending: 0
+  };
+  
+  Object.values(reviewedInsights).forEach(status => {
+    statusCount[status]++;
+  });
+  
+  return statusCount;
+};

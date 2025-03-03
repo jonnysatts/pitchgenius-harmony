@@ -3,6 +3,7 @@ import React from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export enum ViewMode {
+  DASHBOARD = "dashboard",
   STRATEGIC_ANALYSIS = "strategic_analysis",
   NARRATIVE_FRAMEWORK = "narrative_framework",
   ENHANCED_ELEMENTS = "enhanced_elements"
@@ -20,6 +21,8 @@ const ViewModeSwitcher: React.FC<ViewModeSwitcherProps> = ({
   // Get description based on the current view mode
   const getViewModeDescription = (mode: ViewMode): string => {
     switch (mode) {
+      case ViewMode.DASHBOARD:
+        return "View visual dashboard with metrics and charts for your strategic insights";
       case ViewMode.STRATEGIC_ANALYSIS:
         return "Review insights organized by strategic analysis categories";
       case ViewMode.NARRATIVE_FRAMEWORK:
@@ -33,7 +36,10 @@ const ViewModeSwitcher: React.FC<ViewModeSwitcherProps> = ({
 
   return (
     <Tabs value={viewMode} onValueChange={onViewModeChange} className="mb-6">
-      <TabsList className="grid grid-cols-3 w-full max-w-lg mb-2">
+      <TabsList className="grid grid-cols-4 w-full max-w-xl mb-2">
+        <TabsTrigger value={ViewMode.DASHBOARD}>
+          Dashboard
+        </TabsTrigger>
         <TabsTrigger value={ViewMode.STRATEGIC_ANALYSIS}>
           Strategic Analysis
         </TabsTrigger>

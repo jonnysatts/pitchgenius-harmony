@@ -10,6 +10,7 @@ import ViewModeSwitcher, { ViewMode } from "@/components/project/insights/ViewMo
 import StrategicAnalysisView from "@/components/project/insights/StrategicAnalysisView";
 import NarrativeFrameworkView from "@/components/project/insights/NarrativeFrameworkView";
 import EnhancedStrategyView from "@/components/project/insights/EnhancedStrategyView";
+import InsightsDashboard from "@/components/project/insights/InsightsDashboard";
 import InsightsHeader from "@/components/project/insights/InsightsHeader";
 import { strategicCategories, narrativeSections } from "@/components/project/insights/constants";
 
@@ -45,7 +46,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   onRetryAnalysis
 }) => {
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.STRATEGIC_ANALYSIS);
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.DASHBOARD);
   
   // Determine if Claude is in the intensive processing phase
   const isClaudeProcessing = aiStatus?.status === 'processing' && 
@@ -100,16 +101,6 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         onRetryAnalysis={onRetryAnalysis} 
       />
       
-      {insights.length > 0 && (
-        <InsightsStats 
-          overallConfidence={overallConfidence}
-          acceptedCount={acceptedCount}
-          rejectedCount={rejectedCount}
-          totalInsights={insights.length}
-          needsReviewCount={needsReviewCount}
-        />
-      )}
-      
       {insights.length === 0 ? (
         <InsightsEmptyState onNavigateToDocuments={onNavigateToDocuments} />
       ) : (
@@ -119,6 +110,14 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />
+          
+          {/* Dashboard View */}
+          {viewMode === ViewMode.DASHBOARD && (
+            <InsightsDashboard 
+              insights={insights}
+              reviewedInsights={reviewedInsights}
+            />
+          )}
           
           {/* Strategic Analysis View */}
           {viewMode === ViewMode.STRATEGIC_ANALYSIS && (
