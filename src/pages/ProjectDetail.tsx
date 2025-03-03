@@ -52,6 +52,7 @@ const ProjectDetail = () => {
     aiStatus,
     error,
     useRealAI,
+    processingComplete,
     setUseRealAI,
     handleAnalyzeDocuments
   } = useAiAnalysis(project);
@@ -61,6 +62,13 @@ const ProjectDetail = () => {
     handleAcceptInsight,
     handleRejectInsight
   } = useInsightsReview(insights);
+  
+  // Effect to switch to insights tab when processing completes
+  useEffect(() => {
+    if (processingComplete && insights.length > 0) {
+      setActiveTab("insights");
+    }
+  }, [processingComplete, insights.length]);
   
   // Check if we can use the real AI via Supabase
   useEffect(() => {

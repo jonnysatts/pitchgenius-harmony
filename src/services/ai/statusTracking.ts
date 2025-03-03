@@ -23,7 +23,8 @@ export const getAIProcessingStatus = (projectId: string): AIProcessingStatus => 
  */
 export const monitorAIProcessingProgress = (
   projectId: string,
-  onStatusUpdate: (status: AIProcessingStatus) => void
+  onStatusUpdate: (status: AIProcessingStatus) => void,
+  onCompletionCallback?: () => void
 ): () => void => {
   let cancelled = false;
   let progress = 0;
@@ -74,22 +75,29 @@ export const monitorAIProcessingProgress = (
         progress,
         message: `Processing AI-generated insights...`
       });
-    } else if (progress < 99) { // Changed from 100 to 99 to avoid the edge case
+    } else if (progress < 99) {
       onStatusUpdate({
         status: 'processing',
         progress,
         message: `Finalizing comprehensive insights...`
       });
     } else {
-      // When we reach 100%, we don't clear the interval immediately
-      // Instead, we send the completed status and then clear
+      // When we reach 100%, update status to completed and trigger callback
       onStatusUpdate({
         status: 'completed',
         progress: 100,
         message: 'AI analysis complete!'
       });
       
-      // Clear the interval *after* sending the status update
+      // Call the completion callback if provided
+      if (onCompletionCallback) {
+        // Add a small delay to ensure UI updates before callback
+        setTimeout(() => {
+          onCompletionCallback();
+        }, 500);
+      }
+      
+      // Clear the interval after sending the status update
       if (interval) clearInterval(interval);
       interval = null;
     }

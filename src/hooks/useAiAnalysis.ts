@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Project, Document, StrategicInsight, AIProcessingStatus } from "@/lib/types";
 import { 
   generateInsights, 
@@ -17,11 +17,27 @@ export const useAiAnalysis = (project: Project) => {
   });
   const [error, setError] = useState<string | null>(null);
   const [useRealAI, setUseRealAI] = useState(false);
+  const [processingComplete, setProcessingComplete] = useState(false);
 
   const updateUseRealAI = (value: boolean) => {
     setUseRealAI(value);
     console.log(`${value ? 'Using real AI' : 'Using mock AI'} for document analysis`);
   };
+
+  // Define the completion callback
+  const handleProcessingComplete = useCallback((setActiveTab: (tab: string) => void) => {
+    console.log("AI processing complete, navigating to insights tab");
+    setProcessingComplete(true);
+    
+    // Navigate to insights tab
+    setActiveTab("insights");
+    
+    // Show completion toast
+    toast({
+      title: "Analysis complete",
+      description: `Generated ${insights.length} strategic insights${useRealAI ? ' using Claude AI' : ''}`,
+    });
+  }, [insights.length, toast, useRealAI]);
 
   const handleAnalyzeDocuments = async (documents: Document[], setActiveTab: (tab: string) => void) => {
     if (documents.length === 0) {
@@ -33,8 +49,9 @@ export const useAiAnalysis = (project: Project) => {
       return;
     }
     
-    // Reset any previous errors
+    // Reset any previous errors and status
     setError(null);
+    setProcessingComplete(false);
     
     // Update status to processing
     setAiStatus({
@@ -43,10 +60,11 @@ export const useAiAnalysis = (project: Project) => {
       message: 'Starting document analysis...'
     });
     
-    // Set up progress monitoring
+    // Set up progress monitoring with completion callback
     const cancelMonitoring = monitorAIProcessingProgress(
       project.id,
-      (status) => setAiStatus(status)
+      (status) => setAiStatus(status),
+      () => handleProcessingComplete(setActiveTab)
     );
     
     try {
@@ -77,19 +95,8 @@ export const useAiAnalysis = (project: Project) => {
         setError(result.error);
       } else {
         setInsights(result.insights);
-        
-        // We don't need to immediately set the active tab here
-        // Let the progress monitor handle the completion state
-        // This prevents premature navigation
-        
-        // Only set the active tab and show toast when the analysis is complete
-        if (aiStatus.status === 'completed' || aiStatus.progress === 100) {
-          setActiveTab("insights");
-          toast({
-            title: "Analysis complete",
-            description: `Generated ${result.insights.length} strategic insights from ${documents.length} documents${useRealAI ? ' using Claude AI' : ''}`,
-          });
-        }
+        // Note: We don't need to manually set active tab here
+        // The completion callback in the monitor will handle this
       }
     } catch (error: any) {
       console.error("Error analyzing documents:", error);
@@ -105,11 +112,9 @@ export const useAiAnalysis = (project: Project) => {
         message: errorMessage
       });
       setError(errorMessage);
-    } finally {
-      // Don't cancel monitoring here - let it complete naturally
-      // This allows us to see the 100% completion state
-      // cancelMonitoring will be called when the component unmounts
-      // or when a new analysis is started
+      
+      // Cancel monitoring on error
+      cancelMonitoring();
     }
   };
 
@@ -118,6 +123,7 @@ export const useAiAnalysis = (project: Project) => {
     aiStatus,
     error,
     useRealAI,
+    processingComplete,
     setUseRealAI: updateUseRealAI,
     handleAnalyzeDocuments,
     setInsights,
