@@ -69,6 +69,18 @@ export const useDocuments = (projectId: string, userId: string) => {
       return;
     }
     
+    // Check if adding these files would exceed max files
+    // We add this check early to prevent starting uploads that would exceed the limit
+    const maxFiles = 20; // Same as in the FileUpload component 
+    if (documents.length + files.length > maxFiles) {
+      toast({
+        title: "Too many files",
+        description: `You can upload a maximum of ${maxFiles} documents in total.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     const newDocuments: Document[] = [];

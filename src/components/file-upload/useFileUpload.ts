@@ -81,15 +81,18 @@ export const useFileUpload = ({
     // Convert FileList to array
     const filesArray = Array.from(filesToProcess);
     
-    // Check if adding these files would exceed max files
-    if (selectedFiles.length + filesArray.length > maxFiles) {
+    // Check if adding these files would exceed max files in this batch
+    if (filesArray.length > maxFiles) {
       toast({
         title: "Too many files",
-        description: `You can upload a maximum of ${maxFiles} files.`,
+        description: `You can upload a maximum of ${maxFiles} files at once.`,
         variant: "destructive"
       });
       return;
     }
+    
+    // We don't check against total documents here - that's handled in useDocuments.ts
+    // This just validates the current batch being uploaded
     
     filesArray.forEach(file => {
       const error = validateFile(file);
