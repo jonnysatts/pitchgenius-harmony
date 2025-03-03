@@ -9,7 +9,7 @@ import { Project } from "@/lib/types";
 
 // Import hooks
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
-import { useDocuments } from "@/hooks/useDocuments";
+import { useDocuments } from "@/hooks/documents/useDocuments";
 import { useInsightsReview } from "@/hooks/useInsightsReview";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
 

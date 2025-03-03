@@ -1,11 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Document } from "@/lib/types";
-import { calculateDocumentPriority } from "@/services/documentService";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  fetchProjectDocuments, 
   uploadDocumentToStorage, 
   insertDocumentRecord, 
   removeDocument,
@@ -14,58 +12,59 @@ import {
   DocumentNotFoundError,
   AuthenticationError
 } from "@/services/documentStorage";
+import { calculateDocumentPriority } from "@/services/documentService";
 
-export const useDocuments = (projectId: string, userId: string) => {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const useDocumentActions = (
+  projectId: string,
+  userId: string,
+  setDocuments: React.Dispatch<React.SetStateAction<Document[]>>,
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
+  setError: React.Dispatch<React.SetStateAction<string | null>>,
+  setFailedUploads: React.Dispatch<React.SetStateAction<{filename: string; error: string}[]>>
+) => {
   const { toast } = useToast();
   
-  // Track failed documents for better error reporting
-  const [failedUploads, setFailedUploads] = useState<{
-    filename: string;
-    error: string;
-  }[]>([]);
-
-  // Fetch existing documents when component mounts
-  useEffect(() => {
-    if (!projectId) return;
-    
-    const loadDocuments = async () => {
+  const handleRemoveDocument = async (documentId: string) => {
+    try {
       setIsLoading(true);
       setError(null);
       
-      try {
-        const docs = await fetchProjectDocuments(projectId);
-        setDocuments(docs);
-      } catch (err) {
-        console.error('Error fetching documents:', err);
-        
-        let errorMessage = "Failed to load documents";
-        
-        if (err instanceof DatabaseError) {
-          errorMessage = `Database error: ${err.message}`;
-        } else if (err instanceof AuthenticationError) {
-          errorMessage = "You need to be logged in to view documents";
-        } else if (err instanceof Error) {
-          errorMessage = err.message;
-        }
-        
-        setError(errorMessage);
-        
-        toast({
-          title: "Error fetching documents",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+      await removeDocument(documentId);
+      
+      // Update local state
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
+      toast({
+        title: "Document removed",
+        description: "Document has been removed from the project",
+      });
+    } catch (err) {
+      console.error('Error removing document:', err);
+      
+      let errorMessage = "Failed to remove document";
+      
+      if (err instanceof DatabaseError) {
+        errorMessage = `Database error: ${err.message}`;
+      } else if (err instanceof DocumentNotFoundError) {
+        errorMessage = err.message;
+        // Still remove from local state if the document wasn't found in the database
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      } else if (err instanceof AuthenticationError) {
+        errorMessage = "You need to be logged in to remove documents";
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
       }
-    };
-
-    loadDocuments();
-  }, [projectId, toast]);
-
+      
+      toast({
+        title: "Error removing document",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const handleFilesSelected = async (files: File[]) => {
     if (!userId || !projectId) {
       toast({
@@ -82,28 +81,59 @@ export const useDocuments = (projectId: string, userId: string) => {
     // Check if adding these files would exceed max files
     // We add this check early to prevent starting uploads that would exceed the limit
     const maxFiles = 20; // Same as in the FileUpload component 
-    if (documents.length + files.length > maxFiles) {
-      toast({
-        title: "Too many files",
-        description: `You can upload a maximum of ${maxFiles} documents in total.`,
-        variant: "destructive"
-      });
-      return;
-    }
     
-    setIsLoading(true);
-    setError(null);
-    const newDocuments: Document[] = [];
-    let failedUploads = 0;
-    let failedDocuments: {filename: string; error: string}[] = [];
-    
+    // We need to get the current documents count before we check
     try {
-      // Check for authentication first to prevent trying every file
+      setIsLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new AuthenticationError();
       }
       
+      setDocuments(prev => {
+        // Check against limit with current documents
+        if (prev.length + files.length > maxFiles) {
+          setIsLoading(false);
+          toast({
+            title: "Too many files",
+            description: `You can upload a maximum of ${maxFiles} documents in total.`,
+            variant: "destructive"
+          });
+          return prev;
+        }
+        return prev;
+      });
+      
+      // Continue with upload if we didn't exceed the limit
+      await processFileUploads(files, projectId, userId);
+      
+    } catch (err) {
+      console.error('Error checking auth or limits:', err);
+      let errorMessage = "Error checking document limits";
+      
+      if (err instanceof AuthenticationError) {
+        errorMessage = "You need to be logged in to upload documents";
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      
+      toast({
+        title: "Upload error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+  
+  const processFileUploads = async (files: File[], projectId: string, userId: string) => {
+    const newDocuments: Document[] = [];
+    let failedUploads = 0;
+    let failedDocuments: {filename: string; error: string}[] = [];
+    
+    try {
       for (const file of files) {
         try {
           // Calculate priority
@@ -222,52 +252,7 @@ export const useDocuments = (projectId: string, userId: string) => {
     }
   };
   
-  const handleRemoveDocument = async (documentId: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      await removeDocument(documentId);
-      
-      // Update local state
-      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      
-      toast({
-        title: "Document removed",
-        description: "Document has been removed from the project",
-      });
-    } catch (err) {
-      console.error('Error removing document:', err);
-      
-      let errorMessage = "Failed to remove document";
-      
-      if (err instanceof DatabaseError) {
-        errorMessage = `Database error: ${err.message}`;
-      } else if (err instanceof DocumentNotFoundError) {
-        errorMessage = err.message;
-        // Still remove from local state if the document wasn't found in the database
-        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      } else if (err instanceof AuthenticationError) {
-        errorMessage = "You need to be logged in to remove documents";
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      
-      toast({
-        title: "Error removing document",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return {
-    documents,
-    isLoading,
-    error,
-    failedUploads,
     handleFilesSelected,
     handleRemoveDocument
   };
