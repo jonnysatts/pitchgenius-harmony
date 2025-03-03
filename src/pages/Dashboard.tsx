@@ -9,15 +9,23 @@ import ProjectList from "@/components/dashboard/ProjectList";
 import CreateProjectDialog from "@/components/dashboard/CreateProjectDialog";
 import { useToast } from "@/hooks/use-toast";
 
+// Define ProjectFormData type to match the interface in CreateProjectDialog
+interface ProjectFormData {
+  title: string;
+  clientName: string;
+  clientIndustry: "retail" | "finance" | "technology" | "entertainment" | "other";
+  clientWebsite?: string; // Make this optional to match CreateProjectDialog
+}
+
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newProject, setNewProject] = useState({
+  const [newProject, setNewProject] = useState<ProjectFormData>({
     title: "",
     clientName: "",
-    clientIndustry: "retail" as "retail" | "finance" | "technology" | "entertainment" | "other",
-    clientWebsite: ""
+    clientIndustry: "retail",
+    clientWebsite: "" // Initialize with empty string
   });
   
   const navigate = useNavigate();
@@ -46,6 +54,11 @@ const Dashboard = () => {
     // Navigation is now handled in CreateProjectDialog component
     setIsCreateDialogOpen(false);
   };
+
+  // Handler function that properly updates the form data
+  const updateProjectData = (data: ProjectFormData) => {
+    setNewProject(data);
+  };
   
   return (
     <AppLayout>
@@ -60,7 +73,7 @@ const Dashboard = () => {
             isOpen={isCreateDialogOpen}
             setIsOpen={setIsCreateDialogOpen}
             projectData={newProject}
-            setProjectData={setNewProject}
+            setProjectData={updateProjectData}
             onCreateProject={handleCreateProject}
           />
         </div>

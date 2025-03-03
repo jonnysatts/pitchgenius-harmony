@@ -9,18 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlusCircle, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface ProjectFormData {
+export interface ProjectFormData {
   title: string;
   clientName: string;
   clientIndustry: "retail" | "finance" | "technology" | "entertainment" | "other";
-  clientWebsite?: string;
+  clientWebsite?: string; // Explicitly making this optional
 }
 
 interface CreateProjectDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   projectData: ProjectFormData;
-  setProjectData: (data: ProjectFormData) => void;
+  setProjectData: (data: ProjectFormData) => void; // This should now match our updated type
   onCreateProject: () => void;
 }
 
