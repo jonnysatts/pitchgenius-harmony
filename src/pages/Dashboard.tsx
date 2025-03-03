@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [newProject, setNewProject] = useState({
     title: "",
     clientName: "",
-    clientIndustry: "retail" as const
+    clientIndustry: "retail" as "retail" | "finance" | "technology" | "entertainment" | "other"
   });
   
   const navigate = useNavigate();
