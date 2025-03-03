@@ -1,6 +1,6 @@
 
-import React from "react";
-import { Project, StrategicInsight, AIProcessingStatus } from "@/lib/types";
+import React, { useState } from "react";
+import { Project, StrategicInsight, AIProcessingStatus, InsightCategory } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import {
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
 import InsightsStats from "@/components/project/InsightsStats";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
@@ -68,6 +69,51 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const acceptedCount = documentInsights.filter(
     insight => reviewedInsights[insight.id] === 'accepted'
   ).length;
+
+  // Group insights by category
+  const insightsByCategory: Record<InsightCategory, StrategicInsight[]> = {} as Record<InsightCategory, StrategicInsight[]>;
+  
+  // Initialize with empty arrays for all categories
+  const allCategories: InsightCategory[] = [
+    "business-challenges",
+    "audience-engagement",
+    "competitive-landscape",
+    "gaming-integration",
+    "strategic-recommendations",
+    "cultural-insights"
+  ];
+  
+  allCategories.forEach(category => {
+    insightsByCategory[category] = [];
+  });
+  
+  // Fill the categories with insights
+  documentInsights.forEach(insight => {
+    if (insight.category) {
+      if (!insightsByCategory[insight.category]) {
+        insightsByCategory[insight.category] = [];
+      }
+      insightsByCategory[insight.category].push(insight);
+    }
+  });
+  
+  // Get list of categories that have insights
+  const categoriesWithInsights = allCategories.filter(
+    category => insightsByCategory[category] && insightsByCategory[category].length > 0
+  );
+  
+  // Get friendly category names for display
+  const getCategoryName = (category: InsightCategory): string => {
+    switch (category) {
+      case "business-challenges": return "Business Challenges";
+      case "audience-engagement": return "Audience Engagement";
+      case "competitive-landscape": return "Competitive Landscape";
+      case "gaming-integration": return "Gaming Integration";
+      case "strategic-recommendations": return "Strategic Recommendations";
+      case "cultural-insights": return "Cultural Insights";
+      default: return category;
+    }
+  };
   
   return (
     <div className="bg-white p-6 rounded-lg border">
@@ -134,17 +180,55 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
       )}
       
       {hasInsights ? (
-        <div className="space-y-6">
-          {documentInsights.map((insight) => (
-            <StrategicInsightCard
-              key={insight.id}
-              insight={insight}
-              reviewStatus={reviewedInsights[insight.id] || 'pending'}
-              onAccept={() => onAcceptInsight(insight.id)}
-              onReject={() => onRejectInsight(insight.id)}
-              onUpdate={(updatedContent) => onUpdateInsight(insight.id, updatedContent)}
-            />
-          ))}
+        <div>
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
+              <TabsTrigger value="all" className="whitespace-nowrap">
+                All Categories
+              </TabsTrigger>
+              {categoriesWithInsights.map(category => (
+                <TabsTrigger 
+                  key={category} 
+                  value={category}
+                  className="whitespace-nowrap"
+                >
+                  {getCategoryName(category)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <TabsContent value="all">
+              <div className="space-y-6">
+                {documentInsights.map((insight) => (
+                  <StrategicInsightCard
+                    key={insight.id}
+                    insight={insight}
+                    reviewStatus={reviewedInsights[insight.id] || 'pending'}
+                    onAccept={() => onAcceptInsight(insight.id)}
+                    onReject={() => onRejectInsight(insight.id)}
+                    onUpdate={(updatedContent) => onUpdateInsight(insight.id, updatedContent)}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+            
+            {categoriesWithInsights.map(category => (
+              <TabsContent key={category} value={category}>
+                <div className="space-y-6">
+                  {insightsByCategory[category].map((insight) => (
+                    <StrategicInsightCard
+                      key={insight.id}
+                      insight={insight}
+                      reviewStatus={reviewedInsights[insight.id] || 'pending'}
+                      onAccept={() => onAcceptInsight(insight.id)}
+                      onReject={() => onRejectInsight(insight.id)}
+                      onUpdate={(updatedContent) => onUpdateInsight(insight.id, updatedContent)}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
       ) : (
         <InsightsEmptyState 
