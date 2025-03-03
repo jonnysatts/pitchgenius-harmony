@@ -7,3 +7,4 @@ export { generateInsights } from "./insightGenerator";
 export { generateComprehensiveInsights } from "./mockGenerator";
 export { getAIProcessingStatus, monitorAIProcessingProgress } from "./statusTracking";
 export { calculateOverallConfidence, countInsightsNeedingReview } from "./insightAnalytics";
+export { GAMING_SPECIALIST_PROMPT, generateWebsiteContext } from "./promptEngineering";
