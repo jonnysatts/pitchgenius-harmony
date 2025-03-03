@@ -65,7 +65,7 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
   
   // Make sure all insights have the source field set to 'website'
   // and have proper category values
-  const processedInsights = rawInsights.map((insight: StrategicInsight) => {
+  const processedInsights = rawInsights.map((insight: any) => {
     // Normalize the category using our utility function
     const normalizedCategory = normalizeWebsiteCategory(insight.category || 'company_positioning');
     
@@ -86,16 +86,17 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       insight.content.summary = `🌐 [Website-derived] Analysis of ${project.clientName}'s website.`;
     }
     
+    // Fix the type by explicitly setting source to 'website'
     return {
       ...insight,
-      source: 'website',
+      source: 'website' as 'website', // Use type assertion to match the expected literal type
       category: normalizedCategory,
       content: {
         ...insight.content,
         websiteUrl: project.clientWebsite,
         source: 'Website analysis'
       }
-    };
+    } as StrategicInsight;
   });
   
   // Log the distributed categories after normalization

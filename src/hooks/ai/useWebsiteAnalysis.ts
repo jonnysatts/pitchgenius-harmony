@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
@@ -12,7 +11,7 @@ export const useWebsiteAnalysis = (
 ) => {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [websiteInsights, setWebsiteInsights] = useState<StrategicInsight[]>([]);
-
+  
   const analyzeWebsiteUrl = useCallback(async () => {
     if (!project.clientWebsite) {
       setError('No website URL provided for analysis');
