@@ -87,7 +87,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
     <div className="bg-white p-6 rounded-lg border">
       <InsightsHeader 
         title="Strategic Insights" 
-        showProceedButton={allInsightsReviewed}
+        showProceedButton={allInsightsReviewed && viewMode === ViewMode.NARRATIVE_FRAMEWORK}
         onProceedToPresentation={handleProceedToPresentation}
       />
       
@@ -103,10 +103,13 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         <InsightsEmptyState onNavigateToDocuments={onNavigateToDocuments} />
       ) : (
         <div className="mt-6">
-          {/* View Mode Selector */}
+          {/* View Mode Selector with Progress Tracking */}
           <ViewModeSwitcher 
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
+            insightsReviewed={allInsightsReviewed}
+            insightCount={insights.length}
+            acceptedCount={acceptedCount}
           />
           
           {/* Strategic Analysis View */}
@@ -136,7 +139,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
           
           {/* Bottom button for navigating to presentation */}
           <InsightsNavigation 
-            showButton={allInsightsReviewed} 
+            showButton={allInsightsReviewed && viewMode === ViewMode.NARRATIVE_FRAMEWORK} 
             onNavigateToPresentation={handleProceedToPresentation} 
           />
         </div>
