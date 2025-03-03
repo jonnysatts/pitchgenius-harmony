@@ -22,8 +22,11 @@ const App = () => (
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/:projectId" element={<ProjectDetail />} />
-            {/* Route directly to Dashboard */}
-            <Route path="*" element={<Navigate to="/dashboard" />} />
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+            {/* Add a specific route for NotFound */}
+            <Route path="/not-found" element={<NotFound />} />
+            {/* Catch all other routes */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

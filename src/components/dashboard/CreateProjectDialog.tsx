@@ -1,11 +1,12 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProjectFormData {
   title: string;
@@ -28,6 +29,47 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   setProjectData,
   onCreateProject
 }) => {
+  const { toast } = useToast();
+  
+  const handleCreateProject = () => {
+    try {
+      // Validate required fields
+      if (!projectData.title.trim()) {
+        toast({
+          title: "Missing information",
+          description: "Please enter a project title",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!projectData.clientName.trim()) {
+        toast({
+          title: "Missing information",
+          description: "Please enter a client name",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Call the parent function to create the project
+      onCreateProject();
+      
+      // Show success toast
+      toast({
+        title: "Project created",
+        description: "Your new project has been created successfully.",
+      });
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Error creating project",
+        description: "There was a problem creating your project. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -39,6 +81,9 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create new project</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to create a new strategic analysis project.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -85,7 +130,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             Cancel
           </Button>
           <Button 
-            onClick={onCreateProject}
+            onClick={handleCreateProject}
             className="bg-brand-orange hover:opacity-90 transition-opacity"
             disabled={!projectData.title || !projectData.clientName}
           >
