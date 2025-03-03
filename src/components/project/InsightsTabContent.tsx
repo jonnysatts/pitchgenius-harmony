@@ -60,8 +60,9 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const acceptedCount = Object.values(reviewedInsights).filter(status => status === 'accepted').length;
   const rejectedCount = Object.values(reviewedInsights).filter(status => status === 'rejected').length;
   
-  // Check if all insights have been reviewed
-  const allInsightsReviewed = insights.length > 0 && needsReviewCount === 0;
+  // Check if all insights have been reviewed (none are pending)
+  const allInsightsReviewed = insights.length > 0 && 
+    Object.values(reviewedInsights).every(status => status === 'accepted' || status === 'rejected');
   
   return (
     <div className="bg-white p-6 rounded-lg border">
