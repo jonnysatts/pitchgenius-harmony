@@ -74,13 +74,14 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const insightsByCategory: Record<InsightCategory, StrategicInsight[]> = {} as Record<InsightCategory, StrategicInsight[]>;
   
   // Initialize with empty arrays for all categories
+  // Use the correct category values from the types.ts file
   const allCategories: InsightCategory[] = [
-    "business-challenges",
-    "audience-engagement",
-    "competitive-landscape",
-    "gaming-integration",
-    "strategic-recommendations",
-    "cultural-insights"
+    "business_challenges",
+    "audience_gaps",
+    "competitive_threats",
+    "gaming_opportunities",
+    "strategic_recommendations",
+    "key_narratives"
   ];
   
   allCategories.forEach(category => {
@@ -90,10 +91,10 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   // Fill the categories with insights
   documentInsights.forEach(insight => {
     if (insight.category) {
-      if (!insightsByCategory[insight.category]) {
-        insightsByCategory[insight.category] = [];
+      if (!insightsByCategory[insight.category as InsightCategory]) {
+        insightsByCategory[insight.category as InsightCategory] = [];
       }
-      insightsByCategory[insight.category].push(insight);
+      insightsByCategory[insight.category as InsightCategory].push(insight);
     }
   });
   
@@ -105,12 +106,12 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   // Get friendly category names for display
   const getCategoryName = (category: InsightCategory): string => {
     switch (category) {
-      case "business-challenges": return "Business Challenges";
-      case "audience-engagement": return "Audience Engagement";
-      case "competitive-landscape": return "Competitive Landscape";
-      case "gaming-integration": return "Gaming Integration";
-      case "strategic-recommendations": return "Strategic Recommendations";
-      case "cultural-insights": return "Cultural Insights";
+      case "business_challenges": return "Business Challenges";
+      case "audience_gaps": return "Audience Engagement";
+      case "competitive_threats": return "Competitive Landscape";
+      case "gaming_opportunities": return "Gaming Integration";
+      case "strategic_recommendations": return "Strategic Recommendations";
+      case "key_narratives": return "Cultural Insights";
       default: return category;
     }
   };
