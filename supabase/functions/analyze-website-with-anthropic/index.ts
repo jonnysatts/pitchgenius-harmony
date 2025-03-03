@@ -1,12 +1,18 @@
 
-// Analyze a website using Claude/Anthropic API
+// Analyze a website using Claude/Anthropic API and Firecrawl for website scraping
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { Anthropic } from 'https://esm.sh/@anthropic-ai/sdk@0.6.2';
 import { corsHeaders } from '../_shared/cors.ts';
+import FirecrawlApp from 'https://esm.sh/@mendable/firecrawl-js@0.0.1';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: Deno.env.get('ANTHROPIC_API_KEY') || '',
+});
+
+// Initialize Firecrawl client
+const firecrawl = new FirecrawlApp({
+  apiKey: Deno.env.get('FIRECRAWL_API_KEY') || '',
 });
 
 // Define the supported website insight categories
@@ -19,10 +25,57 @@ const websiteInsightCategories = [
   'product_service_fit'
 ];
 
-// Basic web content fetch function
-async function fetchWebsiteContent(url: string): Promise<string> {
+// Advanced web content fetch function using Firecrawl
+async function fetchWebsiteContentWithFirecrawl(url: string): Promise<string> {
   try {
-    console.log(`Fetching content from ${url}`);
+    console.log(`Fetching content from ${url} using Firecrawl`);
+    
+    // Ensure URL has protocol
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+    
+    // Check if Firecrawl API key is available
+    const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY');
+    if (!firecrawlApiKey) {
+      console.log('No Firecrawl API key found, falling back to basic fetch');
+      return await fetchWebsiteContentBasic(fullUrl);
+    }
+    
+    console.log('Using Firecrawl to scrape website');
+    
+    // Crawl the website with Firecrawl
+    const crawlResponse = await firecrawl.crawlUrl(fullUrl, {
+      limit: 50, // Limit to 50 pages for reasonable crawling
+      scrapeOptions: {
+        formats: ['markdown'],
+      }
+    });
+    
+    if (!crawlResponse.success) {
+      console.error('Firecrawl error:', crawlResponse.error);
+      throw new Error(`Firecrawl error: ${crawlResponse.error}`);
+    }
+    
+    console.log(`Successfully fetched ${crawlResponse.data.length} pages with Firecrawl`);
+    
+    // Compile all the content from crawled pages
+    let combinedContent = '';
+    for (const page of crawlResponse.data) {
+      combinedContent += `\n\n## Page: ${page.url}\n${page.markdown || page.text || ''}\n`;
+    }
+    
+    // Return the first 100,000 characters to avoid overwhelming Claude
+    return combinedContent.slice(0, 100000);
+  } catch (error) {
+    console.error('Error using Firecrawl:', error);
+    console.log('Falling back to basic fetch...');
+    return await fetchWebsiteContentBasic(url);
+  }
+}
+
+// Basic web content fetch function (fallback)
+async function fetchWebsiteContentBasic(url: string): Promise<string> {
+  try {
+    console.log(`Falling back to basic fetch for ${url}`);
     
     // Ensure URL has protocol
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
@@ -39,7 +92,7 @@ async function fetchWebsiteContent(url: string): Promise<string> {
     }
     
     const html = await response.text();
-    console.log(`Successfully fetched ${html.length} bytes of content`);
+    console.log(`Successfully fetched ${html.length} bytes of content with basic fetch`);
     
     // Very basic HTML cleaning - extract text content
     const textContent = html
@@ -87,11 +140,11 @@ Deno.serve(async (req) => {
     
     console.log(`Analyzing website for project ${projectId}: ${clientWebsite}\n`);
     
-    // Fetch actual website content if not provided
+    // Fetch actual website content using Firecrawl (or fallback to basic fetch)
     let contentToAnalyze = websiteContent;
     if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
-      console.log("No valid content provided, attempting to fetch website content directly");
-      contentToAnalyze = await fetchWebsiteContent(clientWebsite);
+      console.log("No valid content provided, attempting to fetch website content with Firecrawl");
+      contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
     }
     
     // Prepare a structured output format for Claude to follow

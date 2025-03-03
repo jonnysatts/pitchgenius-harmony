@@ -7,6 +7,7 @@ import { checkSupabaseConnection } from "../config";
 import { createTimeoutPromise } from "../apiClient";
 import { callWebsiteAnalysisApi } from "./claudeApiService";
 import { generateWebsiteMockInsights } from "./mockGenerator";
+import { FirecrawlService } from "@/utils/FirecrawlService";
 
 /**
  * Analyze a client website to generate preliminary insights
@@ -28,6 +29,16 @@ export const analyzeClientWebsite = async (
     // Check if we can use the real API
     const useRealApi = await checkSupabaseConnection();
     
+    // Check if Firecrawl API key is available (client-side)
+    const firecrawlApiKey = FirecrawlService.getApiKey();
+    const hasFirecrawl = !!firecrawlApiKey;
+    
+    if (hasFirecrawl) {
+      console.log('Firecrawl API key detected, will use enhanced website analysis');
+    } else {
+      console.log('No Firecrawl API key, using basic website analysis');
+    }
+    
     if (!useRealApi) {
       console.log('Supabase connection not available, using mock website insights');
       const websiteMockInsights = generateWebsiteMockInsights(project);
@@ -39,8 +50,8 @@ export const analyzeClientWebsite = async (
     
     console.log('Using Anthropic API via Supabase Edge Function to analyze website');
     
-    // Create a timeout promise - 120 seconds (2 minutes)
-    const timeoutPromise = createTimeoutPromise(project, [], 120000);
+    // Create a timeout promise - 180 seconds (3 minutes) - increased for Firecrawl
+    const timeoutPromise = createTimeoutPromise(project, [], 180000);
     
     try {
       // Race between the actual API call and the timeout

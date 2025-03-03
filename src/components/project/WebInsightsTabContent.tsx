@@ -50,10 +50,6 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   // Website insights are already filtered in the parent component
   const hasWebsiteInsights = websiteInsights.length > 0;
   
-  // Debug logs
-  console.log("WebInsightsTabContent - Total websiteInsights:", websiteInsights.length);
-  console.log("WebInsightsTabContent - Insights data:", websiteInsights);
-  
   // Group insights by category with proper type checking and fallbacks
   const insightsByCategory = websiteInsights.reduce((acc, insight) => {
     // Add a fallback for category - default to "company_positioning" if not set
@@ -74,23 +70,19 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
     return acc;
   }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
   
-  // Log categories that have insights
-  console.log("WebInsightsTabContent - Categories with insights:", Object.keys(insightsByCategory));
-  
   // Make sure every category has an array, even if empty
   websiteInsightCategories.forEach(category => {
     const categoryId = category.id as WebsiteInsightCategory;
     if (!insightsByCategory[categoryId]) {
       insightsByCategory[categoryId] = [];
     }
-    const count = insightsByCategory[categoryId].length;
-    console.log(`WebInsightsTabContent - Category ${category.id}: ${count} insights`);
   });
   
   return (
     <div className="bg-white p-6 rounded-lg border">
-      {/* Header */}
+      {/* Header with project passed as prop */}
       <WebInsightsHeader 
+        project={project}
         hasWebsiteUrl={hasWebsiteUrl}
         isAnalyzing={isAnalyzingWebsite}
         onAnalyzeWebsite={onAnalyzeWebsite}

@@ -1,9 +1,10 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Globe, Loader2 } from "lucide-react";
+import React from 'react';
+import { Project } from '@/lib/types';
+import { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
 
 interface WebInsightsHeaderProps {
+  project: Project;
   hasWebsiteUrl: boolean;
   isAnalyzing: boolean;
   onAnalyzeWebsite?: () => void;
@@ -11,39 +12,27 @@ interface WebInsightsHeaderProps {
 }
 
 const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
+  project,
   hasWebsiteUrl,
   isAnalyzing,
-  onAnalyzeWebsite,
+  onAnalyzeWebsite = () => {},
   hasInsights
 }) => {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <div className="space-y-4 mb-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Website Insights</h2>
-        <p className="text-slate-500 text-sm">
-          Strategic insights generated from analyzing the client's website
+        <h2 className="text-2xl font-bold tracking-tight">Website Analysis</h2>
+        <p className="text-muted-foreground">
+          Analyze client website to extract strategic insights using AI
         </p>
       </div>
       
-      {hasWebsiteUrl && onAnalyzeWebsite && (
-        <Button
-          onClick={onAnalyzeWebsite}
-          disabled={isAnalyzing}
-          className="mt-4 md:mt-0 flex items-center gap-2"
-        >
-          {isAnalyzing ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              Analyzing Website...
-            </>
-          ) : (
-            <>
-              <Globe size={16} />
-              {hasInsights ? 'Refresh Website Analysis' : 'Analyze Website'}
-            </>
-          )}
-        </Button>
-      )}
+      <WebsiteAnalysisControls
+        project={project}
+        isAnalyzing={isAnalyzing}
+        onAnalyzeWebsite={onAnalyzeWebsite}
+        hasInsights={hasInsights}
+      />
     </div>
   );
 };

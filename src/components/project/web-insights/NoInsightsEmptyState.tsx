@@ -1,49 +1,66 @@
 
-import React from "react";
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Globe, Loader2 } from "lucide-react";
+import { AlertCircle, Globe } from 'lucide-react';
+import { FirecrawlService } from '@/utils/FirecrawlService';
 
 interface NoInsightsEmptyStateProps {
   hasWebsiteUrl: boolean;
-  isAnalyzing: boolean;
+  isAnalyzing?: boolean;
   onAnalyzeWebsite?: () => void;
 }
 
-const NoInsightsEmptyState: React.FC<NoInsightsEmptyStateProps> = ({ 
-  hasWebsiteUrl, 
-  isAnalyzing, 
-  onAnalyzeWebsite 
-}) => {
+export const NoInsightsEmptyState = ({
+  hasWebsiteUrl,
+  isAnalyzing = false,
+  onAnalyzeWebsite
+}: NoInsightsEmptyStateProps) => {
+  const hasFirecrawlKey = !!FirecrawlService.getApiKey();
+  
+  if (!hasWebsiteUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 mt-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center">
+        <AlertCircle className="h-10 w-10 text-gray-400 mb-4" />
+        <h3 className="font-semibold text-lg mb-2">No Website URL Provided</h3>
+        <p className="text-gray-500 max-w-md mb-4">
+          Add a website URL to the project details to enable website analysis.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-50 rounded-lg p-8 text-center border border-dashed">
-      <Globe size={48} className="mx-auto text-slate-300 mb-4" />
-      <h3 className="text-xl font-medium text-slate-800 mb-2">No Website Insights Yet</h3>
-      <p className="text-slate-600 mb-6">
-        {hasWebsiteUrl 
-          ? "Click 'Analyze Website' to generate insights from the client's website."
-          : "Add a client website URL in the Documents tab or Dashboard to analyze their online presence."}
+    <div className="flex flex-col items-center justify-center p-8 mt-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center">
+      <Globe className="h-10 w-10 text-gray-400 mb-4" />
+      <h3 className="font-semibold text-lg mb-2">
+        {isAnalyzing ? "Analyzing Website..." : "No Website Insights Yet"}
+      </h3>
+      
+      <p className="text-gray-500 max-w-md mb-6">
+        {isAnalyzing 
+          ? "Please wait while we analyze the website content and generate strategic insights."
+          : hasFirecrawlKey 
+            ? "Start the analysis to extract strategic insights from the website using the Firecrawl API for comprehensive content analysis."
+            : "Start the analysis to extract strategic insights from the website. For better results, add a Firecrawl API key."
+        }
       </p>
-      {hasWebsiteUrl && onAnalyzeWebsite && (
-        <Button
-          onClick={onAnalyzeWebsite}
+      
+      {!isAnalyzing && (
+        <Button 
+          onClick={onAnalyzeWebsite} 
           disabled={isAnalyzing}
-          className="mx-auto"
+          size="lg"
         >
-          {isAnalyzing ? (
-            <>
-              <Loader2 size={16} className="mr-2 animate-spin" />
-              Analyzing Website...
-            </>
-          ) : (
-            <>
-              <Globe size={16} className="mr-2" />
-              Analyze Website
-            </>
-          )}
+          <Globe className="mr-2 h-4 w-4" />
+          Start Website Analysis
         </Button>
+      )}
+      
+      {isAnalyzing && (
+        <div className="flex items-center justify-center w-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
       )}
     </div>
   );
 };
-
-export default NoInsightsEmptyState;
