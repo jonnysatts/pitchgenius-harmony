@@ -6,7 +6,7 @@ import {
   fetchProjectDocuments,
   DatabaseError,
   AuthenticationError
-} from "@/services/documentStorage";
+} from "@/services/documents";
 
 export const useDocumentFetching = (
   projectId: string,

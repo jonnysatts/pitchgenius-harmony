@@ -1,7 +1,5 @@
-
 import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   uploadDocumentToStorage, 
   insertDocumentRecord, 
@@ -10,7 +8,7 @@ import {
   DatabaseError,
   DocumentNotFoundError,
   AuthenticationError
-} from "@/services/documentStorage";
+} from "@/services/documents";
 import { calculateDocumentPriority } from "@/services/documentService";
 
 export const useDocumentActions = (
