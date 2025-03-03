@@ -47,41 +47,68 @@ export const generateInsights = async (
     
     console.log('Using Anthropic API via Supabase Edge Function to generate insights');
     
+    // Create a timeout promise to handle API timeouts
+    const timeoutPromise = new Promise<{ insights: StrategicInsight[], error?: string }>((resolve) => {
+      setTimeout(() => {
+        console.log('API request taking too long, falling back to mock insights');
+        const mockInsights = generateComprehensiveInsights(project, documents);
+        resolve({ 
+          insights: mockInsights, 
+          error: "API request timeout - using generated sample insights instead" 
+        });
+      }, 30000); // 30 second timeout
+    });
+    
     try {
-      // Call the Supabase Edge Function that uses Anthropic
-      const { data, error } = await supabase.functions.invoke('generate-insights-with-anthropic', {
-        body: { 
-          projectId: project.id, 
-          documentIds,
-          clientIndustry: project.clientIndustry,
-          projectTitle: project.title,
-          documentContents,
-          processingMode: 'thorough',
-          includeComprehensiveDetails: true
-        }
-      });
-      
-      if (error) {
-        console.error('Error generating insights with Anthropic:', error);
-        console.log('Falling back to mock insights generator due to API error');
-        const mockInsights = generateComprehensiveInsights(project, documents);
-        return { insights: mockInsights };
-      }
-      
-      // Check if we received valid insights from the API
-      if (!data || !data.insights || data.insights.length === 0) {
-        console.log('No insights received from API, falling back to mock generator');
-        const mockInsights = generateComprehensiveInsights(project, documents);
-        return { insights: mockInsights };
-      }
-      
-      console.log('Successfully received insights from Anthropic:', data);
-      return { insights: data.insights || [] };
+      // Race between the actual API call and the timeout
+      return await Promise.race([
+        (async () => {
+          // Call the Supabase Edge Function that uses Anthropic
+          const { data, error } = await supabase.functions.invoke('generate-insights-with-anthropic', {
+            body: { 
+              projectId: project.id, 
+              documentIds,
+              clientIndustry: project.clientIndustry,
+              projectTitle: project.title,
+              documentContents,
+              processingMode: 'thorough',
+              includeComprehensiveDetails: true
+            }
+          });
+          
+          if (error) {
+            console.error('Error generating insights with Anthropic:', error);
+            console.log('Falling back to mock insights generator due to API error');
+            const mockInsights = generateComprehensiveInsights(project, documents);
+            return { 
+              insights: mockInsights,
+              error: "API error - using generated sample insights instead" 
+            };
+          }
+          
+          // Check if we received valid insights from the API
+          if (!data || !data.insights || data.insights.length === 0) {
+            console.log('No insights received from API, falling back to mock generator');
+            const mockInsights = generateComprehensiveInsights(project, documents);
+            return { 
+              insights: mockInsights,
+              error: "No insights returned from API - using generated sample insights instead" 
+            };
+          }
+          
+          console.log('Successfully received insights from Anthropic:', data);
+          return { insights: data.insights || [] };
+        })(),
+        timeoutPromise
+      ]);
     } catch (apiError: any) {
       console.error('Error calling Anthropic API:', apiError);
       console.log('Falling back to mock insights generator due to API error');
       const mockInsights = generateComprehensiveInsights(project, documents);
-      return { insights: mockInsights };
+      return { 
+        insights: mockInsights,
+        error: "API error - using generated sample insights instead" 
+      };
     }
   } catch (err: any) {
     console.error('Error generating insights:', err);

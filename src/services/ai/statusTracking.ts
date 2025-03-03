@@ -30,6 +30,13 @@ export const monitorAIProcessingProgress = (
   let progress = 0;
   let interval: NodeJS.Timeout | null = null;
   
+  // Immediately update status to show we're starting
+  onStatusUpdate({
+    status: 'processing',
+    progress: 0,
+    message: 'Starting document analysis...'
+  });
+  
   // This simulates the AI processing progress
   // In a production app, this would connect to a real-time status endpoint
   interval = setInterval(() => {
@@ -67,7 +74,7 @@ export const monitorAIProcessingProgress = (
       onStatusUpdate({
         status: 'processing',
         progress,
-        message: `Connecting to Anthropic API...`
+        message: `Generating AI insights...`
       });
     } else if (progress < 90) {
       onStatusUpdate({
@@ -75,11 +82,17 @@ export const monitorAIProcessingProgress = (
         progress,
         message: `Processing AI-generated insights...`
       });
-    } else if (progress < 99) {
+    } else if (progress < 98) {
       onStatusUpdate({
         status: 'processing',
         progress,
         message: `Finalizing comprehensive insights...`
+      });
+    } else if (progress < 100) {
+      onStatusUpdate({
+        status: 'finalizing',
+        progress: 99,
+        message: 'Preparing insights for display...'
       });
     } else {
       // When we reach 100%, update status to completed and trigger callback
@@ -91,10 +104,11 @@ export const monitorAIProcessingProgress = (
       
       // Call the completion callback if provided
       if (onCompletionCallback) {
-        // Add a small delay to ensure UI updates before callback
+        // Add a delay to ensure the insights have been properly loaded
+        // before transitioning to the insights tab
         setTimeout(() => {
           onCompletionCallback();
-        }, 500);
+        }, 1500);
       }
       
       // Clear the interval after sending the status update
@@ -103,8 +117,16 @@ export const monitorAIProcessingProgress = (
     }
     
     // Slow down the progress a bit to reflect real API processing time
+    // Make the last part of the progress slower to better match API behavior
+    if (progress < 85) {
+      progress += Math.random() * 4 + 1;
+    } else if (progress < 95) {
+      progress += Math.random() * 1.5 + 0.5;
+    } else {
+      progress += Math.random() * 0.8 + 0.2;
+    }
+    
     // Don't let progress exceed 100
-    progress += Math.random() * 4 + 1;
     if (progress > 100) progress = 100;
   }, 800);
   
