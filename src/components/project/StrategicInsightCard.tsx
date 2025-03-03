@@ -9,9 +9,19 @@ import { Separator } from "@/components/ui/separator";
 
 interface StrategicInsightCardProps {
   insight: StrategicInsight;
+  reviewStatus?: 'accepted' | 'rejected' | 'pending';
+  onAccept?: () => void;
+  onReject?: () => void;
+  onUpdate?: (content: Record<string, any>) => void;
 }
 
-const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({ insight }) => {
+const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({ 
+  insight, 
+  reviewStatus = 'pending',
+  onAccept,
+  onReject,
+  onUpdate
+}) => {
   const [expanded, setExpanded] = useState(false);
 
   // Helper function to format the category into a readable title
@@ -120,6 +130,9 @@ const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({ insight }) 
     );
   };
 
+  // Determine if we should add review controls or show accepted/rejected status
+  const showReviewControls = !!onAccept && !!onReject && reviewStatus === 'pending';
+
   return (
     <Card className={insight.needsReview ? "border-amber-300" : ""}>
       <CardHeader className="pb-2">
@@ -153,11 +166,56 @@ const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({ insight }) 
                 <Flag size={12} className="mr-1" /> Needs Review
               </Badge>
             )}
+            
+            {reviewStatus === 'accepted' && (
+              <Badge variant="outline" className="ml-2 bg-green-50 text-green-600 border-green-200">
+                <CheckCircle size={12} className="mr-1" /> Accepted
+              </Badge>
+            )}
+            
+            {reviewStatus === 'rejected' && (
+              <Badge variant="outline" className="ml-2 bg-red-50 text-red-600 border-red-200">
+                <AlertTriangle size={12} className="mr-1" /> Rejected
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
       <CardContent>
         {renderContent()}
+        
+        {showReviewControls && onAccept && onReject && (
+          <div className="flex justify-end mt-4 space-x-2">
+            {onUpdate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onUpdate(insight.content)}
+                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+              >
+                Refine
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onReject}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Reject
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAccept}
+              className="text-green-600 border-green-200 hover:bg-green-50"
+            >
+              Accept
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
