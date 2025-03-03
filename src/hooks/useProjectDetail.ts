@@ -64,6 +64,8 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   const handleAnalyzeWebsite = useCallback(() => {
     if (!project.clientWebsite) return;
     analyzeWebsite();
+    // Navigate to the webinsights tab after initiating website analysis
+    setActiveTab("webinsights");
   }, [project.clientWebsite, analyzeWebsite]);
   
   // Navigate to documents tab
@@ -76,12 +78,22 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     setActiveTab("presentation");
   }, []);
   
-  // Automatically navigate to insights tab when processing completes
+  // Automatically navigate to insights tab when document processing completes
   useEffect(() => {
-    if (processingComplete) {
+    if (processingComplete && activeTab === "documents") {
       setActiveTab("insights");
     }
-  }, [processingComplete]);
+  }, [processingComplete, activeTab]);
+  
+  // Handle website analysis completion - switch to webinsights tab
+  useEffect(() => {
+    if (websiteInsights && websiteInsights.length > 0 && isAnalyzingWebsite === false) {
+      // Only navigate if we just finished analyzing (not on initial load)
+      if (activeTab === "documents") {
+        setActiveTab("webinsights");
+      }
+    }
+  }, [websiteInsights, isAnalyzingWebsite, activeTab]);
   
   return {
     activeTab,

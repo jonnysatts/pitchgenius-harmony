@@ -4,10 +4,9 @@ import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
 import DocumentList from "@/components/project/DocumentList";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2, AlertCircle, Globe } from "lucide-react";
+import { Brain, Loader2, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import WebsiteAnalysisCard from "@/components/project/WebsiteAnalysisCard";
 
 interface DocumentsTabContentProps {
   documents: Document[];
@@ -50,15 +49,6 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
                             aiStatus.progress >= 30 && 
                             aiStatus.progress < 60;
   
-  // Can analyze website if:
-  // 1. Website URL exists
-  // 2. Not currently analyzing website
-  // 3. Not in the middle of document analysis
-  const canAnalyzeWebsite = 
-    !!(websiteUrl || project?.clientWebsite) && 
-    !isAnalyzingWebsite && 
-    !(aiStatus && aiStatus.status === 'processing');
-  
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg border">
@@ -77,51 +67,13 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
         />
       </div>
       
-      {/* Website Analysis Card */}
+      {/* Website Analysis Card - moved to a separate component */}
       {(websiteUrl || project?.clientWebsite) && onAnalyzeWebsite && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Website Analysis</CardTitle>
-                <CardDescription>Generate preliminary insights based on the client's website</CardDescription>
-              </div>
-              
-              <Button 
-                onClick={onAnalyzeWebsite}
-                disabled={!canAnalyzeWebsite}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                {isAnalyzingWebsite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe size={16} />}
-                {isAnalyzingWebsite ? 'Analyzing...' : 'Analyze Website'}
-              </Button>
-            </div>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="text-sm text-slate-600 flex items-center">
-              <Globe size={14} className="mr-2 text-slate-400" />
-              <span className="font-medium text-slate-700 mr-1">Website URL:</span> 
-              <a 
-                href={(websiteUrl || project?.clientWebsite || '').startsWith('http') 
-                  ? (websiteUrl || project?.clientWebsite) 
-                  : `https://${websiteUrl || project?.clientWebsite}`
-                } 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline truncate"
-              >
-                {websiteUrl || project?.clientWebsite}
-              </a>
-            </div>
-            
-            <p className="text-xs text-slate-500 mt-2">
-              This will analyze the client's website to extract brand positioning, target audience, and potential gaming opportunities.
-              Website-derived insights will be marked as preliminary research.
-            </p>
-          </CardContent>
-        </Card>
+        <WebsiteAnalysisCard
+          websiteUrl={websiteUrl || project?.clientWebsite}
+          isAnalyzing={isAnalyzingWebsite}
+          onAnalyzeWebsite={onAnalyzeWebsite}
+        />
       )}
       
       <div className="bg-white p-6 rounded-lg border">

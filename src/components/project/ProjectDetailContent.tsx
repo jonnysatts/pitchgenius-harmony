@@ -5,6 +5,7 @@ import { AIProcessingStatus, Project, Document, StrategicInsight } from "@/lib/t
 import ProjectHeader from "@/components/project/ProjectHeader";
 import DocumentsTabContent from "@/components/project/DocumentsTabContent";
 import InsightsTabContent from "@/components/project/InsightsTabContent";
+import WebInsightsTabContent from "@/components/project/WebInsightsTabContent";
 import PresentationTabContent from "@/components/project/PresentationTabContent";
 import HelpTabContent from "@/components/project/HelpTabContent";
 import ProjectWelcomeAlert from "@/components/project/ProjectWelcomeAlert";
@@ -62,6 +63,18 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   navigateToPresentation,
   onRetryAnalysis
 }) => {
+  // Filter insights to separate website-derived insights
+  const websiteInsights = insights.filter(insight => 
+    insight.content.source === 'Website analysis' || 
+    (insight.content.summary && insight.content.summary.includes('[Website-derived]'))
+  );
+  
+  // Document-derived insights (exclude website insights)
+  const documentInsights = insights.filter(insight => 
+    !(insight.content.source === 'Website analysis' || 
+      (insight.content.summary && insight.content.summary.includes('[Website-derived]')))
+  );
+  
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <ProjectHeader 
@@ -77,9 +90,10 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
         onValueChange={setActiveTab} 
         className="mt-6"
       >
-        <TabsList className="grid grid-cols-4 w-full max-w-[600px] mb-6">
+        <TabsList className="grid grid-cols-5 w-full max-w-[750px] mb-6">
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="webinsights">Web Insights</TabsTrigger>
+          <TabsTrigger value="insights">Document Insights</TabsTrigger>
           <TabsTrigger value="presentation">Presentation</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
         </TabsList>
@@ -99,9 +113,25 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
           />
         </TabsContent>
         
+        <TabsContent value="webinsights">
+          <WebInsightsTabContent
+            project={project}
+            websiteInsights={websiteInsights}
+            reviewedInsights={reviewedInsights}
+            isAnalyzingWebsite={isAnalyzingWebsite}
+            error={error}
+            onAnalyzeWebsite={handleAnalyzeWebsite}
+            onAcceptInsight={handleAcceptInsight}
+            onRejectInsight={handleRejectInsight}
+            onUpdateInsight={handleUpdateInsight}
+            onNavigateToInsights={() => setActiveTab("insights")}
+            onRetryAnalysis={onRetryAnalysis}
+          />
+        </TabsContent>
+        
         <TabsContent value="insights">
           <InsightsTabContent
-            insights={insights}
+            insights={documentInsights}
             reviewedInsights={reviewedInsights}
             overallConfidence={overallConfidence}
             needsReviewCount={needsReviewCount}

@@ -43,10 +43,10 @@ export const useWebsiteAnalysis = (
         // Add the insights to the main insights collection
         addInsights(result.insights);
         
-        // Show success toast
+        // Show success toast with instruction to check Web Insights tab
         toast({
           title: "Website analysis complete",
-          description: `Generated ${result.insights.length} preliminary insights from website research`,
+          description: `Generated ${result.insights.length} insights from website research. View them in the Web Insights tab.`,
         });
         
         // If there was an error but we still got insights, show warning
