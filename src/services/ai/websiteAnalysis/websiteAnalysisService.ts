@@ -39,8 +39,8 @@ export const analyzeClientWebsite = async (
     
     console.log('Using Anthropic API via Supabase Edge Function to analyze website');
     
-    // Create a timeout promise - 90 seconds (1.5 minutes)
-    const timeoutPromise = createTimeoutPromise(project, [], 90000);
+    // Create a timeout promise - 120 seconds (2 minutes)
+    const timeoutPromise = createTimeoutPromise(project, [], 120000);
     
     try {
       // Race between the actual API call and the timeout
@@ -50,6 +50,7 @@ export const analyzeClientWebsite = async (
       ]);
     } catch (apiError: any) {
       console.log('Falling back to mock website insights due to API error');
+      console.error('API error details:', apiError);
       const mockInsights = generateWebsiteMockInsights(project);
       return { 
         insights: mockInsights,

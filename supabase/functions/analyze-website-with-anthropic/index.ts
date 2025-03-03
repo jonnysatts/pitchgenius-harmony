@@ -19,6 +19,44 @@ const websiteInsightCategories = [
   'product_service_fit'
 ];
 
+// Basic web content fetch function
+async function fetchWebsiteContent(url: string): Promise<string> {
+  try {
+    console.log(`Fetching content from ${url}`);
+    
+    // Ensure URL has protocol
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+    
+    const response = await fetch(fullUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; StrategicAnalysisBot/1.0; +https://example.com)'
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`Error fetching website: ${response.status} ${response.statusText}`);
+      return `Error fetching website content: ${response.status} ${response.statusText}`;
+    }
+    
+    const html = await response.text();
+    console.log(`Successfully fetched ${html.length} bytes of content`);
+    
+    // Very basic HTML cleaning - extract text content
+    const textContent = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Return the first 100,000 characters to avoid overwhelming Claude
+    return textContent.slice(0, 100000);
+  } catch (error) {
+    console.error('Error fetching website content:', error);
+    return `Error fetching website content: ${error.message || 'Unknown error'}`;
+  }
+}
+
 // Handle CORS for preflight requests
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -35,7 +73,8 @@ Deno.serve(async (req) => {
       clientWebsite, 
       websiteContent,
       systemPrompt,
-      projectTitle
+      projectTitle,
+      clientName
     } = requestData;
     
     // Check we have the minimum required data
@@ -48,30 +87,44 @@ Deno.serve(async (req) => {
     
     console.log(`Analyzing website for project ${projectId}: ${clientWebsite}\n`);
     
+    // Fetch actual website content if not provided
+    let contentToAnalyze = websiteContent;
+    if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
+      console.log("No valid content provided, attempting to fetch website content directly");
+      contentToAnalyze = await fetchWebsiteContent(clientWebsite);
+    }
+    
     // Prepare a structured output format for Claude to follow
     const outputFormat = `
-    You must structure your response as a JSON array of insights, with each insight following this format:
+    Structure your response as a JSON array of insights, with exactly one insight for each of these categories:
+    - company_positioning (how they present themselves to the market)
+    - competitive_landscape (competitors and market position)
+    - key_partnerships (specific partners mentioned)
+    - public_announcements (specific news items, dates, announcements)
+    - consumer_engagement (how they interact with customers)
+    - product_service_fit (how their offerings relate to gaming)
+    
+    Each insight must follow this format:
     {
-      "id": "unique-id-for-insight",
-      "category": "One of the following categories: ${websiteInsightCategories.join(', ')}",
-      "confidence": 85, // A number between 60-95 representing how confident you are in this insight
-      "needsReview": false, // Boolean, set to true for less certain insights
+      "id": "website-[category]-[timestamp]",
+      "category": "One of the six categories listed above",
+      "confidence": A number between 60-95 representing how confident you are in this insight,
+      "needsReview": true if specificity is low, false if highly specific,
       "content": {
-        "title": "A clear title for the insight",
-        "summary": "A concise summary of the strategic insight",
-        "details": "Detailed explanation of the insight, providing context and background",
-        "recommendations": "Specific, actionable recommendations for gaming executives"
+        "title": "A specific title based on actual website content",
+        "summary": "A concise summary with SPECIFIC details from the website",
+        "details": "Detailed explanation with specific facts, numbers, names, or direct quotes from the website",
+        "recommendations": "Gaming-specific recommendations based on the details"
       }
     }
     
-    IMPORTANT INSTRUCTIONS:
-    1. Generate at least 6 insights, with at least one insight for each of these categories: ${websiteInsightCategories.join(', ')}
-    2. Make the insights varied and diverse - do not all focus on the same aspect
-    3. Ensure each insight has a unique ID that includes the category name
-    4. Include specific details from the website in your insights
-    5. Ensure all recommendations are gaming-related
-    6. Focus on quality over quantity - each insight should be valuable for gaming strategy
-    7. DO NOT reference other categories outside the ones listed above
+    CRITICAL INSTRUCTIONS:
+    1. ONLY include information actually present on the website - DO NOT HALLUCINATE or INVENT details
+    2. If you cannot find specific information for a category, explicitly note this in the details
+    3. Include direct quotes and specific details wherever possible
+    4. For recommendations, be specific about gaming integrations
+    5. If the content is insufficient, state so clearly in the details field
+    6. Include DATES of announcements, NAMES of partners, and SPECIFIC products/services when available
     `;
     
     // Combine the system prompt with the output format
@@ -82,8 +135,8 @@ Deno.serve(async (req) => {
       model: 'claude-2.1',
       max_tokens_to_sample: 4000,
       system: fullSystemPrompt,
-      prompt: `\n\nHuman: I need strategic analysis of this website for a gaming client. Here's the website content:\n\n${websiteContent}\n\nPlease analyze this content and generate strategic insights that would be valuable for a gaming company considering a potential partnership with this business. Focus on identifying opportunities, challenges, and unique strategic positions.\n\nAssistant: I'll analyze this website content and generate strategic insights for your gaming client.`,
-      temperature: 0.7
+      prompt: `\n\nHuman: I need to analyze this website for a gaming strategy project. The website belongs to ${clientName || "a company"} in the ${clientIndustry} industry. Here's the website content:\n\n${contentToAnalyze}\n\nPlease analyze this content and generate strategic insights that would be valuable for a gaming company considering a potential partnership. Focus on identifying specific opportunities, challenges, and unique strategic positions.\n\nAssistant: I'll analyze this website content and generate strategic insights with specific details for your gaming client.`,
+      temperature: 0.3
     });
     
     // Process the response
@@ -156,8 +209,8 @@ Deno.serve(async (req) => {
         content: {
           ...(insight.content || {}),
           title: insight.content?.title || `Website Analysis: ${insight.category}`,
-          summary: insight.content?.summary || `Strategic insight based on ${clientWebsite} website analysis.`,
-          details: insight.content?.details || '',
+          summary: insight.content?.summary || `Analysis of ${clientWebsite} website.`,
+          details: insight.content?.details || 'No specific details found on the website.',
           recommendations: insight.content?.recommendations || 'Consider how this insight could be leveraged in gaming context.'
         }
       };

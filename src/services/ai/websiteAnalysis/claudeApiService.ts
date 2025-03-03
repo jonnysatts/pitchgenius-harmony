@@ -29,6 +29,7 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
           clientIndustry: project.clientIndustry,
           clientWebsite: project.clientWebsite,
           projectTitle: project.title,
+          clientName: project.clientName,
           websiteContent,
           systemPrompt: websiteResearchPrompt,
           // Add the website insight categories to the request as explicit array
@@ -110,16 +111,21 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       console.log(`Invalid category after normalization for insight: ${insight.id}, setting to default 'company_positioning'`);
     }
     
+    // Clean up the summary to remove duplicate website-derived markers
+    let summary = insight.content?.summary || '';
+    summary = summary.replace(/\[Website-derived\]\s*\[Website-derived\]/g, '[Website-derived]');
+    
     // Ensure title is set
     if (!insight.content?.title || typeof insight.content.title !== 'string') {
       insight.content = insight.content || {};
       insight.content.title = `Website Insight for ${project.clientName}`;
     }
     
-    // Ensure summary is set
-    if (!insight.content?.summary || typeof insight.content.summary !== 'string') {
-      insight.content = insight.content || {};
-      insight.content.summary = `🌐 [Website-derived] Analysis of ${project.clientName}'s website.`;
+    // Ensure summary is set with website marker
+    if (!summary || typeof summary !== 'string') {
+      summary = `🌐 [Website-derived] Analysis of ${project.clientName}'s website.`;
+    } else if (!summary.includes('[Website-derived]')) {
+      summary = `🌐 [Website-derived] ${summary}`;
     }
     
     // Fix the type by explicitly setting source to 'website'
@@ -129,6 +135,7 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       category: normalizedCategory,
       content: {
         ...insight.content,
+        summary,
         websiteUrl: project.clientWebsite,
         source: 'Website analysis'
       }

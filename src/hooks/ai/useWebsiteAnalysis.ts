@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
@@ -15,6 +16,11 @@ export const useWebsiteAnalysis = (
   const analyzeWebsiteUrl = useCallback(async () => {
     if (!project.clientWebsite) {
       setError('No website URL provided for analysis');
+      toast({
+        title: 'Missing Website URL',
+        description: 'Please add a website URL to the project before analyzing',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -28,8 +34,14 @@ export const useWebsiteAnalysis = (
       const result = await analyzeClientWebsite(project);
       
       if (result.insights && result.insights.length > 0) {
-        // Explicitly mark all insights as website-derived
-        const markedInsights = result.insights.map(insight => addWebsiteSourceMarker(insight));
+        // Ensure all insights are properly marked as website-derived
+        const markedInsights = result.insights.map(insight => {
+          // Only add the marker if it's not already there
+          if (insight.source !== 'website') {
+            return addWebsiteSourceMarker(insight);
+          }
+          return insight;
+        });
         
         console.log(`Website analysis generated ${markedInsights.length} insights`);
         console.log('Website insight categories:', markedInsights.map(i => i.category));
@@ -52,6 +64,14 @@ export const useWebsiteAnalysis = (
       
       if (result.error) {
         setError(result.error);
+        // Only show the error toast if no insights were generated
+        if (!result.insights || result.insights.length === 0) {
+          toast({
+            title: 'Website Analysis Error',
+            description: result.error,
+            variant: 'destructive',
+          });
+        }
       }
     } catch (err) {
       console.error('Error analyzing website:', err);
