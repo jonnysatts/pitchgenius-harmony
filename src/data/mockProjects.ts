@@ -1,7 +1,14 @@
 
 import { Project } from "@/lib/types";
 
-export const MOCK_PROJECTS: Project[] = [
+// Track newly created projects in session storage
+const getNewProjects = (): Project[] => {
+  const storedProjects = sessionStorage.getItem('newProjects');
+  return storedProjects ? JSON.parse(storedProjects) : [];
+};
+
+// Base mock projects
+const BASE_MOCK_PROJECTS: Project[] = [
   {
     id: "1",
     title: "MegaMart Gaming Strategy",
@@ -39,3 +46,18 @@ export const MOCK_PROJECTS: Project[] = [
     coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
   }
 ];
+
+// Combine base mock projects with any new projects
+export const MOCK_PROJECTS: Project[] = [...getNewProjects(), ...BASE_MOCK_PROJECTS];
+
+// Helper function to add a new project
+export const addNewProject = (project: Project): void => {
+  const newProjects = getNewProjects();
+  newProjects.unshift(project); // Add to beginning
+  sessionStorage.setItem('newProjects', JSON.stringify(newProjects));
+};
+
+// Helper to find a project by ID
+export const findProjectById = (id: string): Project | undefined => {
+  return MOCK_PROJECTS.find(p => p.id === id);
+};

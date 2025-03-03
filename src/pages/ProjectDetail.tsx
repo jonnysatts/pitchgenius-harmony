@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { MOCK_PROJECTS } from "@/data/mockProjects";
+import { MOCK_PROJECTS, findProjectById } from "@/data/mockProjects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
 import { calculateOverallConfidence, countInsightsNeedingReview } from "@/services/ai";
@@ -31,14 +30,26 @@ const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
-  const project = MOCK_PROJECTS.find(p => p.id === projectId) as Project;
+  // Get the project by ID
+  const project = findProjectById(projectId || '');
   const [activeTab, setActiveTab] = useState("documents");
   
-  // Get state from location
-  const mockProjectWarning = location.state?.mockProjectWarning;
-  const newProjectTitle = location.state?.newProjectTitle;
-  const newProjectClient = location.state?.newProjectClient;
+  // If project not found, redirect to dashboard
+  useEffect(() => {
+    if (!project && projectId) {
+      toast({
+        title: "Project not found",
+        description: "The project you're looking for doesn't exist or has been deleted.",
+        variant: "destructive"
+      });
+      navigate("/dashboard");
+    }
+  }, [project, projectId, navigate]);
+  
+  // Check if this is a newly created project
+  const isNewProject = project?.id.startsWith('new_');
   
   // Use our custom hooks
   const { 
@@ -55,7 +66,7 @@ const ProjectDetail = () => {
     processingComplete,
     setUseRealAI,
     handleAnalyzeDocuments
-  } = useAiAnalysis(project);
+  } = useAiAnalysis(project || {} as Project);
   
   const {
     reviewedInsights,
@@ -114,9 +125,10 @@ const ProjectDetail = () => {
     <AppLayout>
       <div className="container mx-auto px-4 py-8">
         <ProjectWelcomeAlert 
-          mockProjectWarning={!!mockProjectWarning} 
-          newProjectTitle={newProjectTitle} 
-          newProjectClient={newProjectClient} 
+          mockProjectWarning={false} 
+          newProjectTitle={project.title} 
+          newProjectClient={project.clientName} 
+          isNewProject={isNewProject}
         />
         
         <ProjectHeader project={project} />

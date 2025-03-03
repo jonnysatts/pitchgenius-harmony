@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { MOCK_PROJECTS } from "@/data/mockProjects";
+import { MOCK_PROJECTS, addNewProject } from "@/data/mockProjects";
 import { useToast } from "@/hooks/use-toast";
 import { Project } from "@/lib/types";
 
@@ -21,10 +21,12 @@ const NewProject = () => {
     const createNewProject = () => {
       // Simulate API call delay
       setTimeout(() => {
-        // In a real app, this would call an API to create a project
-        // For now, we'll create a mock project with a new ID
+        // Create a unique ID with timestamp and randomness
+        const newProjectId = `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        
+        // Create a new project
         const newProject: Project = {
-          id: `new_${Date.now()}`,
+          id: newProjectId,
           title: projectTitle,
           clientName: clientName,
           clientIndustry: clientIndustry,
@@ -32,44 +34,42 @@ const NewProject = () => {
           updatedAt: new Date().toISOString(),
           createdBy: "1", // Current user ID
           collaborators: [],
-          status: "draft"
+          status: "draft",
+          coverImage: getIndustryCoverImage(clientIndustry)
         };
         
-        // In a real app, we would save this to a database
-        // For now, we'll just navigate to the first mock project, but with the new title
-        // This simulates that we've created a new project
+        // Add this project to our stored projects
+        addNewProject(newProject);
         
         toast({
           title: "Project created",
           description: `${projectTitle} has been created successfully`,
         });
         
-        // Navigate to the first mock project
-        const firstProject = MOCK_PROJECTS[0];
-        if (firstProject) {
-          // Navigate to the first project but with a message that we are using a mock for demo purposes
-          navigate(`/projects/${firstProject.id}`, { 
-            state: { 
-              newProjectTitle: projectTitle,
-              newProjectClient: clientName,
-              mockProjectWarning: true 
-            } 
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "Unable to create a new project. No demo projects available.",
-            variant: "destructive"
-          });
-          navigate("/dashboard");
-        }
-        
+        // Navigate to the new project
+        navigate(`/projects/${newProjectId}`);
         setLoading(false);
       }, 1500);
     };
     
     createNewProject();
   }, [searchParams, toast, navigate]);
+  
+  // Helper function to get appropriate cover image based on industry
+  const getIndustryCoverImage = (industry: Project['clientIndustry']): string => {
+    switch (industry) {
+      case 'technology':
+        return "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d";
+      case 'finance':
+        return "https://images.unsplash.com/photo-1498050108023-c5249f4df085";
+      case 'entertainment':
+        return "https://images.unsplash.com/photo-1603739903239-8b6e64c3b185";
+      case 'retail':
+        return "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158";
+      default:
+        return "https://images.unsplash.com/photo-1557804506-669a67965ba0";
+    }
+  };
   
   if (loading) {
     return (
