@@ -24,6 +24,7 @@ const ProjectDetail = () => {
   
   const { 
     documents, 
+    isLoading,
     handleFilesSelected, 
     handleRemoveDocument 
   } = useDocuments(projectId || '', user?.id || '');
@@ -109,6 +110,7 @@ const ProjectDetail = () => {
         needsReviewCount={needsReviewCount}
         usingFallbackInsights={usingFallbackInsights}
         isNewProject={isNewProject}
+        isLoading={isLoading}
         handleFilesSelected={handleFilesSelected}
         handleRemoveDocument={handleRemoveDocument}
         handleAnalyzeDocuments={onAnalyzeDocuments}

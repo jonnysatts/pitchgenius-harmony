@@ -28,6 +28,7 @@ interface ProjectDetailContentProps {
   needsReviewCount: number;
   usingFallbackInsights: boolean;
   isNewProject: boolean;
+  isLoading?: boolean;
   handleFilesSelected: (files: File[]) => void;
   handleRemoveDocument: (documentId: string) => void;
   handleAnalyzeDocuments: () => void;
@@ -50,6 +51,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   needsReviewCount,
   usingFallbackInsights,
   isNewProject,
+  isLoading = false,
   handleFilesSelected,
   handleRemoveDocument,
   handleAnalyzeDocuments,
@@ -104,6 +106,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
             documents={documents}
             project={project}
             aiStatus={aiStatus}
+            isLoading={isLoading}
             onFilesSelected={handleFilesSelected}
             onRemoveDocument={handleRemoveDocument}
             onAnalyzeDocuments={handleAnalyzeDocuments}

@@ -11,6 +11,7 @@ interface FileUploadProps {
   maxFileSizeMB?: number;
   maxFiles?: number;
   className?: string;
+  disabled?: boolean;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -18,7 +19,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   acceptedFileTypes = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.rtf', '.md', '.jpg', '.png'],
   maxFileSizeMB = 10,
   maxFiles = 10,
-  className
+  className,
+  disabled = false
 }) => {
   const {
     dragActive,
@@ -34,11 +36,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
     onFilesSelected,
     acceptedFileTypes,
     maxFileSizeMB,
-    maxFiles
+    maxFiles,
+    disabled
   });
   
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn("w-full", className, disabled ? "opacity-70 pointer-events-none" : "")}>
       <DropZone
         dragActive={dragActive}
         acceptedFileTypes={acceptedFileTypes}
@@ -49,6 +52,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onFileInputChange={handleChange}
+        disabled={disabled}
       />
       
       <FileList

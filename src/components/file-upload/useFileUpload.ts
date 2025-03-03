@@ -7,13 +7,15 @@ interface UseFileUploadProps {
   acceptedFileTypes: string[];
   maxFileSizeMB: number;
   maxFiles: number;
+  disabled?: boolean;
 }
 
 export const useFileUpload = ({
   onFilesSelected,
   acceptedFileTypes,
   maxFileSizeMB,
-  maxFiles
+  maxFiles,
+  disabled = false
 }: UseFileUploadProps) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -25,6 +27,8 @@ export const useFileUpload = ({
   const maxSizeBytes = maxFileSizeMB * 1024 * 1024;
   
   const handleDrag = (e: React.DragEvent) => {
+    if (disabled) return;
+    
     e.preventDefault();
     e.stopPropagation();
     
@@ -68,6 +72,8 @@ export const useFileUpload = ({
   };
   
   const processFiles = (filesToProcess: FileList | File[]) => {
+    if (disabled) return;
+    
     const newFiles: File[] = [];
     const errors: Record<string, string> = {};
     const progress: Record<string, number> = {};
@@ -107,11 +113,13 @@ export const useFileUpload = ({
       const updatedFiles = [...selectedFiles, ...newFiles];
       setSelectedFiles(updatedFiles);
       setUploadProgress(prev => ({ ...prev, ...progress }));
-      onFilesSelected(updatedFiles);
+      onFilesSelected(newFiles);
     }
   };
   
   const handleDrop = (e: React.DragEvent) => {
+    if (disabled) return;
+    
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -122,6 +130,8 @@ export const useFileUpload = ({
   };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    
     e.preventDefault();
     
     if (e.target.files && e.target.files.length > 0) {
@@ -130,6 +140,8 @@ export const useFileUpload = ({
   };
   
   const removeFile = (fileName: string) => {
+    if (disabled) return;
+    
     setSelectedFiles(prev => prev.filter(file => file.name !== fileName));
     
     // Also remove from errors and progress if present
@@ -143,6 +155,8 @@ export const useFileUpload = ({
   };
 
   const dismissError = (fileName: string) => {
+    if (disabled) return;
+    
     const newErrors = { ...fileErrors };
     delete newErrors[fileName];
     setFileErrors(newErrors);

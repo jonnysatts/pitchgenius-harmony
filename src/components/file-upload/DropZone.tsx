@@ -14,6 +14,7 @@ interface DropZoneProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
 export const DropZone: React.FC<DropZoneProps> = ({
@@ -25,12 +26,15 @@ export const DropZone: React.FC<DropZoneProps> = ({
   onDragLeave,
   onDragOver,
   onDrop,
-  onFileInputChange
+  onFileInputChange,
+  disabled = false
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleButtonClick = () => {
-    inputRef.current?.click();
+    if (!disabled) {
+      inputRef.current?.click();
+    }
   };
 
   return (
@@ -38,12 +42,13 @@ export const DropZone: React.FC<DropZoneProps> = ({
       className={cn(
         "border-2 border-dashed rounded-xl p-6 text-center transition-colors flex flex-col items-center justify-center",
         dragActive ? "border-brand-orange bg-orange-50" : "border-slate-300 hover:border-slate-400",
-        "group"
+        "group",
+        disabled ? "opacity-70 cursor-not-allowed" : ""
       )}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDragEnter={!disabled ? onDragEnter : undefined}
+      onDragLeave={!disabled ? onDragLeave : undefined}
+      onDragOver={!disabled ? onDragOver : undefined}
+      onDrop={!disabled ? onDrop : undefined}
     >
       <input
         ref={inputRef}
@@ -52,6 +57,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
         onChange={onFileInputChange}
         accept={acceptedFileTypes.join(',')}
         className="hidden"
+        disabled={disabled}
       />
       
       <FileUp 
@@ -74,6 +80,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
         type="button"
         onClick={handleButtonClick}
         variant="outline"
+        disabled={disabled}
       >
         Browse files
       </Button>
