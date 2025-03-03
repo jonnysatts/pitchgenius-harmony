@@ -24,7 +24,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   const {
     insights,
     aiStatus,
-    error: aiError,
+    error: aiError, // Make sure this is explicitly named to match usage in ProjectDetail.tsx
     processingComplete,
     usingFallbackInsights,
     handleAnalyzeDocuments,
@@ -80,7 +80,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     failedUploads,
     insights,
     aiStatus,
-    aiError,
+    aiError, // Explicitly return aiError to match usage in ProjectDetail.tsx
     usingFallbackInsights,
     reviewedInsights,
     needsReviewCount,

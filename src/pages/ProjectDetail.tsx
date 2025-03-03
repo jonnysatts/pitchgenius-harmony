@@ -31,7 +31,7 @@ const ProjectDetail = () => {
     insights,
     reviewedInsights,
     aiStatus,
-    error,
+    aiError, // Fix: Use aiError instead of error
     usingFallbackInsights,
     needsReviewCount,
     overallConfidence,
@@ -87,7 +87,7 @@ const ProjectDetail = () => {
         reviewedInsights={reviewedInsights}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        error={error}
+        error={aiError} // Fix: Pass aiError as error prop
         aiStatus={aiStatus}
         overallConfidence={overallConfidence}
         needsReviewCount={needsReviewCount}
