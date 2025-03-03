@@ -7,10 +7,11 @@ import { MOCK_PROJECTS } from "@/data/mockProjects";
 import ProjectFilters from "@/components/dashboard/ProjectFilters";
 import ProjectList from "@/components/dashboard/ProjectList";
 import CreateProjectDialog from "@/components/dashboard/CreateProjectDialog";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all"); // Changed from empty string to "all"
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     title: "",
@@ -19,6 +20,7 @@ const Dashboard = () => {
   });
   
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Filter projects based on search term and status
   const filteredProjects = MOCK_PROJECTS.filter(project => {
@@ -26,16 +28,40 @@ const Dashboard = () => {
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.clientName.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "all" || project.status === statusFilter; // Changed condition to handle "all" value
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
   
   const handleCreateProject = () => {
     // In a real app, this would make an API call
-    // For now, we'll just navigate to a new project page
+    // For now, we'll simulate creating a new project by navigating to an existing one
     setIsCreateDialogOpen(false);
-    navigate("/projects/new");
+    
+    // Find the first project from mock data to use as demo
+    const firstProject = MOCK_PROJECTS[0];
+    
+    if (firstProject) {
+      // Log the action for debugging
+      console.log(`Creating new project "${newProject.title}" and navigating to ${firstProject.id}`);
+      
+      // Navigate to an existing project instead of a non-existent "new" one
+      navigate(`/projects/${firstProject.id}`);
+      
+      // Reset the form data
+      setNewProject({
+        title: "",
+        clientName: "",
+        clientIndustry: "retail"
+      });
+    } else {
+      // Handle the case where there are no mock projects
+      toast({
+        title: "Error",
+        description: "Unable to create a new project. No demo projects available.",
+        variant: "destructive"
+      });
+    }
   };
   
   return (
