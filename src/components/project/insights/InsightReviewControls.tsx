@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
+import InsightCardActions from "./InsightCardActions";
 
 interface InsightReviewControlsProps {
   showControls: boolean;
@@ -10,48 +10,12 @@ interface InsightReviewControlsProps {
   content?: Record<string, any>;
 }
 
-const InsightReviewControls: React.FC<InsightReviewControlsProps> = ({
-  showControls,
-  onAccept,
-  onReject,
-  onUpdate,
-  content
-}) => {
-  if (!showControls || !onAccept || !onReject) {
-    return null;
-  }
-
+const InsightReviewControls: React.FC<InsightReviewControlsProps> = (props) => {
   return (
-    <div className="flex justify-end mt-4 space-x-2">
-      {onUpdate && content && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onUpdate(content)}
-          className="text-purple-600 border-purple-200 hover:bg-purple-50"
-        >
-          Refine
-        </Button>
-      )}
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onReject}
-        className="text-red-600 border-red-200 hover:bg-red-50"
-      >
-        Reject
-      </Button>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onAccept}
-        className="text-green-600 border-green-200 hover:bg-green-50"
-      >
-        Accept
-      </Button>
-    </div>
+    <InsightCardActions 
+      {...props}
+      reviewStatus="pending"
+    />
   );
 };
 
