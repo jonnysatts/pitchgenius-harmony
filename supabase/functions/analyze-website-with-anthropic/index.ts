@@ -1,7 +1,7 @@
 
 // Main entry point for website analysis using Claude/Anthropic
 import { corsHeaders, handleCorsPreflightRequest } from './utils/corsHandlers.ts';
-import { fetchWebsiteContentWithFirecrawl } from './utils/firecrawlFetcher.ts';
+import { fetchWebsiteContentBasic } from './utils/websiteFetcher.ts';
 import { analyzeWebsiteWithAnthropic } from './services/anthropicService.ts';
 import { parseClaudeResponse, processInsights } from './utils/insightProcessor.ts';
 
@@ -44,11 +44,11 @@ Deno.serve(async (req) => {
     
     console.log(`Analyzing website for project ${projectId}: ${clientWebsite}\n`);
     
-    // Fetch actual website content using Firecrawl (or fallback to basic fetch)
+    // Fetch actual website content using basic fetch
     let contentToAnalyze = websiteContent;
     if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
-      console.log("No valid content provided, attempting to fetch website content with Firecrawl");
-      contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
+      console.log("No valid content provided, attempting to fetch website content with basic fetch");
+      contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
     }
     
     // Call Claude to analyze the content

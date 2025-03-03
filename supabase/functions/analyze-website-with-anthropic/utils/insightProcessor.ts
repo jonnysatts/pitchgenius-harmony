@@ -1,64 +1,115 @@
 
 /**
- * Process and normalize the Claude response
+ * Utility to process Claude's response into structured insights
  */
+
+// Parse the Claude response into a structured array of insights
 export function parseClaudeResponse(claudeResponse: string): any[] {
   try {
-    // Extract JSON from Claude's response
-    // Claude might wrap the JSON in text, markdown code blocks, etc.
-    const jsonMatches = claudeResponse.match(/\[[\s\S]*?\]/g);
+    console.log("Processing Claude response");
     
-    if (!jsonMatches || jsonMatches.length === 0) {
-      console.error('No JSON array found in Claude response');
-      throw new Error('No JSON array found in Claude response');
+    // Find JSON array in the response
+    const jsonStartRegex = /\[\s*{/;
+    const jsonEndRegex = /}\s*\]/;
+    
+    let jsonStartMatch = claudeResponse.match(jsonStartRegex);
+    let jsonEndMatch = claudeResponse.match(jsonEndRegex);
+    
+    if (!jsonStartMatch || !jsonEndMatch) {
+      console.error("Could not find JSON structure in Claude response");
+      throw new Error("Unexpected response format from Claude");
     }
     
-    // Find the longest JSON match which is likely the insights array
-    let longestMatch = '';
-    for (const match of jsonMatches) {
-      if (match.length > longestMatch.length) {
-        longestMatch = match;
-      }
+    // Extract the JSON portion from the response
+    const jsonStart = jsonStartMatch.index;
+    const jsonEnd = jsonEndMatch.index + jsonEndMatch[0].length;
+    
+    if (jsonStart === undefined || jsonEnd === undefined) {
+      throw new Error("Failed to locate JSON boundaries in Claude response");
     }
+    
+    const jsonString = claudeResponse.substring(jsonStart, jsonEnd);
+    console.log("Extracted JSON string of length:", jsonString.length);
     
     // Parse the JSON
-    const insights = JSON.parse(longestMatch);
+    const insights = JSON.parse(jsonString);
     
     if (!Array.isArray(insights)) {
-      console.error('Parsed content is not an array:', insights);
-      throw new Error('Parsed content from Claude is not an array');
+      throw new Error("Parsed result is not an array");
     }
     
-    console.log(`Successfully parsed ${insights.length} insights from Claude response`);
     return insights;
   } catch (error) {
-    console.error('Error parsing Claude response:', error);
-    console.error('Raw Claude response:', claudeResponse);
-    throw new Error(`Failed to parse Claude response: ${error.message}`);
+    console.error("Error parsing Claude response:", error);
+    console.log("Claude response excerpt:", claudeResponse.substring(0, 200) + "...");
+    throw error;
   }
 }
 
-/**
- * Process insights to ensure they have all required fields
- */
-export function processInsights(insights: any[]): any[] {
-  return insights.map(insight => {
-    // Generate a unique ID if one doesn't exist
-    const id = insight.id || `website-${insight.category || 'general'}-${Date.now()}`;
+// Process insights to ensure they have all required fields and proper formatting
+export function processInsights(rawInsights: any[]): any[] {
+  try {
+    console.log("Processing insights array:", rawInsights.length);
     
-    // Ensure all required fields are present
-    return {
-      id,
-      source: 'website',
-      category: insight.category || 'company_positioning',
-      confidence: insight.confidence || 75,
-      needsReview: insight.needsReview !== undefined ? insight.needsReview : true,
-      content: {
-        title: insight.content?.title || 'Website Analysis Insight',
-        summary: insight.content?.summary || 'Analysis from website content',
-        details: insight.content?.details || 'No specific details available',
-        recommendations: insight.content?.recommendations || 'No specific recommendations available',
+    return rawInsights.map((insight, index) => {
+      // Generate a timestamp-based ID if not present
+      if (!insight.id) {
+        const timestamp = Date.now();
+        insight.id = `website-${insight.category || 'general'}-${timestamp}-${index}`;
       }
-    };
-  });
+      
+      // Ensure category is set
+      if (!insight.category) {
+        console.log("Missing category for insight:", insight.id);
+        insight.category = 'company_positioning';
+      }
+      
+      // Ensure confidence is within range
+      if (!insight.confidence || typeof insight.confidence !== 'number') {
+        insight.confidence = 75;
+      } else {
+        insight.confidence = Math.max(60, Math.min(95, insight.confidence));
+      }
+      
+      // Set needsReview if not present
+      if (typeof insight.needsReview !== 'boolean') {
+        insight.needsReview = true;
+      }
+      
+      // Initialize content object if not present
+      if (!insight.content) {
+        insight.content = {};
+      }
+      
+      // Set default title if not present
+      if (!insight.content.title) {
+        insight.content.title = `Insight about ${insight.category}`;
+      }
+      
+      // Set default summary if not present
+      if (!insight.content.summary) {
+        insight.content.summary = "[Website-derived] Analysis based on website content";
+      } else if (!insight.content.summary.includes("[Website-derived]")) {
+        insight.content.summary = `[Website-derived] ${insight.content.summary}`;
+      }
+      
+      // Set default details if not present
+      if (!insight.content.details) {
+        insight.content.details = "No specific details were extracted from the website.";
+      }
+      
+      // Set default recommendations if not present
+      if (!insight.content.recommendations) {
+        insight.content.recommendations = "Consider exploring gaming integration opportunities based on the website analysis.";
+      }
+      
+      // Set source to website
+      insight.source = 'website';
+      
+      return insight;
+    });
+  } catch (error) {
+    console.error("Error processing insights:", error);
+    throw error;
+  }
 }

@@ -1,14 +1,21 @@
 
 /**
  * Basic utility to fetch website content 
- * Used as a fallback when Firecrawl is not available
+ * Used when Firecrawl is not available
  */
 export async function fetchWebsiteContentBasic(url: string): Promise<string> {
   try {
     console.log(`Fetching content from ${url} using basic fetch`);
     
+    // Ensure URL has protocol
+    const urlWithProtocol = url.startsWith('http') ? url : `https://${url}`;
+    
     // Simple fetch of the website HTML
-    const response = await fetch(url);
+    const response = await fetch(urlWithProtocol, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; GameAnalytics/1.0; +https://example.com)'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);

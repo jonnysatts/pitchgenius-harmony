@@ -61,7 +61,7 @@ export class FirecrawlService {
       console.log(`Analyzing website ${url} using Firecrawl via Supabase Edge Function`);
       
       // We'll call our Supabase Edge Function that will use the Firecrawl API key from secrets
-      const { data, error } = await fetch(`https://nryafptwknnftdjugoyn.supabase.co/functions/v1/analyze-website-with-anthropic`, {
+      const response = await fetch(`https://nryafptwknnftdjugoyn.supabase.co/functions/v1/analyze-website-with-anthropic`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,12 +74,14 @@ export class FirecrawlService {
           clientIndustry,
           systemPrompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations."
         })
-      }).then(res => res.json());
+      });
       
-      if (error) {
-        console.error('Error analyzing website via Supabase:', error);
-        throw new Error(`Error analyzing website: ${error.message || JSON.stringify(error)}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error from edge function: ${response.status} ${response.statusText} - ${errorText}`);
       }
+      
+      const data = await response.json();
       
       return data;
     } catch (error) {
