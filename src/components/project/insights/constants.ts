@@ -1,6 +1,5 @@
-
-import { Layers, Lightbulb, Users, TrendingUp, FileSliders } from "lucide-react";
-import { InsightCategory, NarrativeSection } from "@/lib/types";
+import { Layers, Lightbulb, Users, TrendingUp, FileSliders, Globe, Building, Award, Share2, Bell, Smartphone, Gamepad } from "lucide-react";
+import { InsightCategory, NarrativeSection, WebsiteInsightCategory } from "@/lib/types";
 
 // Define the strategic categories for Phase 1 (Analysis)
 export const strategicCategories = [
@@ -79,5 +78,45 @@ export const narrativeSections = [
     label: "Proof of Concept",
     description: "Case studies, ROI metrics, and next steps",
     sourceCategories: ["strategic_recommendations"] as InsightCategory[]
+  }
+];
+
+// Define the website insight categories (separate from strategic insights)
+export const websiteInsightCategories = [
+  {
+    id: "company_positioning" as WebsiteInsightCategory,
+    label: "Company Positioning & Brand Narrative",
+    description: "How the company presents itself and its brand story",
+    icon: Building
+  },
+  {
+    id: "competitive_landscape" as WebsiteInsightCategory,
+    label: "Competitive Landscape & Market Differentiation",
+    description: "Where the company stands in relation to competitors",
+    icon: Award
+  },
+  {
+    id: "key_partnerships" as WebsiteInsightCategory,
+    label: "Key Partnerships & Industry Relationships",
+    description: "Strategic alliances and business relationships",
+    icon: Share2
+  },
+  {
+    id: "public_announcements" as WebsiteInsightCategory,
+    label: "Public Announcements & Recent News",
+    description: "Recent company news and public statements",
+    icon: Bell
+  },
+  {
+    id: "consumer_engagement" as WebsiteInsightCategory,
+    label: "Consumer Engagement & Digital Presence",
+    description: "How the company engages with consumers online",
+    icon: Smartphone
+  },
+  {
+    id: "product_service_fit" as WebsiteInsightCategory,
+    label: "Product/Service Fit in the Gaming Space",
+    description: "How products or services could integrate with gaming",
+    icon: Gamepad
   }
 ];

@@ -1,5 +1,5 @@
 
-import { StrategicInsight, InsightCategory, NarrativeSection } from "@/lib/types";
+import { StrategicInsight, InsightCategory, NarrativeSection, WebsiteInsightCategory } from "@/lib/types";
 
 /**
  * Groups insights by their category
@@ -13,6 +13,36 @@ export const groupInsightsByCategory = (insights: StrategicInsight[]): Record<st
     groups[category].push(insight);
     return groups;
   }, {} as Record<string, StrategicInsight[]>);
+};
+
+/**
+ * Groups insights by their source (document or website)
+ */
+export const groupInsightsBySource = (insights: StrategicInsight[]): Record<string, StrategicInsight[]> => {
+  return insights.reduce((sources, insight) => {
+    const source = insight.source || 'document';
+    if (!sources[source]) {
+      sources[source] = [];
+    }
+    sources[source].push(insight);
+    return sources;
+  }, {} as Record<string, StrategicInsight[]>);
+};
+
+/**
+ * Groups website insights by their specific website category
+ */
+export const groupWebsiteInsightsByCategory = (insights: StrategicInsight[]): Record<WebsiteInsightCategory, StrategicInsight[]> => {
+  return insights.reduce((categories, insight) => {
+    if (insight.source === 'website') {
+      const category = insight.category as WebsiteInsightCategory;
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push(insight);
+    }
+    return categories;
+  }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
 };
 
 /**

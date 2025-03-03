@@ -1,3 +1,4 @@
+
 export type UserRole = "admin" | "standard" | "viewer";
 
 export interface User {
@@ -42,6 +43,15 @@ export type InsightCategory =
   "strategic_recommendations" | 
   "key_narratives";
 
+// Categories specifically for website insights
+export type WebsiteInsightCategory = 
+  "company_positioning" | 
+  "competitive_landscape" | 
+  "key_partnerships" | 
+  "public_announcements" | 
+  "consumer_engagement" | 
+  "product_service_fit";
+
 // Enhanced narrative section types with more dimensions
 export type NarrativeSection = 
   "gaming_revolution" | 
@@ -58,7 +68,8 @@ export type NarrativeSection =
 
 export interface StrategicInsight {
   id: string;
-  category: InsightCategory;
+  category: InsightCategory | WebsiteInsightCategory;
+  source?: 'document' | 'website'; // Add source field to distinguish between document and website insights
   narrativeSection?: NarrativeSection; // Which narrative section this insight belongs to
   content: Record<string, any>;
   confidence: number;

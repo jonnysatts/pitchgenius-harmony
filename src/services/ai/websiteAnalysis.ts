@@ -2,13 +2,14 @@
 /**
  * Service for analyzing client websites and generating preliminary insights
  */
-import { Project, StrategicInsight } from "@/lib/types";
+import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
 import { callClaudeApi, createTimeoutPromise } from "./apiClient";
 import { generateWebsiteResearchPrompt } from "./promptEngineering";
 import { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
 import { checkSupabaseConnection } from "./config";
 import { prepareWebsiteContent } from "./promptUtils";
+import { websiteInsightCategories } from "@/components/project/insights/constants";
 
 /**
  * Analyze a client website to generate preliminary insights
@@ -78,9 +79,6 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
       project.clientIndustry
     );
     
-    // In production, this would call the Supabase Edge Function with the website URL
-    // For now, we'll use the mock insights as a placeholder
-    
     const websiteContent = prepareWebsiteContent(project.clientWebsite || '', project);
     
     try {
@@ -92,7 +90,9 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
           clientWebsite: project.clientWebsite,
           projectTitle: project.title,
           websiteContent,
-          systemPrompt: websiteResearchPrompt
+          systemPrompt: websiteResearchPrompt,
+          // Add the website insight categories to the request
+          websiteInsightCategories: websiteInsightCategories.map(cat => cat.id)
         }
       });
       
@@ -105,7 +105,13 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
         throw new Error('No insights returned from website analysis');
       }
       
-      return { insights: data.insights };
+      // Make sure all insights have the source field set to 'website'
+      const processedInsights = data.insights.map((insight: StrategicInsight) => ({
+        ...insight,
+        source: 'website'
+      }));
+      
+      return { insights: processedInsights };
     } catch (err) {
       console.error('Error calling Supabase Edge Function:', err);
       throw err;
@@ -121,25 +127,28 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
  * This is used when we can't call the real API
  */
 const generateWebsiteMockInsights = (project: Project): StrategicInsight[] => {
-  // Generate a smaller set of mock insights (3-5)
-  const websiteInsights = generateComprehensiveInsights(project, [])
-    .filter((_, index) => index < 5) // Take only first 5 insights
-    .map(insight => {
-      // Create a modified insight with website analysis specific information
-      return {
-        ...insight,
-        content: {
-          ...insight.content,
-          source: 'Website analysis',
-          websiteUrl: project.clientWebsite,
-          // Add a flag that this is preliminary research
-          summary: insight.content.summary 
-            ? '🌐 [Website-derived] ' + insight.content.summary 
-            : insight.content.summary
-        }
-      };
-    });
+  // Create a distribution of mock insights across website categories
+  const categoryDistribution = websiteInsightCategories.map(category => category.id);
+  
+  // Generate a set of mock insights (one for each category)
+  const websiteInsights = categoryDistribution.map((category, index) => {
+    const categoryInfo = websiteInsightCategories.find(cat => cat.id === category);
+    return {
+      id: `website-insight-${index + 1}`,
+      category: category as WebsiteInsightCategory,
+      source: 'website' as 'website',
+      confidence: 70 + Math.floor(Math.random() * 25), // Random confidence between 70-95
+      needsReview: Math.random() > 0.5, // 50% chance of needing review
+      content: {
+        title: categoryInfo?.label || 'Website Insight',
+        summary: `🌐 [Website-derived] Analysis of ${project.clientName}'s ${categoryInfo?.label.toLowerCase()} based on their website.`,
+        details: `This insight was generated from analyzing ${project.clientWebsite} to understand ${categoryInfo?.description.toLowerCase()}.`,
+        recommendations: `Consider how the ${categoryInfo?.label.toLowerCase()} could be leveraged in a gaming context.`,
+        source: 'Website analysis',
+        websiteUrl: project.clientWebsite
+      }
+    };
+  });
     
   return websiteInsights;
 };
-

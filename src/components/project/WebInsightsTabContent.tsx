@@ -1,12 +1,14 @@
 
 import React from "react";
-import { Project, StrategicInsight } from "@/lib/types";
+import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Globe, RefreshCw, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
-import InsightsEmptyState from "@/components/project/InsightsEmptyState";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
+import { websiteInsightCategories } from "@/components/project/insights/constants";
+import { formatCategoryTitle } from "@/utils/insightUtils";
 
 interface WebInsightsTabContentProps {
   project: Project;
@@ -45,6 +47,16 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
 
   // Website insights are already filtered in the parent component
   const hasWebsiteInsights = websiteInsights.length > 0;
+  
+  // Group insights by category
+  const insightsByCategory = websiteInsights.reduce((acc, insight) => {
+    const category = insight.category as WebsiteInsightCategory;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(insight);
+    return acc;
+  }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
   
   return (
     <div className="bg-white p-6 rounded-lg border">
@@ -136,16 +148,86 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             <span className="font-medium">{websiteInsights.length}</span> insights generated from website analysis
           </div>
           
-          {websiteInsights.map(insight => (
-            <StrategicInsightCard
-              key={insight.id}
-              insight={insight}
-              reviewStatus={reviewedInsights[insight.id] || 'pending'}
-              onAccept={() => onAcceptInsight(insight.id)}
-              onReject={() => onRejectInsight(insight.id)}
-              onUpdate={(content) => onUpdateInsight(insight.id, content)}
-            />
-          ))}
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="mb-4 w-full overflow-x-auto flex flex-nowrap">
+              <TabsTrigger value="all" className="whitespace-nowrap">
+                All Categories
+              </TabsTrigger>
+              {websiteInsightCategories.map((category) => (
+                <TabsTrigger 
+                  key={category.id} 
+                  value={category.id}
+                  className="whitespace-nowrap"
+                >
+                  {category.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <TabsContent value="all" className="space-y-8">
+              {websiteInsightCategories.map((category) => {
+                const categoryInsights = insightsByCategory[category.id as WebsiteInsightCategory] || [];
+                if (categoryInsights.length === 0) return null;
+                
+                return (
+                  <div key={category.id} className="space-y-4">
+                    <h3 className="text-lg font-semibold flex items-center">
+                      <category.icon className="mr-2 h-5 w-5 text-slate-500" />
+                      {category.label}
+                    </h3>
+                    <p className="text-sm text-slate-600 mb-4">{category.description}</p>
+                    <div className="space-y-4">
+                      {categoryInsights.map(insight => (
+                        <StrategicInsightCard
+                          key={insight.id}
+                          insight={insight}
+                          reviewStatus={reviewedInsights[insight.id] || 'pending'}
+                          onAccept={() => onAcceptInsight(insight.id)}
+                          onReject={() => onRejectInsight(insight.id)}
+                          onUpdate={(content) => onUpdateInsight(insight.id, content)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </TabsContent>
+            
+            {websiteInsightCategories.map((category) => {
+              const categoryInsights = insightsByCategory[category.id as WebsiteInsightCategory] || [];
+              
+              return (
+                <TabsContent key={category.id} value={category.id} className="space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-md mb-4">
+                    <h3 className="text-lg font-semibold flex items-center">
+                      <category.icon className="mr-2 h-5 w-5 text-slate-500" />
+                      {category.label}
+                    </h3>
+                    <p className="text-sm text-slate-600 mt-1">{category.description}</p>
+                  </div>
+                  
+                  {categoryInsights.length > 0 ? (
+                    <div className="space-y-4">
+                      {categoryInsights.map(insight => (
+                        <StrategicInsightCard
+                          key={insight.id}
+                          insight={insight}
+                          reviewStatus={reviewedInsights[insight.id] || 'pending'}
+                          onAccept={() => onAcceptInsight(insight.id)}
+                          onReject={() => onRejectInsight(insight.id)}
+                          onUpdate={(content) => onUpdateInsight(insight.id, content)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 border border-dashed rounded-md">
+                      <p className="text-slate-500">No insights in this category yet.</p>
+                    </div>
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
           
           <div className="flex justify-end mt-8">
             <Button

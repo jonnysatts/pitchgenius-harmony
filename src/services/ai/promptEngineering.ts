@@ -31,11 +31,13 @@ export const generateWebsiteResearchPrompt = (websiteUrl: string, industry: stri
   
 Your task is to analyze the website content for ${websiteUrl} in the ${industry} industry and extract strategic insights that would help create an effective gaming engagement strategy for this client.
 
-Specifically:
-1. Identify the client's key business objectives, target audience, and current marketing approach
-2. Determine how gaming or gamification elements could enhance their current strategy
-3. Identify potential challenges or barriers to implementing gaming strategies in their business
-4. Recommend 3-5 specific, actionable strategic approaches that leverage gaming for this client
+Specifically, categorize your insights into these categories:
+1. Company Positioning & Brand Narrative - How the company presents itself and its brand story
+2. Competitive Landscape & Market Differentiation - Where the company stands in relation to competitors
+3. Key Partnerships & Industry Relationships - Strategic alliances and business relationships
+4. Public Announcements & Recent News - Recent company news and public statements
+5. Consumer Engagement & Digital Presence - How the company engages with consumers online
+6. Product/Service Fit in the Gaming Space - How products or services could integrate with gaming
 
 For each insight, provide:
 - A clear, concise summary (1-2 sentences)
@@ -43,5 +45,7 @@ For each insight, provide:
 - The potential business impact
 - Key considerations for implementation
 
-Your insights should be practical, aligned with the client's industry and brand, and focused on achievable recommendations that would provide real business value.`;
+Your insights should be practical, aligned with the client's industry and brand, and focused on achievable recommendations that would provide real business value.
+
+IMPORTANT: Keep website research insights separate from direct client inputs. Website research should be used to validate, challenge, or enhance the strategic narrative developed from direct client materials.`;
 };
