@@ -43,14 +43,19 @@ export type InsightCategory =
   "strategic_recommendations" | 
   "key_narratives";
 
-// Enriched narrative section types
+// Enhanced narrative section types with more dimensions
 export type NarrativeSection = 
   "gaming_revolution" | 
   "client_landscape" | 
   "cultural_insight" | 
   "solution_path" | 
   "tangible_vision" | 
-  "proof_of_concept";
+  "proof_of_concept" |
+  "audience_strategy" |
+  "engagement_approach" |
+  "channel_selection" |
+  "messaging_framework" |
+  "call_to_action";
 
 export interface StrategicInsight {
   id: string;
@@ -84,7 +89,7 @@ export interface Presentation {
   updatedAt: string;
 }
 
-// New type for the 6-step narrative framework
+// Enhanced type for the narrative framework with more dimensions
 export interface NarrativeFramework {
   gamingRevolution: string;
   currentLandscape: string;
@@ -92,6 +97,11 @@ export interface NarrativeFramework {
   strategicSolution: string;
   tangibleVision: string;
   proofOfConcept: string;
+  audienceStrategy: string;
+  engagementApproach: string;
+  channelSelection: string;
+  messagingFramework: string;
+  callToAction: string;
 }
 
 // Enhanced type for the strategic elements

@@ -83,10 +83,13 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
     setViewMode(value as ViewMode);
   };
 
+  // Set appropriate header title based on view mode
+  const headerTitle = viewMode === ViewMode.STRATEGIC_ANALYSIS ? "Strategic Insights" : "Narrative Framework";
+
   return (
     <div className="bg-white p-6 rounded-lg border">
       <InsightsHeader 
-        title="Strategic Insights" 
+        title={headerTitle}
         showProceedButton={allInsightsReviewed && viewMode === ViewMode.NARRATIVE_FRAMEWORK}
         onProceedToPresentation={handleProceedToPresentation}
       />

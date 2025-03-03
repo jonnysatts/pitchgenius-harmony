@@ -29,8 +29,8 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           <h1 className="text-3xl font-bold text-slate-900">
             {newProjectTitle || project.title}
           </h1>
-          <div className="flex items-center mt-1">
-            <span className="text-slate-500 mr-3">
+          <div className="flex flex-wrap items-center mt-1 gap-2">
+            <span className="text-slate-500 mr-1">
               {newProjectClient || project.clientName}
             </span>
             <Badge>
@@ -42,10 +42,10 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
                 href={project.clientWebsite.startsWith('http') ? project.clientWebsite : `https://${project.clientWebsite}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="ml-4 flex items-center text-sm text-blue-500 hover:text-blue-700 transition-colors"
+                className="flex items-center text-sm text-blue-500 hover:text-blue-700 transition-colors"
               >
                 <Globe size={14} className="mr-1" />
-                Visit website
+                {project.clientWebsite}
               </a>
             )}
           </div>

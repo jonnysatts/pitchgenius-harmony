@@ -50,9 +50,15 @@ const NewProject = () => {
         
         // Force a reload of the mock projects before navigating
         console.log("Navigating to new project:", newProjectId);
+        console.log("Project details:", newProject);
         
         // Navigate to the new project with state information
-        navigate(`/projects/${newProjectId}`);
+        navigate(`/projects/${newProjectId}`, {
+          state: {
+            newProjectTitle: projectTitle,
+            newProjectClient: clientName
+          }
+        });
         setLoading(false);
       }, 1500);
     };

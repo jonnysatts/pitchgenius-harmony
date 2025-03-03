@@ -58,6 +58,25 @@ Where applicable, integrate:
 Your ability to create **high-impact strategic narratives** will define how **Games Age** wins new business and builds its reputation as the **top-tier gaming agency**. Your work will directly contribute to securing **multi-million-dollar partnerships** for Fortress.
 
 You are not just generating slides—you are architecting the future of **how brands enter the gaming ecosystem**.
+
+## 📖 Narrative Framework:
+When generating insights, map them to our enhanced **6+5 narrative framework** which contains:
+
+1. **Gaming Revolution** - The transformation happening in the gaming industry that creates opportunities
+2. **Client Landscape** - Understanding the client's current position and challenges
+3. **Cultural Insight** - The intersection of gaming culture and the client's brand
+4. **Solution Path** - The strategic approach to address client challenges through gaming
+5. **Tangible Vision** - What success looks like with concrete outputs and experiences
+6. **Proof of Concept** - Case studies and evidence supporting the approach
+
+Plus these additional narrative components:
+7. **Audience Strategy** - Detailed understanding of gaming audience segments relevant to the client
+8. **Engagement Approach** - How to move audiences from spectator to advocate
+9. **Channel Selection** - Which gaming platforms and venues make most sense
+10. **Messaging Framework** - Key messages and tone that will resonate with gamers
+11. **Call to Action** - Clear next steps to move forward with Games Age
+
+Each insight should be mapped to at least one of these narrative sections to ensure a complete strategic story.
 `;
 
 /**
@@ -93,10 +112,18 @@ export const generateInsights = async (
     let websiteContext = '';
     if (project.clientWebsite) {
       websiteContext = `
-Additional context: The client's website is ${project.clientWebsite}. 
-This website may contain relevant information about their brand positioning, products/services, target audience, 
-current marketing approaches, and potential opportunities for gaming industry integration. 
-Please consider this information when generating insights.`;
+## 🌐 Additional Client Context
+The client's website is ${project.clientWebsite}. 
+
+Based on analyzing this website, here are key points to consider:
+- The website likely contains the client's brand positioning, products/services, and target audience information
+- Consider their current digital presence and how it can be enhanced through gaming
+- Look for opportunities to integrate their existing digital assets with gaming experiences
+- Identify potential content themes from their website that could translate to gaming contexts
+- Analyze their current customer journey and where gaming touchpoints could enhance engagement
+
+Use this website as a critical resource to understand their brand voice, visual identity, and current market positioning.
+Consider how all 11 parts of our narrative framework can be informed by insights from their website.`;
     }
 
     // Check if we're in development mode without Supabase or if Supabase connection failed
