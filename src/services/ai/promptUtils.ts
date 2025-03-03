@@ -1,4 +1,3 @@
-
 /**
  * Utilities for preparing document contents for AI processing
  */
@@ -25,11 +24,22 @@ export const prepareDocumentContents = (documents: Document[], project: Project)
 /**
  * Prepare website content for AI processing
  */
-export const prepareWebsiteContent = (url: string, project: Project): any => {
-  return {
-    url: url,
-    industry: project.clientIndustry,
-    // In a real implementation, this would contain scraped text content from the website
-    content: `This is simulated content scraped from the website ${url}. In a production environment, this would be the actual content scraped from the client's website, including text from key pages like Home, About, Products/Services, and Contact pages.`
-  };
+export const prepareWebsiteContent = (websiteUrl: string, project: Project): string => {
+  // In a real implementation, this would fetch and preprocess website content
+  // For now, we'll return placeholder content to acknowledge the URL
+  return `
+Website URL: ${websiteUrl}
+Industry: ${project.clientIndustry}
+Project Title: ${project.title}
+
+This is a placeholder for actual website content that would be fetched and processed
+in a production environment. In a real implementation, this function would:
+
+1. Scrape the website content
+2. Extract key information like product offerings, messaging, branding
+3. Format it appropriately for analysis by Claude AI
+
+For now, the Claude analysis will use its knowledge of ${project.clientIndustry} websites
+and specifically this URL to generate strategic insights.
+`;
 };

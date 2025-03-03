@@ -20,7 +20,7 @@ interface DocumentsTabContentProps {
   onAnalyzeWebsite?: () => void;
   isAnalyzingWebsite?: boolean;
   hasDocuments?: boolean;
-  websiteUrl?: string; // Added the missing websiteUrl property
+  websiteUrl?: string;
 }
 
 const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
@@ -34,6 +34,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   onAnalyzeWebsite,
   isAnalyzingWebsite = false,
   hasDocuments,
+  websiteUrl,
 }) => {
   // Only disable the Analyze button if:
   // 1. There are no documents OR
@@ -54,7 +55,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   // 2. Not currently analyzing website
   // 3. Not in the middle of document analysis
   const canAnalyzeWebsite = 
-    !!project?.clientWebsite && 
+    !!(websiteUrl || project?.clientWebsite) && 
     !isAnalyzingWebsite && 
     !(aiStatus && aiStatus.status === 'processing');
   
@@ -77,7 +78,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
       </div>
       
       {/* Website Analysis Card */}
-      {project?.clientWebsite && onAnalyzeWebsite && (
+      {(websiteUrl || project?.clientWebsite) && onAnalyzeWebsite && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex justify-between items-center">
@@ -103,12 +104,15 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
               <Globe size={14} className="mr-2 text-slate-400" />
               <span className="font-medium text-slate-700 mr-1">Website URL:</span> 
               <a 
-                href={project.clientWebsite.startsWith('http') ? project.clientWebsite : `https://${project.clientWebsite}`} 
+                href={(websiteUrl || project?.clientWebsite || '').startsWith('http') 
+                  ? (websiteUrl || project?.clientWebsite) 
+                  : `https://${websiteUrl || project?.clientWebsite}`
+                } 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline truncate"
               >
-                {project.clientWebsite}
+                {websiteUrl || project?.clientWebsite}
               </a>
             </div>
             

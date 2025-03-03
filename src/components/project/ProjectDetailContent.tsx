@@ -87,6 +87,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
         <TabsContent value="documents">
           <DocumentsTabContent 
             documents={documents}
+            project={project}
             isLoading={isLoading}
             onFilesSelected={handleFilesSelected}
             onRemoveDocument={handleRemoveDocument}
