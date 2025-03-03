@@ -39,7 +39,9 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     acceptedInsights,
     rejectedInsights,
     handleAcceptInsight,
-    handleRejectInsight
+    handleRejectInsight,
+    handleUpdateInsight,
+    updatedInsights
   } = useInsightsReview(insights);
   
   // Set up retry analysis handler
@@ -87,11 +89,13 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     overallConfidence,
     acceptedInsights,
     rejectedInsights,
+    updatedInsights,
     handleFilesSelected,
     handleRemoveDocument,
     handleAnalyzeProjectDocuments,
     handleAcceptInsight,
     handleRejectInsight,
+    handleUpdateInsight,
     handleNavigateToDocuments,
     handleNavigateToPresentation,
     handleRetryAnalysis,

@@ -1,8 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { StrategicInsight, AIProcessingStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import InsightsStats from "@/components/project/InsightsStats";
 import InsightsEmptyState from "@/components/project/InsightsEmptyState";
 import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
@@ -20,10 +21,60 @@ interface InsightsTabContentProps {
   aiStatus?: AIProcessingStatus;
   onAcceptInsight: (insightId: string) => void;
   onRejectInsight: (insightId: string) => void;
+  onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   onNavigateToDocuments: () => void;
   onNavigateToPresentation: () => void;
   onRetryAnalysis?: () => void;
 }
+
+// Define the strategic narrative sections
+const narrativeSections = [
+  {
+    id: "all_insights",
+    label: "All Insights",
+    description: "Review all strategic insights across categories"
+  },
+  {
+    id: "gaming_revolution",
+    label: "Gaming Revolution Context",
+    description: "Industry-specific gaming statistics and trends relevant to the client"
+  },
+  {
+    id: "client_landscape",
+    label: "Client's Current Landscape",
+    description: "Assessment of challenges and opportunities in the gaming context"
+  },
+  {
+    id: "cultural_insight",
+    label: "Gaming Cultural Insight",
+    description: "Key strategic insights connecting client to gaming culture"
+  },
+  {
+    id: "solution_path",
+    label: "Strategic Solution Path",
+    description: "Strategic approach to addressing client challenges through gaming"
+  },
+  {
+    id: "tangible_vision",
+    label: "Tangible Vision",
+    description: "Concrete activation concepts and implementation details"
+  },
+  {
+    id: "proof_of_concept",
+    label: "Proof of Concept",
+    description: "Case studies, ROI metrics, and next steps"
+  }
+];
+
+// Map insight categories to narrative sections
+const categoryToSectionMap: Record<string, string> = {
+  "business_challenges": "client_landscape",
+  "audience_gaps": "client_landscape",
+  "competitive_threats": "client_landscape",
+  "gaming_opportunities": "gaming_revolution",
+  "strategic_recommendations": "solution_path",
+  "key_narratives": "cultural_insight"
+};
 
 const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   insights,
@@ -35,11 +86,13 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   aiStatus,
   onAcceptInsight,
   onRejectInsight,
+  onUpdateInsight,
   onNavigateToDocuments,
   onNavigateToPresentation,
   onRetryAnalysis
 }) => {
   const { toast } = useToast();
+  const [activeSection, setActiveSection] = useState<string>("all_insights");
   
   // Determine if Claude is in the intensive processing phase
   const isClaudeProcessing = aiStatus?.status === 'processing' && 
@@ -54,6 +107,18 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
     }
     groups[category].push(insight);
     return groups;
+  }, {} as Record<string, StrategicInsight[]>);
+  
+  // Group insights by narrative section
+  const insightsBySection = insights.reduce((sections, insight) => {
+    const category = insight.category || 'other';
+    const sectionId = categoryToSectionMap[category] || "other";
+    
+    if (!sections[sectionId]) {
+      sections[sectionId] = [];
+    }
+    sections[sectionId].push(insight);
+    return sections;
   }, {} as Record<string, StrategicInsight[]>);
   
   // Calculate stats
@@ -81,6 +146,12 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
     
     // Navigate to the presentation tab
     onNavigateToPresentation();
+  };
+  
+  // Get the current section label for context
+  const getCurrentSectionLabel = () => {
+    const section = narrativeSections.find(s => s.id === activeSection);
+    return section ? section.label : "Strategic Insight";
   };
   
   return (
@@ -120,17 +191,82 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
       {insights.length === 0 ? (
         <InsightsEmptyState onNavigateToDocuments={onNavigateToDocuments} />
       ) : (
-        <div className="space-y-10">
-          {Object.entries(insightsByCategory).map(([category, categoryInsights]) => (
-            <InsightsCategoryGroup
-              key={category}
-              category={category}
-              insights={categoryInsights}
-              reviewedInsights={reviewedInsights}
-              onAcceptInsight={onAcceptInsight}
-              onRejectInsight={onRejectInsight}
-            />
-          ))}
+        <div className="mt-6">
+          <Tabs defaultValue="all_insights" value={activeSection} onValueChange={setActiveSection}>
+            <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
+              {narrativeSections.map((section) => (
+                <TabsTrigger 
+                  key={section.id} 
+                  value={section.id}
+                  className="whitespace-nowrap"
+                >
+                  {section.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            {/* Display the description of the current section */}
+            <div className="mb-6 px-4 py-3 bg-muted rounded-md">
+              <p className="text-sm text-muted-foreground">
+                {narrativeSections.find(s => s.id === activeSection)?.description}
+              </p>
+            </div>
+            
+            <TabsContent value="all_insights" className="space-y-10">
+              {Object.entries(insightsByCategory).map(([category, categoryInsights]) => (
+                <InsightsCategoryGroup
+                  key={category}
+                  category={category}
+                  insights={categoryInsights}
+                  reviewedInsights={reviewedInsights}
+                  onAcceptInsight={onAcceptInsight}
+                  onRejectInsight={onRejectInsight}
+                  onUpdateInsight={onUpdateInsight}
+                  section="All Insights"
+                />
+              ))}
+            </TabsContent>
+            
+            {/* Create a tab content for each narrative section */}
+            {narrativeSections.filter(section => section.id !== "all_insights").map((section) => (
+              <TabsContent key={section.id} value={section.id} className="space-y-10">
+                {insightsBySection[section.id] && insightsBySection[section.id].length > 0 ? (
+                  Object.entries(
+                    insightsBySection[section.id].reduce((groups, insight) => {
+                      const category = insight.category || 'other';
+                      if (!groups[category]) {
+                        groups[category] = [];
+                      }
+                      groups[category].push(insight);
+                      return groups;
+                    }, {} as Record<string, StrategicInsight[]>)
+                  ).map(([category, categoryInsights]) => (
+                    <InsightsCategoryGroup
+                      key={`${section.id}-${category}`}
+                      category={category}
+                      insights={categoryInsights}
+                      reviewedInsights={reviewedInsights}
+                      onAcceptInsight={onAcceptInsight}
+                      onRejectInsight={onRejectInsight}
+                      onUpdateInsight={onUpdateInsight}
+                      section={section.label}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground">No insights categorized for this section yet.</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-2"
+                      onClick={() => setActiveSection("all_insights")}
+                    >
+                      View all insights
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
           
           {/* Bottom button for navigating to presentation */}
           <InsightsNavigation 

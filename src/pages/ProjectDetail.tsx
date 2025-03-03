@@ -35,11 +35,13 @@ const ProjectDetail = () => {
     usingFallbackInsights,
     needsReviewCount,
     overallConfidence,
+    acceptedInsights,
     handleFilesSelected,
     handleRemoveDocument,
     handleAnalyzeProjectDocuments,
     handleAcceptInsight,
     handleRejectInsight,
+    handleUpdateInsight,
     handleNavigateToPresentation,
     handleRetryAnalysis,
     isNewProject
@@ -94,11 +96,13 @@ const ProjectDetail = () => {
         usingFallbackInsights={usingFallbackInsights}
         isNewProject={isNewProject}
         isLoading={isLoading}
+        acceptedInsights={acceptedInsights}
         handleFilesSelected={handleFilesSelected}
         handleRemoveDocument={handleRemoveDocument}
         handleAnalyzeDocuments={handleAnalyzeProjectDocuments}
         handleAcceptInsight={handleAcceptInsight}
         handleRejectInsight={handleRejectInsight}
+        handleUpdateInsight={handleUpdateInsight}
         navigateToPresentation={handleNavigateToPresentation}
         onRetryAnalysis={handleRetryAnalysis}
       />

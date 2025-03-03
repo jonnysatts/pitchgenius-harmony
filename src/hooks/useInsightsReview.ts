@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { StrategicInsight } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -5,19 +6,25 @@ import { useToast } from "@/hooks/use-toast";
 export const useInsightsReview = (insights: StrategicInsight[]) => {
   // Initialize reviewedInsights with pending status for all insights
   const [reviewedInsights, setReviewedInsights] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
+  // Store updated insights to track changes
+  const [updatedInsights, setUpdatedInsights] = useState<Record<string, StrategicInsight>>({});
   const { toast } = useToast();
   
   // Reset when insights change
   useEffect(() => {
     // Initialize with all insights set to pending
     const initialReviewState: Record<string, 'accepted' | 'rejected' | 'pending'> = {};
+    const initialInsightsState: Record<string, StrategicInsight> = {};
     
     insights.forEach(insight => {
       // Keep existing review state if available, otherwise set to pending
       initialReviewState[insight.id] = reviewedInsights[insight.id] || 'pending';
+      // Store the current insight
+      initialInsightsState[insight.id] = updatedInsights[insight.id] || insight;
     });
     
     setReviewedInsights(initialReviewState);
+    setUpdatedInsights(initialInsightsState);
   }, [insights]);
   
   // Count how many insights still need review
@@ -39,10 +46,12 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     return Math.round(totalConfidence / acceptedInsights.length);
   }, [insights, reviewedInsights]);
   
-  // Get accepted insights
+  // Get accepted insights - use the updated versions if available
   const acceptedInsights = useMemo(() => 
-    insights.filter(insight => reviewedInsights[insight.id] === 'accepted'),
-    [insights, reviewedInsights]
+    insights
+      .filter(insight => reviewedInsights[insight.id] === 'accepted')
+      .map(insight => updatedInsights[insight.id] || insight),
+    [insights, reviewedInsights, updatedInsights]
   );
   
   // Get rejected insights
@@ -77,6 +86,37 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     });
   }, [toast]);
   
+  // Handler for updating insight content
+  const handleUpdateInsight = useCallback((insightId: string, updatedContent: Record<string, any>) => {
+    // Find the original insight
+    const originalInsight = insights.find(insight => insight.id === insightId);
+    
+    if (!originalInsight) {
+      console.error(`Insight with ID ${insightId} not found`);
+      return;
+    }
+    
+    // Create the updated insight
+    const updatedInsight: StrategicInsight = {
+      ...originalInsight,
+      content: {
+        ...originalInsight.content,
+        ...updatedContent
+      }
+    };
+    
+    // Update the insights map
+    setUpdatedInsights(prev => ({
+      ...prev,
+      [insightId]: updatedInsight
+    }));
+    
+    toast({
+      title: "Insight Updated",
+      description: "The insight has been refined based on your conversation"
+    });
+  }, [insights, toast]);
+  
   return {
     reviewedInsights,
     needsReviewCount,
@@ -84,7 +124,9 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     acceptedInsights,
     rejectedInsights,
     handleAcceptInsight,
-    handleRejectInsight
+    handleRejectInsight,
+    handleUpdateInsight,
+    updatedInsights
   };
 };
 

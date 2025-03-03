@@ -1,47 +1,44 @@
 
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Project } from "@/lib/types";
+import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectWelcomeAlert from "@/components/project/ProjectWelcomeAlert";
+import { AIProcessingStatus, Project, Document, StrategicInsight } from "@/lib/types";
 import ProjectHeader from "@/components/project/ProjectHeader";
-import ErrorAlert from "@/components/project/ErrorAlert";
 import DocumentsTabContent from "@/components/project/DocumentsTabContent";
 import InsightsTabContent from "@/components/project/InsightsTabContent";
 import PresentationTabContent from "@/components/project/PresentationTabContent";
 import HelpTabContent from "@/components/project/HelpTabContent";
-import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Document, StrategicInsight, AIProcessingStatus } from "@/lib/types";
+import ProjectWelcomeAlert from "@/components/project/ProjectWelcomeAlert";
 
 interface ProjectDetailContentProps {
   project: Project;
   documents: Document[];
   insights: StrategicInsight[];
+  acceptedInsights: StrategicInsight[];
   reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  error: string | null;
-  aiStatus: AIProcessingStatus;
+  error?: string | null;
+  aiStatus?: AIProcessingStatus;
   overallConfidence: number;
   needsReviewCount: number;
-  usingFallbackInsights: boolean;
+  usingFallbackInsights?: boolean;
   isNewProject: boolean;
-  isLoading?: boolean;
+  isLoading: boolean;
   handleFilesSelected: (files: File[]) => void;
   handleRemoveDocument: (documentId: string) => void;
   handleAnalyzeDocuments: () => void;
   handleAcceptInsight: (insightId: string) => void;
   handleRejectInsight: (insightId: string) => void;
+  handleUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   navigateToPresentation: () => void;
-  onRetryAnalysis: () => void;
+  onRetryAnalysis?: () => void;
 }
 
 const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   project,
   documents,
   insights,
+  acceptedInsights,
   reviewedInsights,
   activeTab,
   setActiveTab,
@@ -51,78 +48,62 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   needsReviewCount,
   usingFallbackInsights,
   isNewProject,
-  isLoading = false,
+  isLoading,
   handleFilesSelected,
   handleRemoveDocument,
   handleAnalyzeDocuments,
   handleAcceptInsight,
   handleRejectInsight,
+  handleUpdateInsight,
   navigateToPresentation,
   onRetryAnalysis
 }) => {
-  const { toast } = useToast();
-  
   return (
-    <div className="container mx-auto px-4 py-8">
-      <ProjectWelcomeAlert 
-        mockProjectWarning={false} 
-        newProjectTitle={project.title} 
-        newProjectClient={project.clientName} 
-        isNewProject={isNewProject}
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <ProjectHeader 
+        project={project} 
+        activeTab={activeTab}
+        aiStatus={aiStatus}
       />
       
-      <ProjectHeader project={project} />
+      {isNewProject && <ProjectWelcomeAlert />}
       
-      <ErrorAlert error={error} />
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="documents" className="flex items-center gap-2">
-            <FileText size={16} />
-            Documents
-            {documents.length > 0 && (
-              <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="insights" className="flex items-center gap-2">
-            <Lightbulb size={16} />
-            Strategic Insights
-            {insights.length > 0 && (
-              <Badge variant="secondary" className="ml-1">{insights.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="presentation" className="flex items-center gap-2">
-            <Presentation size={16} />
-            Presentation
-          </TabsTrigger>
-          <TabsTrigger value="help" className="flex items-center gap-2">
-            <CircleHelp size={16} />
-            Help
-          </TabsTrigger>
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="mt-6"
+      >
+        <TabsList className="grid grid-cols-4 w-full max-w-[600px] mb-6">
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="presentation">Presentation</TabsTrigger>
+          <TabsTrigger value="help">Help</TabsTrigger>
         </TabsList>
         
         <TabsContent value="documents">
           <DocumentsTabContent 
             documents={documents}
-            project={project}
-            aiStatus={aiStatus}
             isLoading={isLoading}
             onFilesSelected={handleFilesSelected}
             onRemoveDocument={handleRemoveDocument}
             onAnalyzeDocuments={handleAnalyzeDocuments}
+            hasDocuments={documents.length > 0}
+            aiStatus={aiStatus}
           />
         </TabsContent>
         
         <TabsContent value="insights">
-          <InsightsTabContent 
+          <InsightsTabContent
             insights={insights}
             reviewedInsights={reviewedInsights}
             overallConfidence={overallConfidence}
             needsReviewCount={needsReviewCount}
             error={error}
             usingFallbackInsights={usingFallbackInsights}
+            aiStatus={aiStatus}
             onAcceptInsight={handleAcceptInsight}
             onRejectInsight={handleRejectInsight}
+            onUpdateInsight={handleUpdateInsight}
             onNavigateToDocuments={() => setActiveTab("documents")}
             onNavigateToPresentation={navigateToPresentation}
             onRetryAnalysis={onRetryAnalysis}
@@ -132,9 +113,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
         <TabsContent value="presentation">
           <PresentationTabContent 
             project={project}
-            acceptedInsights={insights.filter(insight => 
-              reviewedInsights[insight.id] === 'accepted'
-            )}
+            acceptedInsights={acceptedInsights}
           />
         </TabsContent>
         
