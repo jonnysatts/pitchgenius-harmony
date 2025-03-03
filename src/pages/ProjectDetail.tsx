@@ -6,7 +6,7 @@ import { MOCK_PROJECTS } from "@/data/mockProjects";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
-import { FileUpload } from "@/components/FileUpload";
+import { FileUpload } from "@/components/file-upload";
 import { Document, Project } from "@/lib/types";
 import { processFiles } from "@/services/documentService";
 import DocumentList from "@/components/project/DocumentList";
