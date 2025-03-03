@@ -1,7 +1,9 @@
+
 import { useCallback } from "react";
 import { Project, Document } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
 import { useEffect } from "react";
+import { useToast, toast } from "@/hooks/use-toast";
 
 // Import the new smaller hooks
 import { useAiStatus } from "./ai/useAiStatus";
