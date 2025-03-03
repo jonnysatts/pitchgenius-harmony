@@ -10,6 +10,7 @@ import { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
 import { checkSupabaseConnection } from "./config";
 import { prepareWebsiteContent } from "./promptUtils";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
+import { normalizeWebsiteCategory, isValidWebsiteCategory } from "@/components/project/insights/utils/insightFormatters";
 
 /**
  * Analyze a client website to generate preliminary insights
@@ -105,15 +106,18 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
         throw new Error('No insights returned from website analysis');
       }
       
+      // Log the raw categories from API for debugging
+      console.log('Raw categories from API:', data.insights.map((i: any) => i.category));
+      
       // Make sure all insights have the source field set to 'website'
       // and have proper category values
       const processedInsights = data.insights.map((insight: StrategicInsight) => {
+        // Normalize the category using our utility function
+        const normalizedCategory = normalizeWebsiteCategory(insight.category || 'company_positioning');
+        
         // Ensure the insight has a valid category
-        if (!insight.category || 
-            typeof insight.category !== 'string' || 
-            !websiteInsightCategories.some(cat => cat.id === insight.category)) {
-          console.log(`Fixing invalid category for insight: ${insight.id}, setting to default 'company_positioning'`);
-          insight.category = 'company_positioning';
+        if (!isValidWebsiteCategory(normalizedCategory)) {
+          console.log(`Invalid category after normalization for insight: ${insight.id}, setting to default 'company_positioning'`);
         }
         
         // Ensure title is set
@@ -131,6 +135,7 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
         return {
           ...insight,
           source: 'website',
+          category: normalizedCategory,
           content: {
             ...insight.content,
             websiteUrl: project.clientWebsite,
@@ -139,8 +144,15 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
         };
       });
       
-      console.log(`Processed ${processedInsights.length} website insights:`, 
-        processedInsights.map(i => `${i.id}: ${i.category}`));
+      // Log the distributed categories after normalization
+      const categoryDistribution = processedInsights.reduce((acc: Record<string, number>, insight) => {
+        const category = String(insight.category);
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {});
+      
+      console.log('Website insights category distribution after normalization:', categoryDistribution);
+      console.log('Website insights categories:', processedInsights.map(i => i.category));
       
       return { insights: processedInsights };
     } catch (err) {
@@ -158,20 +170,28 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
  * This is used when we can't call the real API
  */
 const generateWebsiteMockInsights = (project: Project): StrategicInsight[] => {
-  // Create a distribution of mock insights across website categories
-  const categoryDistribution = websiteInsightCategories.map(category => category.id);
+  // Create a more even distribution of mock insights across website categories
+  // instead of just using the category IDs, we'll make a balanced distribution
+  const balancedDistribution: WebsiteInsightCategory[] = [
+    'company_positioning',
+    'competitive_landscape',
+    'key_partnerships',
+    'public_announcements',
+    'consumer_engagement',
+    'product_service_fit'
+  ];
   
   // Generate a set of mock insights (one for each category)
-  const websiteInsights = categoryDistribution.map((category, index) => {
+  const websiteInsights = balancedDistribution.map((category, index) => {
     const categoryInfo = websiteInsightCategories.find(cat => cat.id === category);
     
     // Generate a unique ID with timestamp to prevent duplicates
-    const timestamp = Date.now();
+    const timestamp = Date.now() + index; // Add index to ensure uniqueness
     const uniqueId = `website-insight-${index + 1}-${timestamp}`;
     
     return {
       id: uniqueId,
-      category: category as WebsiteInsightCategory,
+      category: category,
       source: 'website' as 'website',
       confidence: 70 + Math.floor(Math.random() * 25), // Random confidence between 70-95
       needsReview: Math.random() > 0.5, // 50% chance of needing review
