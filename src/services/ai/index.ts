@@ -1,26 +1,9 @@
 
 /**
- * Main AI service index file that exports all AI-related functionality
+ * Export all AI services
  */
-
-// Export from config
-export { checkSupabaseConnection } from './config';
-
-// Export from insightGenerator
-export { generateInsights } from './insightGenerator';
-
-// Export from statusTracking
-export { 
-  getAIProcessingStatus,
-  monitorAIProcessingProgress
-} from './statusTracking';
-
-// Export from insightAnalytics
-export {
-  calculateOverallConfidence,
-  countInsightsNeedingReview
-} from './insightAnalytics';
-
-// Export from mockGenerator
-export { generateComprehensiveInsights } from './mockGenerator';
-
+export { checkSupabaseConnection } from "./config";
+export { generateInsights } from "./insightGenerator";
+export { generateComprehensiveInsights } from "./mockGenerator";
+export { getAIProcessingStatus, monitorAIProcessingProgress } from "./statusTracking";
+export { calculateOverallConfidence, countInsightsNeedingReview } from "./insightAnalytics";

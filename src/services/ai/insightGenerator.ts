@@ -42,21 +42,24 @@ export const generateInsights = async (
     if (!useRealApi) {
       console.log('Supabase connection not available, using mock insights generator');
       const mockInsights = generateComprehensiveInsights(project, documents);
-      return { insights: mockInsights };
+      return { 
+        insights: mockInsights,
+        error: "Using sample insights - no Supabase connection available"
+      };
     }
     
     console.log('Using Anthropic API via Supabase Edge Function to generate insights');
     
-    // Create a timeout promise to handle API timeouts
+    // Create a shorter timeout promise to handle API timeouts - reduced from 30 seconds to 15 seconds
     const timeoutPromise = new Promise<{ insights: StrategicInsight[], error?: string }>((resolve) => {
       setTimeout(() => {
         console.log('API request taking too long, falling back to mock insights');
         const mockInsights = generateComprehensiveInsights(project, documents);
         resolve({ 
           insights: mockInsights, 
-          error: "API request timeout - using generated sample insights instead" 
+          error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please refresh and retry." 
         });
-      }, 30000); // 30 second timeout
+      }, 15000); // 15 second timeout instead of 30
     });
     
     try {
@@ -82,7 +85,7 @@ export const generateInsights = async (
             const mockInsights = generateComprehensiveInsights(project, documents);
             return { 
               insights: mockInsights,
-              error: "API error - using generated sample insights instead" 
+              error: "Claude AI error - using generated sample insights instead. Error: " + error.message
             };
           }
           
@@ -92,12 +95,15 @@ export const generateInsights = async (
             const mockInsights = generateComprehensiveInsights(project, documents);
             return { 
               insights: mockInsights,
-              error: "No insights returned from API - using generated sample insights instead" 
+              error: "No insights returned from Claude AI - using generated sample insights instead" 
             };
           }
           
           console.log('Successfully received insights from Anthropic:', data);
-          return { insights: data.insights || [] };
+          return { 
+            insights: data.insights || [],
+            error: undefined
+          };
         })(),
         timeoutPromise
       ]);
@@ -107,7 +113,7 @@ export const generateInsights = async (
       const mockInsights = generateComprehensiveInsights(project, documents);
       return { 
         insights: mockInsights,
-        error: "API error - using generated sample insights instead" 
+        error: "Claude AI error - using generated sample insights instead. Error: " + apiError.message
       };
     }
   } catch (err: any) {

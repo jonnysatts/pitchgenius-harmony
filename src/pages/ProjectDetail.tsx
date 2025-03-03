@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -34,11 +33,9 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Get the project by ID
   const project = findProjectById(projectId || '');
   const [activeTab, setActiveTab] = useState("documents");
   
-  // If project not found, redirect to dashboard
   useEffect(() => {
     if (!project && projectId) {
       toast({
@@ -50,10 +47,8 @@ const ProjectDetail = () => {
     }
   }, [project, projectId, navigate, toast]);
   
-  // Check if this is a newly created project
   const isNewProject = project?.id.startsWith('new_');
   
-  // Use our custom hooks
   const { 
     documents, 
     handleFilesSelected, 
@@ -66,6 +61,7 @@ const ProjectDetail = () => {
     error,
     useRealAI,
     processingComplete,
+    usingFallbackInsights,
     setUseRealAI,
     handleAnalyzeDocuments
   } = useAiAnalysis(project || {} as Project);
@@ -76,14 +72,12 @@ const ProjectDetail = () => {
     handleRejectInsight
   } = useInsightsReview(insights);
   
-  // Effect to switch to insights tab when processing completes
   useEffect(() => {
     if (processingComplete && insights.length > 0) {
       setActiveTab("insights");
     }
   }, [processingComplete, insights.length]);
   
-  // Check if we can use the real AI via Supabase
   useEffect(() => {
     const checkAiAvailability = async () => {
       try {
@@ -114,16 +108,13 @@ const ProjectDetail = () => {
     );
   }
   
-  // Calculate stats
   const overallConfidence = calculateOverallConfidence(insights);
   const needsReviewCount = countInsightsNeedingReview(insights);
   
-  // Handle analyze documents with setActiveTab callback
   const onAnalyzeDocuments = () => {
     handleAnalyzeDocuments(documents, setActiveTab);
   };
 
-  // Function to navigate to presentation tab
   const navigateToPresentation = () => {
     setActiveTab("presentation");
     toast({
@@ -189,6 +180,8 @@ const ProjectDetail = () => {
               reviewedInsights={reviewedInsights}
               overallConfidence={overallConfidence}
               needsReviewCount={needsReviewCount}
+              error={error}
+              usingFallbackInsights={usingFallbackInsights}
               onAcceptInsight={handleAcceptInsight}
               onRejectInsight={handleRejectInsight}
               onNavigateToDocuments={() => setActiveTab("documents")}

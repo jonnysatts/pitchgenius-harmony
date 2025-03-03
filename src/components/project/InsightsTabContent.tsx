@@ -2,15 +2,18 @@
 import React from "react";
 import { StrategicInsight } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Check, X, ArrowRight } from "lucide-react";
+import { Lightbulb, Check, X, ArrowRight, AlertTriangle } from "lucide-react";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
 import InsightsStats from "@/components/project/InsightsStats";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface InsightsTabContentProps {
   insights: StrategicInsight[];
   reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
   overallConfidence: number;
   needsReviewCount: number;
+  error?: string | null;
+  usingFallbackInsights?: boolean;
   onAcceptInsight: (insightId: string) => void;
   onRejectInsight: (insightId: string) => void;
   onNavigateToDocuments: () => void;
@@ -22,6 +25,8 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   reviewedInsights,
   overallConfidence,
   needsReviewCount,
+  error,
+  usingFallbackInsights,
   onAcceptInsight,
   onRejectInsight,
   onNavigateToDocuments,
@@ -59,6 +64,16 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
           </Button>
         )}
       </div>
+      
+      {/* Show error or fallback message if applicable */}
+      {(error || usingFallbackInsights) && (
+        <Alert variant="warning" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
+          </AlertDescription>
+        </Alert>
+      )}
       
       {insights.length > 0 && (
         <InsightsStats 

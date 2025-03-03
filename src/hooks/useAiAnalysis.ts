@@ -20,6 +20,7 @@ export const useAiAnalysis = (project: Project) => {
   const [useRealAI, setUseRealAI] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
   const [isAnalysisInProgress, setIsAnalysisInProgress] = useState(false);
+  const [usingFallbackInsights, setUsingFallbackInsights] = useState(false);
 
   const updateUseRealAI = (value: boolean) => {
     setUseRealAI(value);
@@ -35,19 +36,27 @@ export const useAiAnalysis = (project: Project) => {
     // Navigate to insights tab
     setActiveTab("insights");
     
-    // Only show completion toast if we have insights
+    // Show the appropriate completion toast based on whether we used fallback insights
     if (insights.length > 0) {
-      toast({
-        title: "Analysis complete",
-        description: `Generated ${insights.length} strategic insights${useRealAI ? ' using Claude AI' : ''}`,
-      });
+      if (usingFallbackInsights) {
+        toast({
+          title: "Analysis complete (with fallback)",
+          description: `Generated ${insights.length} sample insights due to API timeout`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Analysis complete",
+          description: `Generated ${insights.length} strategic insights${useRealAI ? ' using Claude AI' : ''}`,
+        });
+      }
     }
-  }, [insights.length, toast, useRealAI]);
+  }, [insights.length, toast, useRealAI, usingFallbackInsights]);
 
   // Ensure we always have insights, even when unexpected delays occur
   useEffect(() => {
-    // If analysis is in progress but we have no insights after 25 seconds,
-    // generate mock insights as a fallback
+    // If analysis is in progress but we have no insights after 20 seconds,
+    // generate mock insights as a fallback (reduced from 25 seconds)
     let fallbackTimer: NodeJS.Timeout | null = null;
     
     if (isAnalysisInProgress && insights.length === 0) {
@@ -57,13 +66,15 @@ export const useAiAnalysis = (project: Project) => {
           console.log("Analysis taking too long, generating fallback insights");
           const mockInsights = generateComprehensiveInsights(project, []);
           setInsights(mockInsights);
+          setUsingFallbackInsights(true);
           
           toast({
-            title: "Analysis results ready",
+            title: "Fallback insights ready",
             description: "Using generated sample insights due to delay in processing",
+            variant: "default"
           });
         }
-      }, 25000);
+      }, 20000); // Reduced from 25000 to 20000 ms
     }
     
     return () => {
@@ -81,10 +92,11 @@ export const useAiAnalysis = (project: Project) => {
       return;
     }
     
-    // Reset any previous errors and status
+    // Reset any previous errors, status, and fallback state
     setError(null);
     setProcessingComplete(false);
     setIsAnalysisInProgress(true);
+    setUsingFallbackInsights(false);
     
     // Update status to processing
     setAiStatus({
@@ -103,7 +115,7 @@ export const useAiAnalysis = (project: Project) => {
     try {
       // Display different message based on whether we're using real AI or not
       toast({
-        title: useRealAI ? "Starting AI Analysis" : "Analyzing Documents",
+        title: useRealAI ? "Starting Claude AI Analysis" : "Analyzing Documents",
         description: useRealAI 
           ? `Analyzing ${documents.length} documents with Claude AI (this may take a few moments)`
           : `Running AI analysis on all ${documents.length} documents`,
@@ -115,8 +127,11 @@ export const useAiAnalysis = (project: Project) => {
       const result = await generateInsights(project, documents);
       
       if (result.error) {
+        // If there was an error or we fell back to sample insights, update the fallback state
+        setUsingFallbackInsights(true);
+        
         toast({
-          title: "Analysis completed with notice",
+          title: "Analysis notice",
           description: result.error,
           variant: "default"
         });
@@ -134,10 +149,12 @@ export const useAiAnalysis = (project: Project) => {
         // Fallback to mock generator if no insights were returned
         const mockInsights = generateComprehensiveInsights(project, documents);
         setInsights(mockInsights);
+        setUsingFallbackInsights(true);
         
         toast({
-          title: "Analysis complete",
+          title: "Analysis complete (using samples)",
           description: "Generated sample insights based on your documents",
+          variant: "default"
         });
       } else {
         setInsights(result.insights);
@@ -149,6 +166,7 @@ export const useAiAnalysis = (project: Project) => {
       console.log("Error during analysis, using mock generator as fallback");
       const mockInsights = generateComprehensiveInsights(project, documents);
       setInsights(mockInsights);
+      setUsingFallbackInsights(true);
       
       const errorMessage = error.message || "An unexpected error occurred";
       toast({
@@ -165,6 +183,7 @@ export const useAiAnalysis = (project: Project) => {
     error,
     useRealAI,
     processingComplete,
+    usingFallbackInsights,
     setUseRealAI: updateUseRealAI,
     handleAnalyzeDocuments,
     setInsights,
