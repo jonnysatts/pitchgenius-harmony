@@ -1,37 +1,38 @@
 
 import React from "react";
-import { Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Globe } from "lucide-react";
 
 interface WebsiteUrlCardProps {
-  websiteUrl?: string;
+  websiteUrl: string;
 }
 
 const WebsiteUrlCard: React.FC<WebsiteUrlCardProps> = ({ websiteUrl }) => {
-  if (!websiteUrl) return null;
+  // Format the URL for display - remove protocol and trailing slash
+  const displayUrl = websiteUrl
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '');
   
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 border-blue-200 bg-blue-50">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Client Website</CardTitle>
+        <CardTitle className="text-lg flex items-center">
+          <Globe className="h-5 w-5 mr-2 text-blue-500" />
+          Website URL Provided
+        </CardTitle>
         <CardDescription>
-          Analysis based on the client's online presence
+          The following website will be analyzed for insights
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center">
-          <Globe size={16} className="mr-2 text-slate-400" />
-          <a 
-            href={(websiteUrl || '').startsWith('http') 
-              ? websiteUrl 
-              : `https://${websiteUrl}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            {websiteUrl}
-          </a>
-        </div>
+        <a 
+          href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline font-medium"
+        >
+          {displayUrl}
+        </a>
       </CardContent>
     </Card>
   );
