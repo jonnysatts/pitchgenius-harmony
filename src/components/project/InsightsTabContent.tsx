@@ -2,7 +2,7 @@
 import React from "react";
 import { StrategicInsight } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Check, X } from "lucide-react";
+import { Lightbulb, Check, X, ArrowRight } from "lucide-react";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
 import InsightsStats from "@/components/project/InsightsStats";
 
@@ -14,6 +14,7 @@ interface InsightsTabContentProps {
   onAcceptInsight: (insightId: string) => void;
   onRejectInsight: (insightId: string) => void;
   onNavigateToDocuments: () => void;
+  onNavigateToPresentation: () => void;
 }
 
 const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
@@ -23,7 +24,8 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   needsReviewCount,
   onAcceptInsight,
   onRejectInsight,
-  onNavigateToDocuments
+  onNavigateToDocuments,
+  onNavigateToPresentation
 }) => {
   // Group insights by category
   const insightsByCategory = insights.reduce((groups, insight) => {
@@ -39,9 +41,24 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const acceptedCount = Object.values(reviewedInsights).filter(status => status === 'accepted').length;
   const rejectedCount = Object.values(reviewedInsights).filter(status => status === 'rejected').length;
   
+  // Check if all insights have been reviewed
+  const allInsightsReviewed = insights.length > 0 && needsReviewCount === 0;
+  
   return (
     <div className="bg-white p-6 rounded-lg border">
-      <h2 className="text-xl font-semibold mb-6">Strategic Insights</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold">Strategic Insights</h2>
+        
+        {allInsightsReviewed && (
+          <Button 
+            onClick={onNavigateToPresentation} 
+            className="flex items-center gap-2"
+          >
+            Proceed to Presentation
+            <ArrowRight size={16} />
+          </Button>
+        )}
+      </div>
       
       {insights.length > 0 && (
         <InsightsStats 
@@ -119,6 +136,20 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
               </div>
             </div>
           ))}
+          
+          {/* Bottom button for navigating to presentation */}
+          {allInsightsReviewed && (
+            <div className="flex justify-center mt-8">
+              <Button 
+                onClick={onNavigateToPresentation} 
+                className="flex items-center gap-2"
+                size="lg"
+              >
+                Proceed to Presentation
+                <ArrowRight size={16} />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

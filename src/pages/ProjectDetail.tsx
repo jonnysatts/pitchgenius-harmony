@@ -122,6 +122,15 @@ const ProjectDetail = () => {
   const onAnalyzeDocuments = () => {
     handleAnalyzeDocuments(documents, setActiveTab);
   };
+
+  // Function to navigate to presentation tab
+  const navigateToPresentation = () => {
+    setActiveTab("presentation");
+    toast({
+      title: "Proceeding to presentation",
+      description: "Now you can create a presentation based on your accepted insights"
+    });
+  };
   
   return (
     <AppLayout>
@@ -183,6 +192,7 @@ const ProjectDetail = () => {
               onAcceptInsight={handleAcceptInsight}
               onRejectInsight={handleRejectInsight}
               onNavigateToDocuments={() => setActiveTab("documents")}
+              onNavigateToPresentation={navigateToPresentation}
             />
           </TabsContent>
           
