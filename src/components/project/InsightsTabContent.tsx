@@ -9,8 +9,6 @@ import InsightsNavigation from "@/components/project/InsightsNavigation";
 import ViewModeSwitcher, { ViewMode } from "@/components/project/insights/ViewModeSwitcher";
 import StrategicAnalysisView from "@/components/project/insights/StrategicAnalysisView";
 import NarrativeFrameworkView from "@/components/project/insights/NarrativeFrameworkView";
-import EnhancedStrategyView from "@/components/project/insights/EnhancedStrategyView";
-import InsightsDashboard from "@/components/project/insights/InsightsDashboard";
 import InsightsHeader from "@/components/project/insights/InsightsHeader";
 import { strategicCategories, narrativeSections } from "@/components/project/insights/constants";
 
@@ -46,7 +44,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   onRetryAnalysis
 }) => {
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.DASHBOARD);
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.STRATEGIC_ANALYSIS);
   
   // Determine if Claude is in the intensive processing phase
   const isClaudeProcessing = aiStatus?.status === 'processing' && 
@@ -111,14 +109,6 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
             onViewModeChange={handleViewModeChange}
           />
           
-          {/* Dashboard View */}
-          {viewMode === ViewMode.DASHBOARD && (
-            <InsightsDashboard 
-              insights={insights}
-              reviewedInsights={reviewedInsights}
-            />
-          )}
-          
           {/* Strategic Analysis View */}
           {viewMode === ViewMode.STRATEGIC_ANALYSIS && (
             <StrategicAnalysisView 
@@ -142,11 +132,6 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
               onRejectInsight={onRejectInsight}
               onUpdateInsight={onUpdateInsight}
             />
-          )}
-          
-          {/* Enhanced Strategy Elements View */}
-          {viewMode === ViewMode.ENHANCED_ELEMENTS && (
-            <EnhancedStrategyView />
           )}
           
           {/* Bottom button for navigating to presentation */}
