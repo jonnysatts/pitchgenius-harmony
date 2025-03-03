@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect } from "react";
 import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
@@ -83,15 +84,18 @@ export const useAiAnalysis = (project: Project) => {
     const checkAiAvailability = async () => {
       try {
         const anthropicKeyExists = await checkSupabaseConnection();
+        console.log("Anthropic API key check result:", anthropicKeyExists);
         
         if (anthropicKeyExists) {
           setUseRealAI(true);
           console.log("Anthropic API key detected - will use real AI");
         } else {
           console.log("Anthropic API key not detected - will use mock AI");
+          setUseRealAI(false);
         }
       } catch (err) {
         console.error('Error checking Supabase connection:', err);
+        setUseRealAI(false);
       }
     };
     
@@ -128,11 +132,19 @@ export const useAiAnalysis = (project: Project) => {
     setError(null);
     setUsingFallbackInsights(false);
     
+    // Clear any existing insights from storage to force fresh analysis
+    if (project?.id) {
+      localStorage.removeItem(`project_insights_${project.id}`);
+      console.log("Cleared previous insights from storage for project", project.id);
+    }
+    
     // Start processing and get monitoring function
     const monitorProgress = startProcessing(handleProcessingComplete);
     
     // Start monitoring
     monitorProgress(setActiveTab);
+    
+    console.log("Starting document analysis with useRealAI set to:", useRealAI);
     
     // Try to generate insights
     const success = await generateProjectInsights(documents);
@@ -149,6 +161,12 @@ export const useAiAnalysis = (project: Project) => {
     // Reset states
     setError(null);
     setUsingFallbackInsights(false);
+    
+    // Clear any existing insights from storage to force fresh analysis
+    if (project?.id) {
+      localStorage.removeItem(`project_insights_${project.id}`);
+      console.log("Cleared previous insights from storage for project", project.id);
+    }
     
     // Update status to processing
     setAiStatus({
@@ -170,6 +188,8 @@ export const useAiAnalysis = (project: Project) => {
         description: `Analyzing ${documents.length} documents again with Claude AI...`,
       });
       
+      console.log("Retrying document analysis with useRealAI set to:", useRealAI);
+      
       // Try to generate insights with retry flag
       const success = await generateProjectInsights(documents, true);
       
@@ -178,7 +198,7 @@ export const useAiAnalysis = (project: Project) => {
         generateFallbackInsights(documents);
       }
     };
-  }, [setError, setUsingFallbackInsights, setAiStatus, startProcessing, handleProcessingComplete, generateProjectInsights, generateFallbackInsights, toast]);
+  }, [setError, setUsingFallbackInsights, setAiStatus, startProcessing, handleProcessingComplete, generateProjectInsights, generateFallbackInsights, toast, project.id, useRealAI]);
 
   return {
     insights,

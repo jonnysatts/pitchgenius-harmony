@@ -10,11 +10,13 @@ export const useAiGeneration = (
   completeProcessing: (message: string) => void,
   setUsingFallbackInsights: (usingFallback: boolean) => void
 ) => {
-  const [useRealAI, setUseRealAI] = useState<boolean>(false);
+  const [useRealAI, setUseRealAI] = useState<boolean>(true); // Set to true by default
   const [insufficientContent, setInsufficientContent] = useState<boolean>(false);
 
   const generateProjectInsights = useCallback(
     async (documents: Document[], isRetry = false): Promise<boolean> => {
+      console.log("Generating project insights, useRealAI:", useRealAI);
+      
       if (!useRealAI) {
         console.log("Real AI disabled, skipping generation");
         return false;

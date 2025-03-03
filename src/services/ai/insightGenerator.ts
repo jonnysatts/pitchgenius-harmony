@@ -43,6 +43,7 @@ export const generateInsights = async (
 
     // Check if we're in development mode without Supabase or if Supabase connection failed
     const useRealApi = await checkSupabaseConnection();
+    console.log('Supabase connection check result:', useRealApi);
     
     if (!useRealApi) {
       console.log('Supabase connection not available, using mock insights generator');
@@ -66,6 +67,8 @@ export const generateInsights = async (
         timeoutPromise
       ]);
       
+      console.log('Claude API response received:', result.insights ? result.insights.length : 'no insights');
+      
       // Pass through the insufficientContent flag if it exists
       return {
         insights: result.insights,
@@ -73,7 +76,7 @@ export const generateInsights = async (
         insufficientContent: result.insufficientContent || false
       };
     } catch (apiError: any) {
-      console.log('Falling back to mock insights generator due to API error');
+      console.log('Falling back to mock insights generator due to API error:', apiError);
       const mockInsights = generateComprehensiveInsights(project, documents);
       return { 
         insights: mockInsights,

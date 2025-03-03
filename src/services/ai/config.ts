@@ -1,34 +1,28 @@
 
 /**
- * Configuration settings and environment checking for AI services
+ * Configuration and environment checks for AI services
  */
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Check if we can connect to Supabase and verify access to ANTHROPIC_API_KEY
+ * Check if we have a connection to Supabase with necessary API keys
  */
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.functions.invoke('test-connection', {
-      method: 'POST',
-      body: { test: true, timestamp: new Date().toISOString() },
-    });
+    console.log('Checking Supabase connection and API keys');
+    const { data, error } = await supabase.functions.invoke('test-connection');
     
     if (error) {
-      console.error('Error testing Supabase connection:', error);
+      console.error('Error checking connection:', error);
       return false;
     }
     
-    // Check if ANTHROPIC_API_KEY is available
-    const anthropicKeyExists = data?.environmentChecks?.ANTHROPIC_API_KEY?.exists;
+    // Log the response for debugging
+    console.log('Connection test response:', data);
     
-    if (!anthropicKeyExists) {
-      console.warn('ANTHROPIC_API_KEY not found in Supabase secrets');
-    }
-    
-    return !!anthropicKeyExists;
-  } catch (error) {
-    console.error('Exception testing Supabase connection:', error);
+    return data && data.allKeysFound && data.keysFound.includes('ANTHROPIC_API_KEY');
+  } catch (err) {
+    console.error('Error calling test-connection function:', err);
     return false;
   }
 };

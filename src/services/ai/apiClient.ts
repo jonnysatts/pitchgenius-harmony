@@ -23,6 +23,7 @@ export const callClaudeApi = async (
   
   try {
     // Call the Supabase Edge Function that uses Anthropic
+    console.log("Calling Supabase Edge Function with project:", project.id);
     const { data, error } = await supabase.functions.invoke('generate-insights-with-anthropic', {
       body: { 
         projectId: project.id, 
@@ -37,6 +38,8 @@ export const callClaudeApi = async (
         systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext // Add the gaming specialist prompt with website context
       }
     });
+    
+    console.log("Edge Function response received:", data ? "data present" : "no data", error ? `error: ${error.message}` : "no error");
     
     if (error) {
       console.error('Error from Edge Function:', error);
