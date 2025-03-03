@@ -4,9 +4,9 @@
  */
 import { Document, StrategicInsight, Project } from "@/lib/types";
 import { checkSupabaseConnection } from "./config";
-import { generateComprehensiveInsights } from "./mockGenerator";
+import { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
 import { callClaudeApi, createTimeoutPromise } from "./apiClient";
-import { prepareDocumentContents } from "./promptEngineering";
+import { prepareDocumentContents } from "./promptUtils";
 
 /**
  * Generate strategic insights by processing documents with AI

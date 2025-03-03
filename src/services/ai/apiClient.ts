@@ -4,8 +4,9 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { Document, Project, StrategicInsight } from "@/lib/types";
-import { prepareDocumentContents, GAMING_SPECIALIST_PROMPT, generateWebsiteContext } from "./promptEngineering";
-import { generateComprehensiveInsights } from "./mockGenerator";
+import { prepareDocumentContents } from "./promptUtils";
+import { GAMING_SPECIALIST_PROMPT, generateWebsiteContext } from "./promptEngineering";
+import { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
 
 /**
  * Call the Supabase Edge Function that uses Anthropic API
