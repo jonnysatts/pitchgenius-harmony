@@ -20,6 +20,13 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
 }) => {
   const hasWebsiteUrl = !!project.clientWebsite;
 
+  const handleAnalyzeWebsite = () => {
+    console.log("Analyze website button clicked, hasInsights:", hasInsights);
+    if (onAnalyzeWebsite) {
+      onAnalyzeWebsite();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <FirecrawlApiKeyForm />
@@ -38,7 +45,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
           </div>
           
           <Button
-            onClick={onAnalyzeWebsite}
+            onClick={handleAnalyzeWebsite}
             disabled={isAnalyzing || !hasWebsiteUrl}
             className="w-full md:w-auto"
             size="lg"

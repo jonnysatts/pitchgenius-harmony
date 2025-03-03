@@ -36,11 +36,11 @@ export const useWebsiteAnalysis = (
       if (result.insights && result.insights.length > 0) {
         // Ensure all insights are properly marked as website-derived
         const markedInsights = result.insights.map(insight => {
-          // Only add the marker if it's not already there
-          if (insight.source !== 'website') {
-            return addWebsiteSourceMarker(insight);
-          }
-          return insight;
+          // Ensure the insight has the correct source
+          return {
+            ...insight,
+            source: 'website' as 'website'  // Explicitly set source to 'website'
+          };
         });
         
         console.log(`Website analysis generated ${markedInsights.length} insights`);
