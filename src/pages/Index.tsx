@@ -6,8 +6,16 @@ const Index = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Automatically redirect to dashboard
-    navigate("/dashboard");
+    // Log the navigation attempt
+    console.log("Index page: Attempting to redirect to dashboard");
+    
+    // Directly navigate to dashboard with a slight delay to ensure hooks are initialized
+    const redirectTimer = setTimeout(() => {
+      navigate("/dashboard");
+      console.log("Index page: Redirect executed");
+    }, 100);
+    
+    return () => clearTimeout(redirectTimer);
   }, [navigate]);
 
   return (

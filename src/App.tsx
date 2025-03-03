@@ -47,7 +47,8 @@ const App = () => (
                 </RequireAuth>
               } 
             />
-            <Route path="/" element={<Index />} />
+            {/* Use direct Navigate component for immediate redirect */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
