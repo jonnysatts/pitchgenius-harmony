@@ -20,3 +20,7 @@ export {
   calculateOverallConfidence,
   countInsightsNeedingReview
 } from './insightAnalytics';
+
+// Export from mockGenerator
+export { generateComprehensiveInsights } from './mockGenerator';
+
