@@ -31,6 +31,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
         <h2 className="text-xl font-semibold mb-4">Upload Documents</h2>
         <p className="text-slate-500 mb-4">
           Upload your client documents. We support PDFs, Office documents, images, and text files.
+          All documents will be thoroughly analyzed by our AI.
         </p>
         
         <FileUpload 
@@ -68,7 +69,16 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
               className="mb-2" 
             />
             <p className="text-xs text-slate-500 italic">
-              Our AI is analyzing your documents to extract strategic gaming opportunities...
+              Our AI is thoroughly analyzing all of your documents to extract strategic gaming opportunities...
+            </p>
+          </div>
+        )}
+        
+        {documents.length > 0 && (
+          <div className="mb-4 text-sm">
+            <p className="text-slate-600">
+              <span className="font-semibold">{documents.length}</span> document{documents.length !== 1 ? 's' : ''} uploaded. 
+              All documents will be analyzed in detail when you click "Analyze with AI".
             </p>
           </div>
         )}

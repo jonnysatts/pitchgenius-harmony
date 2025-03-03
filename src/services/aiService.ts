@@ -10,14 +10,17 @@ export const generateInsights = async (
   documents: Document[]
 ): Promise<{ insights: StrategicInsight[], error?: string }> => {
   try {
-    // Call the Supabase Edge Function to process documents and generate insights
+    // Process all documents without limiting
     const documentIds = documents.map(doc => doc.id);
+    
+    console.log(`Processing ${documents.length} documents for project ${project.id}`);
     
     const { data, error } = await supabase.functions.invoke('generate-insights', {
       body: { 
         projectId: project.id, 
         documentIds,
-        clientIndustry: project.clientIndustry 
+        clientIndustry: project.clientIndustry,
+        processingMode: 'thorough' // Signal the backend to perform thorough analysis
       }
     });
     
@@ -66,13 +69,19 @@ export const monitorAIProcessingProgress = (
     if (cancelled) return;
     
     // Simulate different phases of processing with appropriate messages
-    if (progress < 20) {
+    if (progress < 15) {
       onStatusUpdate({
         status: 'processing',
         progress,
-        message: `Extracting text from documents...`
+        message: `Extracting text from all documents...`
       });
-    } else if (progress < 40) {
+    } else if (progress < 30) {
+      onStatusUpdate({
+        status: 'processing',
+        progress,
+        message: `Analyzing document relationships...`
+      });
+    } else if (progress < 45) {
       onStatusUpdate({
         status: 'processing',
         progress,
@@ -84,7 +93,13 @@ export const monitorAIProcessingProgress = (
         progress,
         message: `Identifying gaming opportunities...`
       });
-    } else if (progress < 80) {
+    } else if (progress < 75) {
+      onStatusUpdate({
+        status: 'processing',
+        progress,
+        message: `Performing deep content analysis...`
+      });
+    } else if (progress < 90) {
       onStatusUpdate({
         status: 'processing',
         progress,
@@ -94,23 +109,24 @@ export const monitorAIProcessingProgress = (
       onStatusUpdate({
         status: 'processing',
         progress,
-        message: `Finalizing insights...`
+        message: `Finalizing comprehensive insights...`
       });
     } else {
       onStatusUpdate({
         status: 'completed',
         progress: 100,
-        message: 'Analysis complete!'
+        message: 'Thorough analysis complete!'
       });
       clearInterval(interval);
     }
     
-    progress += 5;
+    // Slow down the progress a bit to reflect more thorough processing
+    progress += 3;
     
     if (progress > 100) {
       clearInterval(interval);
     }
-  }, 600); // Update every 600ms for a smoother progress animation
+  }, 800); // Longer interval for thorough analysis
   
   // Return a function to cancel the monitoring
   return () => {
@@ -136,3 +152,4 @@ export const calculateOverallConfidence = (insights: StrategicInsight[]): number
 export const countInsightsNeedingReview = (insights: StrategicInsight[]): number => {
   return insights.filter(insight => insight.needsReview).length;
 };
+

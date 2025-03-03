@@ -4,7 +4,9 @@ import { Document } from "@/lib/types";
 // Priority keywords to look for in filenames
 const PRIORITY_KEYWORDS = [
   "executive", "summary", "strategy", "strategic", "competitive", 
-  "market", "analysis", "research", "brief", "proposal"
+  "market", "analysis", "research", "brief", "proposal",
+  "roadmap", "vision", "customer", "product", "plan",
+  "objectives", "innovation", "insight", "data", "core"
 ];
 
 /**
@@ -65,3 +67,30 @@ export const getFileCategory = (mimeType: string): string => {
   if (mimeType.includes('text')) return 'Text';
   return 'Other';
 };
+
+/**
+ * Estimate document complexity by file size and type
+ * Returns a value from 1-5 where higher means more complex
+ */
+export const estimateDocumentComplexity = (document: Document): number => {
+  const sizeInMB = document.size / (1024 * 1024);
+  let complexity = 1;
+  
+  // Base complexity on file size
+  if (sizeInMB > 10) {
+    complexity += 2;
+  } else if (sizeInMB > 5) {
+    complexity += 1;
+  }
+  
+  // Add complexity based on file type
+  const fileCategory = getFileCategory(document.type);
+  if (fileCategory === 'PDF' || fileCategory === 'Word') {
+    complexity += 1;
+  } else if (fileCategory === 'Excel' || fileCategory === 'PowerPoint') {
+    complexity += 2;
+  }
+  
+  return Math.min(complexity, 5);
+};
+
