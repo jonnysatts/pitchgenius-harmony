@@ -65,9 +65,9 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         )}
       </div>
       
-      {/* Show error or fallback message if applicable */}
+      {/* Show error or fallback message if applicable - Fixed the variant from "warning" to "default" */}
       {(error || usingFallbackInsights) && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="default" className="mb-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
