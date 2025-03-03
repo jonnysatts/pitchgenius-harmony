@@ -1,0 +1,72 @@
+
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+interface InsightsTabHeaderProps {
+  hasInsights: boolean;
+  onRetryAnalysis?: () => void;
+}
+
+const InsightsTabHeader: React.FC<InsightsTabHeaderProps> = ({ 
+  hasInsights, 
+  onRetryAnalysis 
+}) => {
+  return (
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Document Insights</h2>
+        <p className="text-slate-500 text-sm">
+          Strategic insights generated from analyzing the client documents
+        </p>
+      </div>
+      
+      {hasInsights && onRetryAnalysis && (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="mt-4 md:mt-0 flex items-center gap-2"
+            >
+              <RefreshCcw size={16} />
+              Refresh Analysis
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Refresh Document Analysis</DialogTitle>
+              <DialogDescription>
+                This will restart the document analysis process using Claude AI. 
+                The current insights will be replaced with new ones. Are you sure?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => document.querySelector('[data-state="open"] button[aria-label="Close"]')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  onRetryAnalysis();
+                  document.querySelector('[data-state="open"] button[aria-label="Close"]')?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+                }}
+              >
+                Confirm Refresh
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+};
+
+export default InsightsTabHeader;
