@@ -77,9 +77,9 @@ const ApiConnectionTest: React.FC<ApiConnectionTestProps> = ({ onApiConnectionRe
   };
 
   return (
-    <>
+    <div className="flex flex-col items-end">
       {apiConnectionResult && (
-        <Alert className={`mb-4 ${apiConnectionResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+        <Alert className={`mb-4 mt-2 max-w-md ${apiConnectionResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
           {apiConnectionResult.success ? 
             <CheckCircle2 className="h-4 w-4 text-green-500" /> : 
             <XCircle className="h-4 w-4 text-red-500" />
@@ -141,7 +141,7 @@ const ApiConnectionTest: React.FC<ApiConnectionTestProps> = ({ onApiConnectionRe
           </>
         ) : "Test Supabase Secrets"}
       </Button>
-    </>
+    </div>
   );
 };
 
