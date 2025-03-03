@@ -3,7 +3,12 @@ import { useState, useEffect } from "react";
 import { Document } from "@/lib/types";
 import { calculateDocumentPriority } from "@/services/documentService";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { 
+  fetchProjectDocuments, 
+  uploadDocumentToStorage, 
+  insertDocumentRecord, 
+  removeDocument 
+} from "@/services/documentStorage";
 
 export const useDocuments = (projectId: string, userId: string) => {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -14,74 +19,25 @@ export const useDocuments = (projectId: string, userId: string) => {
   useEffect(() => {
     if (!projectId) return;
     
-    const fetchDocuments = async () => {
+    const loadDocuments = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('uploaded_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching documents:', error);
-          toast({
-            title: "Error fetching documents",
-            description: error.message,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (data) {
-          // Convert retrieved documents to our Document type
-          const fetchedDocs: Document[] = data.map(doc => ({
-            id: doc.id,
-            name: doc.name,
-            size: doc.size,
-            type: doc.type,
-            uploadedAt: doc.uploaded_at,
-            uploadedBy: doc.user_id,
-            url: doc.url,
-            priority: doc.priority
-          }));
-          
-          setDocuments(fetchedDocs);
-        }
+        const docs = await fetchProjectDocuments(projectId);
+        setDocuments(docs);
       } catch (err) {
-        console.error('Unexpected error fetching documents:', err);
+        console.error('Error fetching documents:', err);
+        toast({
+          title: "Error fetching documents",
+          description: err instanceof Error ? err.message : "Unknown error occurred",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchDocuments();
+    loadDocuments();
   }, [projectId, toast]);
-
-  const uploadDocumentToStorage = async (file: File, userId: string, projectId: string): Promise<{storagePath: string, publicUrl: string}> => {
-    // Create a path with user ID and project ID to organize files
-    const storagePath = `${userId}/${projectId}/${file.name}`;
-    
-    // Upload the file to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('project_documents')
-      .upload(storagePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
-      
-    if (error) {
-      console.error('Error uploading file to storage:', error);
-      throw error;
-    }
-    
-    // Get the public URL for the file
-    const { data: { publicUrl } } = supabase.storage
-      .from('project_documents')
-      .getPublicUrl(storagePath);
-      
-    return { storagePath, publicUrl };
-  };
 
   const handleFilesSelected = async (files: File[]) => {
     if (!userId || !projectId) return;
@@ -112,34 +68,19 @@ export const useDocuments = (projectId: string, userId: string) => {
         };
         
         // Insert document into database
-        const { data, error } = await supabase
-          .from('documents')
-          .insert({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            project_id: projectId,
-            user_id: userId,
-            url: publicUrl,
-            priority,
-            storage_path: storagePath
-          })
-          .select()
-          .single();
+        const insertedDoc = await insertDocumentRecord(
+          file.name,
+          file.size,
+          file.type,
+          projectId,
+          userId,
+          publicUrl,
+          priority,
+          storagePath
+        );
           
-        if (error) {
-          console.error('Error inserting document into database:', error);
-          toast({
-            title: "Error uploading document",
-            description: error.message,
-            variant: "destructive",
-          });
-          continue; // Skip this file and continue with others
-        }
-        
-        // Update the document with the real ID from the database
-        if (data) {
-          newDoc.id = data.id;
+        if (insertedDoc) {
+          newDoc.id = insertedDoc.id;
         }
         
         newDocuments.push(newDoc);
@@ -165,48 +106,7 @@ export const useDocuments = (projectId: string, userId: string) => {
   
   const handleRemoveDocument = async (documentId: string) => {
     try {
-      // Find the document to get its storage path
-      const docToRemove = documents.find(doc => doc.id === documentId);
-      
-      if (!docToRemove) {
-        console.error('Document not found for removal:', documentId);
-        return;
-      }
-      
-      // Get the storage path from the database
-      const { data: docData, error: fetchError } = await supabase
-        .from('documents')
-        .select('storage_path')
-        .eq('id', documentId)
-        .single();
-        
-      if (fetchError) {
-        console.error('Error fetching document storage path:', fetchError);
-        throw fetchError;
-      }
-      
-      if (docData?.storage_path) {
-        // Delete from storage
-        const { error: storageError } = await supabase.storage
-          .from('project_documents')
-          .remove([docData.storage_path]);
-          
-        if (storageError) {
-          console.error('Error removing file from storage:', storageError);
-          // Continue anyway to remove from database
-        }
-      }
-      
-      // Delete from database
-      const { error: deleteError } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', documentId);
-        
-      if (deleteError) {
-        console.error('Error deleting document from database:', deleteError);
-        throw deleteError;
-      }
+      await removeDocument(documentId);
       
       // Update local state
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
