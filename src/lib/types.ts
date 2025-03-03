@@ -71,7 +71,7 @@ export interface NarrativeFramework {
 
 // Type for AI processing status
 export interface AIProcessingStatus {
-  status: "idle" | "processing" | "completed" | "error";
+  status: "idle" | "processing" | "completed" | "error" | "finalizing";
   progress: number;
   message: string;
 }
