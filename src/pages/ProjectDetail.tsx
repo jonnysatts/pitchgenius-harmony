@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -63,7 +64,8 @@ const ProjectDetail = () => {
     processingComplete,
     usingFallbackInsights,
     setUseRealAI,
-    handleAnalyzeDocuments
+    handleAnalyzeDocuments,
+    retryAnalysis
   } = useAiAnalysis(project || {} as Project);
   
   const {
@@ -113,6 +115,11 @@ const ProjectDetail = () => {
   
   const onAnalyzeDocuments = () => {
     handleAnalyzeDocuments(documents, setActiveTab);
+  };
+
+  const onRetryAnalysis = () => {
+    const retry = retryAnalysis(setActiveTab);
+    retry(documents);
   };
 
   const navigateToPresentation = () => {
@@ -186,6 +193,7 @@ const ProjectDetail = () => {
               onRejectInsight={handleRejectInsight}
               onNavigateToDocuments={() => setActiveTab("documents")}
               onNavigateToPresentation={navigateToPresentation}
+              onRetryAnalysis={onRetryAnalysis}
             />
           </TabsContent>
           

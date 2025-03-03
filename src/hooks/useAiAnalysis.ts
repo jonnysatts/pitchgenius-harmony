@@ -177,6 +177,74 @@ export const useAiAnalysis = (project: Project) => {
     }
   };
 
+  // Add a retry analysis function
+  const retryAnalysis = useCallback((setActiveTab: (tab: string) => void) => {
+    // Reset states
+    setError(null);
+    setProcessingComplete(false);
+    setIsAnalysisInProgress(true);
+    setUsingFallbackInsights(false);
+    
+    // Update status to processing
+    setAiStatus({
+      status: 'processing',
+      progress: 0,
+      message: 'Retrying document analysis with Claude AI...'
+    });
+    
+    toast({
+      title: "Retrying Claude AI Analysis",
+      description: "Attempting to analyze documents with Claude AI again",
+    });
+    
+    // Call the document analysis function again
+    return async (documents: Document[]) => {
+      if (documents.length === 0) {
+        toast({
+          title: "No documents to analyze",
+          description: "Please upload documents before running the analysis",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Set up progress monitoring with completion callback
+      monitorAIProcessingProgress(
+        project.id,
+        (status) => setAiStatus(status),
+        () => handleProcessingComplete(setActiveTab)
+      );
+      
+      try {
+        // Call the AI service to generate insights
+        const result = await generateInsights(project, documents);
+        
+        if (result.error) {
+          setUsingFallbackInsights(true);
+          setAiStatus({
+            status: 'completed',
+            progress: 100,
+            message: 'Analysis complete with fallback to sample insights'
+          });
+          setError(result.error);
+        }
+        
+        if (!result.insights || result.insights.length === 0) {
+          const mockInsights = generateComprehensiveInsights(project, documents);
+          setInsights(mockInsights);
+          setUsingFallbackInsights(true);
+        } else {
+          setInsights(result.insights);
+        }
+      } catch (error: any) {
+        const mockInsights = generateComprehensiveInsights(project, documents);
+        setInsights(mockInsights);
+        setUsingFallbackInsights(true);
+        setError(error.message || "An unexpected error occurred");
+      }
+    };
+  }, [project, handleProcessingComplete, toast]);
+
   return {
     insights,
     aiStatus,
@@ -186,6 +254,7 @@ export const useAiAnalysis = (project: Project) => {
     usingFallbackInsights,
     setUseRealAI: updateUseRealAI,
     handleAnalyzeDocuments,
+    retryAnalysis,
     setInsights,
     setError
   };

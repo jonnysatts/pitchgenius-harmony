@@ -2,10 +2,11 @@
 import React from "react";
 import { StrategicInsight } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Check, X, ArrowRight, AlertTriangle } from "lucide-react";
+import { Lightbulb, Check, X, ArrowRight, AlertTriangle, RefreshCw } from "lucide-react";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
 import InsightsStats from "@/components/project/InsightsStats";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 interface InsightsTabContentProps {
   insights: StrategicInsight[];
@@ -18,6 +19,7 @@ interface InsightsTabContentProps {
   onRejectInsight: (insightId: string) => void;
   onNavigateToDocuments: () => void;
   onNavigateToPresentation: () => void;
+  onRetryAnalysis?: () => void;
 }
 
 const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
@@ -30,8 +32,11 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   onAcceptInsight,
   onRejectInsight,
   onNavigateToDocuments,
-  onNavigateToPresentation
+  onNavigateToPresentation,
+  onRetryAnalysis
 }) => {
+  const { toast } = useToast();
+  
   // Group insights by category
   const insightsByCategory = insights.reduce((groups, insight) => {
     const category = insight.category || 'other';
@@ -48,6 +53,17 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   
   // Check if all insights have been reviewed
   const allInsightsReviewed = insights.length > 0 && needsReviewCount === 0;
+
+  // Handle retry analysis
+  const handleRetryAnalysis = () => {
+    if (onRetryAnalysis) {
+      toast({
+        title: "Restarting analysis",
+        description: "Attempting to analyze documents with Claude AI"
+      });
+      onRetryAnalysis();
+    }
+  };
   
   return (
     <div className="bg-white p-6 rounded-lg border">
@@ -65,12 +81,25 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         )}
       </div>
       
-      {/* Show error or fallback message if applicable - Fixed the variant from "warning" to "default" */}
+      {/* Show error or fallback message if applicable */}
       {(error || usingFallbackInsights) && (
         <Alert variant="default" className="mb-4">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
+          <AlertDescription className="flex justify-between items-center">
+            <div>
+              {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
+            </div>
+            {(error?.includes("timeout") || error?.includes("Claude AI")) && onRetryAnalysis && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="flex items-center gap-1"
+                onClick={handleRetryAnalysis}
+              >
+                <RefreshCw size={14} />
+                Retry Analysis
+              </Button>
+            )}
           </AlertDescription>
         </Alert>
       )}
