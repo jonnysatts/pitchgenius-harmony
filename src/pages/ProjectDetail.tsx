@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
 import { FileUpload } from "@/components/file-upload";
-import { Document, Project } from "@/lib/types";
+import { Document, Project, StrategicInsight, AIProcessingStatus } from "@/lib/types";
 import { processFiles } from "@/services/documentService";
+import { generateInsights, monitorAIProcessingProgress } from "@/services/aiService";
 import DocumentList from "@/components/project/DocumentList";
-import { CircleHelp, FileText, Lightbulb, Presentation } from "lucide-react";
+import { CircleHelp, FileText, Lightbulb, Presentation, Brain } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
+import StrategicInsightCard from "@/components/project/StrategicInsightCard";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -21,7 +24,13 @@ const ProjectDetail = () => {
   const project = MOCK_PROJECTS.find(p => p.id === projectId);
   
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [insights, setInsights] = useState<StrategicInsight[]>([]);
   const [activeTab, setActiveTab] = useState("documents");
+  const [aiStatus, setAiStatus] = useState<AIProcessingStatus>({
+    status: 'idle',
+    progress: 0,
+    message: 'Ready to analyze documents'
+  });
   
   if (!project) {
     return (
@@ -54,6 +63,83 @@ const ProjectDetail = () => {
       description: "Document has been removed from the project",
     });
   };
+  
+  const handleAnalyzeDocuments = async () => {
+    if (documents.length === 0) {
+      toast({
+        title: "No documents to analyze",
+        description: "Please upload documents before running the analysis",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Update status to processing
+    setAiStatus({
+      status: 'processing',
+      progress: 0,
+      message: 'Starting document analysis...'
+    });
+    
+    // Set up progress monitoring
+    const cancelMonitoring = monitorAIProcessingProgress(
+      project.id,
+      (status) => setAiStatus(status)
+    );
+    
+    try {
+      // Call the AI service to generate insights
+      const result = await generateInsights(project.id, documents);
+      
+      if (result.error) {
+        toast({
+          title: "Analysis failed",
+          description: result.error,
+          variant: "destructive"
+        });
+        setAiStatus({
+          status: 'error',
+          progress: 0,
+          message: result.error
+        });
+      } else {
+        setInsights(result.insights);
+        
+        // Wait for the progress animation to complete
+        setTimeout(() => {
+          setActiveTab("insights");
+          toast({
+            title: "Analysis complete",
+            description: `Generated ${result.insights.length} strategic insights`,
+          });
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error("Error analyzing documents:", error);
+      toast({
+        title: "Analysis failed",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+      setAiStatus({
+        status: 'error',
+        progress: 0,
+        message: error.message || "Analysis failed"
+      });
+    } finally {
+      cancelMonitoring();
+    }
+  };
+  
+  // Group insights by category
+  const insightsByCategory = insights.reduce((groups, insight) => {
+    const category = insight.category || 'other';
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(insight);
+    return groups;
+  }, {} as Record<string, StrategicInsight[]>);
   
   return (
     <AppLayout>
@@ -110,7 +196,28 @@ const ProjectDetail = () => {
             </div>
             
             <div className="bg-white p-6 rounded-lg border">
-              <h2 className="text-xl font-semibold mb-4">Project Documents</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Project Documents</h2>
+                <Button 
+                  onClick={handleAnalyzeDocuments} 
+                  disabled={documents.length === 0 || aiStatus.status === 'processing'}
+                  className="flex items-center gap-2"
+                >
+                  <Brain size={16} />
+                  {aiStatus.status === 'processing' ? 'Analyzing...' : 'Analyze with AI'}
+                </Button>
+              </div>
+              
+              {aiStatus.status === 'processing' && (
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{aiStatus.message}</span>
+                    <span>{aiStatus.progress}%</span>
+                  </div>
+                  <Progress value={aiStatus.progress} className="h-2" />
+                </div>
+              )}
+              
               <DocumentList 
                 documents={documents}
                 onRemoveDocument={handleRemoveDocument}
@@ -121,9 +228,34 @@ const ProjectDetail = () => {
           <TabsContent value="insights">
             <div className="bg-white p-6 rounded-lg border">
               <h2 className="text-xl font-semibold mb-4">Strategic Insights</h2>
-              <p className="text-slate-500">
-                Strategic insights will appear here after documents are processed.
-              </p>
+              
+              {insights.length === 0 ? (
+                <div className="text-center py-8">
+                  <Lightbulb className="mx-auto h-12 w-12 text-slate-300" />
+                  <h3 className="mt-2 text-sm font-semibold text-slate-900">No insights yet</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Upload documents and run the AI analysis to generate strategic insights
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {Object.entries(insightsByCategory).map(([category, categoryInsights]) => (
+                    <div key={category} className="space-y-4">
+                      <h3 className="text-lg font-medium capitalize">
+                        {category.replace(/_/g, ' ')}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        {categoryInsights.map(insight => (
+                          <StrategicInsightCard 
+                            key={insight.id} 
+                            insight={insight} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
           
