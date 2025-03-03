@@ -58,7 +58,7 @@ export const useDocuments = (projectId: string, userId: string) => {
     fetchDocuments();
   }, [projectId, toast]);
 
-  const uploadDocumentToStorage = async (file: File, userId: string, projectId: string): Promise<string | null> => {
+  const uploadDocumentToStorage = async (file: File, userId: string, projectId: string): Promise<{storagePath: string, publicUrl: string}> => {
     // Create a path with user ID and project ID to organize files
     const storagePath = `${userId}/${projectId}/${file.name}`;
     
@@ -96,7 +96,8 @@ export const useDocuments = (projectId: string, userId: string) => {
         const timestamp = new Date().toISOString();
         
         // Upload file to storage
-        const { storagePath, publicUrl } = await uploadDocumentToStorage(file, userId, projectId);
+        const uploadResult = await uploadDocumentToStorage(file, userId, projectId);
+        const { storagePath, publicUrl } = uploadResult;
         
         // Create new document entry
         const newDoc: Document = {
