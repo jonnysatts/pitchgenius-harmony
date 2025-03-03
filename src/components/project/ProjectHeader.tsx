@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Project } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, CheckCircle2, XCircle, KeyRound } from "lucide-react";
+import { InfoIcon, CheckCircle2, XCircle, KeyRound, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { testSupabaseConnection } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,13 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
     setApiConnectionResult(null);
     
     try {
+      toast({
+        title: "Testing Supabase Connection",
+        description: "Checking connection to Supabase and access to secrets...",
+      });
+
       const result = await testSupabaseConnection();
+      console.log("Test connection result:", result);
       
       if (result.success) {
         setApiConnectionResult({
@@ -131,8 +137,14 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
           disabled={testingApi}
           variant="outline"
           size="sm"
+          className="flex items-center gap-1"
         >
-          {testingApi ? "Testing..." : "Test Supabase Secrets"}
+          {testingApi ? (
+            <>
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Testing...
+            </>
+          ) : "Test Supabase Secrets"}
         </Button>
       </div>
       

@@ -16,8 +16,13 @@ export const testSupabaseConnection = async () => {
   try {
     console.log('Testing Supabase connection and secret access...');
     
+    // Add detailed logging to help debug the issue
+    console.log(`Supabase URL: ${SUPABASE_URL}`);
+    console.log('Invoking test-connection function...');
+    
     const { data, error } = await supabase.functions.invoke('test-connection', {
-      body: { test: true }
+      method: 'POST',
+      body: { test: true },
     });
     
     if (error) {
