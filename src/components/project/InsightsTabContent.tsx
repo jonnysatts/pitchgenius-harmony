@@ -194,6 +194,11 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
     onNavigateToPresentation();
   };
 
+  // Handler for the viewMode value change that properly converts string to ViewMode enum
+  const handleViewModeChange = (value: string) => {
+    setViewMode(value as ViewMode);
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg border">
       <div className="flex justify-between items-center mb-6">
@@ -232,8 +237,8 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         <InsightsEmptyState onNavigateToDocuments={onNavigateToDocuments} />
       ) : (
         <div className="mt-6">
-          {/* View Mode Selector */}
-          <Tabs value={viewMode} onValueChange={setViewMode} className="mb-6">
+          {/* View Mode Selector - Fixed the onValueChange to use the handler function */}
+          <Tabs value={viewMode} onValueChange={handleViewModeChange} className="mb-6">
             <TabsList className="grid grid-cols-3 w-full max-w-lg mb-2">
               <TabsTrigger value={ViewMode.STRATEGIC_ANALYSIS}>
                 Strategic Analysis
