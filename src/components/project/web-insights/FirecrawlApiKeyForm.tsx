@@ -6,14 +6,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FirecrawlService } from '@/utils/FirecrawlService';
 import { useToast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
-import { AlertCircle, CheckCircle, Server } from 'lucide-react';
+import { AlertCircle, CheckCircle, Server, Link } from 'lucide-react';
 
 export const FirecrawlApiKeyForm = () => {
   const { toast } = useToast();
   const [apiKey, setApiKey] = useState('');
   const [savedApiKey, setSavedApiKey] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [usingSupabase, setUsingSupabase] = useState(true);
 
   // Check for existing API key on mount
   useEffect(() => {
@@ -69,7 +68,7 @@ export const FirecrawlApiKeyForm = () => {
       <CardHeader>
         <CardTitle>Firecrawl API Key</CardTitle>
         <CardDescription>
-          Firecrawl is now connected via Supabase for comprehensive website analysis
+          Firecrawl is used to enhance website analysis by providing better content extraction
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -78,9 +77,20 @@ export const FirecrawlApiKeyForm = () => {
           <div>
             <p className="text-blue-800 font-medium">Using Supabase Firecrawl Integration</p>
             <p className="text-sm text-blue-600 mt-1">
-              Firecrawl API key is now securely stored in Supabase and used by the Edge Function
-              for enhanced website analysis.
+              For the best experience, add your Firecrawl API key to Supabase Edge Function secrets
+              with the name "FIRECRAWL_API_KEY". This enables enhanced website scraping.
             </p>
+            <div className="mt-3 flex items-center">
+              <Link className="h-4 w-4 text-blue-700 mr-1" />
+              <a 
+                href="https://supabase.com/dashboard/project/nryafptwknnftdjugoyn/settings/functions" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-blue-700 underline"
+              >
+                Add FIRECRAWL_API_KEY to Supabase secrets
+              </a>
+            </div>
           </div>
         </div>
         
@@ -92,7 +102,7 @@ export const FirecrawlApiKeyForm = () => {
         )}
         
         <div className="mt-4 text-sm text-gray-500">
-          <p>Note: The Firecrawl local key below is optional as the primary integration now uses the secure Supabase configuration.</p>
+          <p>Note: The Firecrawl local key below is optional as the primary integration now uses the Supabase configuration.</p>
         </div>
       </CardContent>
       {!savedApiKey && (

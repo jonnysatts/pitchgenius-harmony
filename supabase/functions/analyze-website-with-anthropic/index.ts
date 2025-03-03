@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflightRequest } from './utils/corsHandlers.ts';
 import { fetchWebsiteContentBasic } from './utils/websiteFetcher.ts';
+import { fetchWebsiteContentWithFirecrawl } from './utils/firecrawlFetcher.ts';
 import { analyzeWebsiteWithAnthropic } from './services/anthropicService.ts';
 import { parseClaudeResponse, processInsights } from './utils/insightProcessor.ts';
 
@@ -45,11 +46,18 @@ serve(async (req) => {
     
     console.log(`Analyzing website for project ${projectId}: ${clientWebsite}\n`);
     
-    // Fetch actual website content using basic fetch
+    // Try to use provided content first, otherwise fetch it
     let contentToAnalyze = websiteContent;
     if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
-      console.log("No valid content provided, attempting to fetch website content with basic fetch");
-      contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
+      console.log("No valid content provided, attempting to fetch website content");
+      
+      try {
+        // First try using Firecrawl for enhanced scraping
+        contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
+      } catch (fetchError) {
+        console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
+        contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
+      }
     }
     
     // Call Claude to analyze the content

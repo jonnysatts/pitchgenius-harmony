@@ -47,9 +47,21 @@ export class FirecrawlService {
    * Returns true if the API key is valid
    */
   static async testApiKey(apiKey: string): Promise<boolean> {
-    // We can't directly use Firecrawl on client-side,
-    // so we'll just do simple validation for now
-    return apiKey && apiKey.length > 10;
+    try {
+      const response = await fetch('https://api.firecrawl.dev/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ test: true })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Error testing Firecrawl API key:', error);
+      return false;
+    }
   }
 
   /**
