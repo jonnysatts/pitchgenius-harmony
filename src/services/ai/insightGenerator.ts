@@ -50,16 +50,16 @@ export const generateInsights = async (
     
     console.log('Using Anthropic API via Supabase Edge Function to generate insights');
     
-    // Create a shorter timeout promise to handle API timeouts - reduced from 30 seconds to 15 seconds
+    // Create a timeout promise - increased from 15 to 30 seconds to give Claude more time
     const timeoutPromise = new Promise<{ insights: StrategicInsight[], error?: string }>((resolve) => {
       setTimeout(() => {
         console.log('API request taking too long, falling back to mock insights');
         const mockInsights = generateComprehensiveInsights(project, documents);
         resolve({ 
           insights: mockInsights, 
-          error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please refresh and retry." 
+          error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please use the Retry Analysis button." 
         });
-      }, 15000); // 15 second timeout instead of 30
+      }, 30000); // 30 second timeout instead of 15
     });
     
     try {
@@ -74,7 +74,7 @@ export const generateInsights = async (
               clientIndustry: project.clientIndustry,
               projectTitle: project.title,
               documentContents,
-              processingMode: 'thorough',
+              processingMode: 'quick', // Changed from 'thorough' to 'quick' to reduce processing time
               includeComprehensiveDetails: true
             }
           });
