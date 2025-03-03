@@ -24,7 +24,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   const {
     insights,
     aiStatus,
-    error: aiError, // Make sure this is explicitly named to match usage in ProjectDetail.tsx
+    error: aiError,
     processingComplete,
     usingFallbackInsights,
     handleAnalyzeDocuments,
@@ -64,8 +64,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   const handleAnalyzeWebsite = useCallback(() => {
     if (!project.clientWebsite) return;
     analyzeWebsite();
-    // Navigate to the webinsights tab after initiating website analysis
-    setActiveTab("webinsights");
+    // We'll handle the tab navigation in the effect below instead of here
   }, [project.clientWebsite, analyzeWebsite]);
   
   // Navigate to documents tab
@@ -88,12 +87,21 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   // Handle website analysis completion - switch to webinsights tab
   useEffect(() => {
     if (websiteInsights && websiteInsights.length > 0 && isAnalyzingWebsite === false) {
-      // Only navigate if we just finished analyzing (not on initial load)
-      if (activeTab === "documents") {
+      // Only navigate if we were previously analyzing
+      const wasAnalyzing = sessionStorage.getItem('was_analyzing_website') === 'true';
+      if (wasAnalyzing) {
         setActiveTab("webinsights");
+        sessionStorage.removeItem('was_analyzing_website');
       }
     }
-  }, [websiteInsights, isAnalyzingWebsite, activeTab]);
+  }, [websiteInsights, isAnalyzingWebsite]);
+  
+  // Track when website analysis begins
+  useEffect(() => {
+    if (isAnalyzingWebsite) {
+      sessionStorage.setItem('was_analyzing_website', 'true');
+    }
+  }, [isAnalyzingWebsite]);
   
   return {
     activeTab,
@@ -104,7 +112,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     failedUploads,
     insights,
     aiStatus,
-    aiError, // Explicitly return aiError to match usage in ProjectDetail.tsx
+    aiError,
     usingFallbackInsights,
     reviewedInsights,
     needsReviewCount,

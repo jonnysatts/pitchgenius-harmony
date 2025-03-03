@@ -75,6 +75,14 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
       (insight.content.summary && insight.content.summary.includes('[Website-derived]')))
   );
   
+  // Handle tab change without triggering re-renders
+  const handleTabChange = (value: string) => {
+    // Only update if the value is different to prevent unnecessary re-renders
+    if (value !== activeTab) {
+      setActiveTab(value);
+    }
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <ProjectHeader 
@@ -87,7 +95,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
       
       <Tabs 
         value={activeTab} 
-        onValueChange={setActiveTab} 
+        onValueChange={handleTabChange} 
         className="mt-6"
       >
         <TabsList className="grid grid-cols-5 w-full max-w-[750px] mb-6">
@@ -124,7 +132,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
             onAcceptInsight={handleAcceptInsight}
             onRejectInsight={handleRejectInsight}
             onUpdateInsight={handleUpdateInsight}
-            onNavigateToInsights={() => setActiveTab("insights")}
+            onNavigateToInsights={() => handleTabChange("insights")}
             onRetryAnalysis={onRetryAnalysis}
           />
         </TabsContent>
@@ -141,7 +149,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
             onAcceptInsight={handleAcceptInsight}
             onRejectInsight={handleRejectInsight}
             onUpdateInsight={handleUpdateInsight}
-            onNavigateToDocuments={() => setActiveTab("documents")}
+            onNavigateToDocuments={() => handleTabChange("documents")}
             onNavigateToPresentation={navigateToPresentation}
             onRetryAnalysis={onRetryAnalysis}
           />
