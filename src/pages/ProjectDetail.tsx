@@ -22,39 +22,31 @@ const ProjectDetail = () => {
   
   const project = findProjectById(projectId || '');
   
-  const { 
-    documents, 
-    isLoading,
-    handleFilesSelected, 
-    handleRemoveDocument 
-  } = useDocuments(projectId || '', user?.id || '');
-  
-  const {
-    insights,
-    aiStatus,
-    error,
-    useRealAI,
-    processingComplete,
-    usingFallbackInsights,
-    setUseRealAI,
-    handleAnalyzeDocuments,
-    retryAnalysis
-  } = useAiAnalysis(project || {} as Project);
-  
-  const {
-    reviewedInsights,
-    handleAcceptInsight,
-    handleRejectInsight
-  } = useInsightsReview(insights);
-  
+  // Use the useProjectDetail hook
   const {
     activeTab,
     setActiveTab,
-    overallConfidence,
+    documents,
+    documentsLoading: isLoading,
+    insights,
+    reviewedInsights,
+    aiStatus,
+    error,
+    usingFallbackInsights,
     needsReviewCount,
-    navigateToPresentation,
+    overallConfidence,
+    handleFilesSelected,
+    handleRemoveDocument,
+    handleAnalyzeProjectDocuments,
+    handleAcceptInsight,
+    handleRejectInsight,
+    handleNavigateToPresentation,
+    handleRetryAnalysis,
     isNewProject
-  } = useProjectDetail(project, projectId, insights, processingComplete);
+  } = useProjectDetail(projectId || '', user?.id || '', project || {} as Project);
+  
+  // Set up the AI configuration
+  const { setUseRealAI } = useAiAnalysis(project || {} as Project);
   
   useEffect(() => {
     const checkAiAvailability = async () => {
@@ -86,15 +78,6 @@ const ProjectDetail = () => {
     );
   }
   
-  const onAnalyzeDocuments = () => {
-    handleAnalyzeDocuments(documents, setActiveTab);
-  };
-
-  const onRetryAnalysis = () => {
-    const retry = retryAnalysis(setActiveTab);
-    retry(documents);
-  };
-  
   return (
     <AppLayout>
       <ProjectDetailContent
@@ -113,11 +96,11 @@ const ProjectDetail = () => {
         isLoading={isLoading}
         handleFilesSelected={handleFilesSelected}
         handleRemoveDocument={handleRemoveDocument}
-        handleAnalyzeDocuments={onAnalyzeDocuments}
+        handleAnalyzeDocuments={handleAnalyzeProjectDocuments}
         handleAcceptInsight={handleAcceptInsight}
         handleRejectInsight={handleRejectInsight}
-        navigateToPresentation={navigateToPresentation}
-        onRetryAnalysis={onRetryAnalysis}
+        navigateToPresentation={handleNavigateToPresentation}
+        onRetryAnalysis={handleRetryAnalysis}
       />
     </AppLayout>
   );

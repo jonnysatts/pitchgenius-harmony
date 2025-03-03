@@ -1,16 +1,15 @@
-
 import React, { useState } from "react";
 import { StrategicInsight, Project } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { 
-  PresentationScreen, 
+  Presentation, 
   Palette, 
   Brain, 
   LayoutTemplate, 
   Layers, 
   Download,
   Plus,
-  FileSlides
+  FileSliders
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -26,14 +25,12 @@ const PresentationTabContent: React.FC<PresentationTabContentProps> = ({
   const [activeTab, setActiveTab] = useState("slides");
   const [generatingSlides, setGeneratingSlides] = useState(false);
   
-  // This will eventually be populated by slide generation logic
   const slideCount = 0;
   
   const handleGenerateSlides = () => {
     console.log("Generating slides with insights:", acceptedInsights);
     setGeneratingSlides(true);
     
-    // Simulate slide generation (this will be replaced with actual slide generation)
     setTimeout(() => {
       setGeneratingSlides(false);
     }, 2000);
@@ -65,7 +62,7 @@ const PresentationTabContent: React.FC<PresentationTabContentProps> = ({
       
       {acceptedInsights.length === 0 ? (
         <div className="text-center py-16 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
-          <FileSlides size={48} className="mx-auto text-slate-300 mb-4" />
+          <FileSliders size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-700 mb-2">No Accepted Insights Yet</h3>
           <p className="text-slate-500 max-w-md mx-auto mb-6">
             You need to review and accept strategic insights before generating a presentation.
@@ -84,7 +81,7 @@ const PresentationTabContent: React.FC<PresentationTabContentProps> = ({
           <TabsContent value="slides" className="space-y-4">
             {slideCount === 0 ? (
               <div className="text-center py-12 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
-                <PresentationScreen size={36} className="mx-auto text-slate-300 mb-3" />
+                <Presentation size={36} className="mx-auto text-slate-300 mb-3" />
                 <h3 className="text-base font-medium text-slate-700 mb-2">No Slides Generated Yet</h3>
                 <p className="text-slate-500 max-w-md mx-auto mb-4">
                   Use the "Generate Slides" button to create a presentation based on your accepted insights.
@@ -100,7 +97,6 @@ const PresentationTabContent: React.FC<PresentationTabContentProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-4">
-                {/* Slide thumbnails will go here */}
                 <div className="aspect-[16/9] bg-slate-100 rounded flex items-center justify-center">
                   <Plus size={24} className="text-slate-400" />
                 </div>

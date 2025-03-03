@@ -130,7 +130,12 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
         </TabsContent>
         
         <TabsContent value="presentation">
-          <PresentationTabContent />
+          <PresentationTabContent 
+            project={project}
+            acceptedInsights={insights.filter(insight => 
+              reviewedInsights[insight.id] === 'accepted'
+            )}
+          />
         </TabsContent>
         
         <TabsContent value="help">

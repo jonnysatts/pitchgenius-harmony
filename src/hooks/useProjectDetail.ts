@@ -7,6 +7,8 @@ import useInsightsReview from "@/hooks/useInsightsReview";
 
 export const useProjectDetail = (projectId: string, userId: string, project: Project) => {
   const [activeTab, setActiveTab] = useState<string>("documents");
+  const [isNewProject] = useState<boolean>(project.createdAt ? 
+    Date.now() - new Date(project.createdAt).getTime() < 5 * 60 * 1000 : false); // 5 minutes
   
   // Handle documents for the project
   const {
@@ -92,7 +94,8 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     handleRejectInsight,
     handleNavigateToDocuments,
     handleNavigateToPresentation,
-    handleRetryAnalysis
+    handleRetryAnalysis,
+    isNewProject
   };
 };
 
