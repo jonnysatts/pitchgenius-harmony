@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
-import { formatCategoryTitle } from "@/utils/insightUtils";
 
 interface WebInsightsTabContentProps {
   project: Project;
@@ -48,15 +47,30 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   // Website insights are already filtered in the parent component
   const hasWebsiteInsights = websiteInsights.length > 0;
   
-  // Group insights by category
+  // Debug logs to help diagnose the issue
+  console.log("WebInsightsTabContent - Total websiteInsights:", websiteInsights.length);
+  
+  // Group insights by category - print debugging info
   const insightsByCategory = websiteInsights.reduce((acc, insight) => {
-    const category = insight.category as WebsiteInsightCategory;
+    // Add a fallback for category - default to "company_positioning" if not set
+    const category = (insight.category || "company_positioning") as WebsiteInsightCategory;
+    console.log(`WebInsightsTabContent - Insight category: ${category}, title: ${insight.content?.title || 'No title'}`);
+    
     if (!acc[category]) {
       acc[category] = [];
     }
     acc[category].push(insight);
     return acc;
   }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
+  
+  // Log categories that have insights
+  console.log("WebInsightsTabContent - Categories with insights:", Object.keys(insightsByCategory));
+  
+  // Check if there's at least one insight in each category
+  websiteInsightCategories.forEach(category => {
+    const count = insightsByCategory[category.id as WebsiteInsightCategory]?.length || 0;
+    console.log(`WebInsightsTabContent - Category ${category.id}: ${count} insights`);
+  });
   
   return (
     <div className="bg-white p-6 rounded-lg border">
@@ -166,13 +180,16 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             
             <TabsContent value="all" className="space-y-8">
               {websiteInsightCategories.map((category) => {
+                // Use the category.id directly to access the insights
                 const categoryInsights = insightsByCategory[category.id as WebsiteInsightCategory] || [];
+                
+                // Skip empty categories in the "all" view
                 if (categoryInsights.length === 0) return null;
                 
                 return (
                   <div key={category.id} className="space-y-4">
                     <h3 className="text-lg font-semibold flex items-center">
-                      <category.icon className="mr-2 h-5 w-5 text-slate-500" />
+                      {category.icon && <category.icon className="mr-2 h-5 w-5 text-slate-500" />}
                       {category.label}
                     </h3>
                     <p className="text-sm text-slate-600 mb-4">{category.description}</p>
@@ -194,13 +211,14 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             </TabsContent>
             
             {websiteInsightCategories.map((category) => {
+              // Use the category.id directly to access the insights
               const categoryInsights = insightsByCategory[category.id as WebsiteInsightCategory] || [];
               
               return (
                 <TabsContent key={category.id} value={category.id} className="space-y-4">
                   <div className="bg-slate-50 p-4 rounded-md mb-4">
                     <h3 className="text-lg font-semibold flex items-center">
-                      <category.icon className="mr-2 h-5 w-5 text-slate-500" />
+                      {category.icon && <category.icon className="mr-2 h-5 w-5 text-slate-500" />}
                       {category.label}
                     </h3>
                     <p className="text-sm text-slate-600 mt-1">{category.description}</p>

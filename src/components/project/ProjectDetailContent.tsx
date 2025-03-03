@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AIProcessingStatus, Project, Document, StrategicInsight } from "@/lib/types";
 import ProjectHeader from "@/components/project/ProjectHeader";
@@ -65,15 +65,23 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
 }) => {
   // Filter insights to separate website-derived insights
   const websiteInsights = insights.filter(insight => 
-    insight.content.source === 'Website analysis' || 
-    (insight.content.summary && insight.content.summary.includes('[Website-derived]'))
+    insight.source === 'website' || 
+    (insight.content?.source === 'Website analysis') || 
+    (insight.content?.summary && insight.content.summary.includes('[Website-derived]'))
   );
+  
+  // Debug log for insight filtering
+  console.log("ProjectDetailContent - Total insights:", insights.length);
+  console.log("ProjectDetailContent - Website insights:", websiteInsights.length);
   
   // Document-derived insights (exclude website insights)
   const documentInsights = insights.filter(insight => 
-    !(insight.content.source === 'Website analysis' || 
-      (insight.content.summary && insight.content.summary.includes('[Website-derived]')))
+    !(insight.source === 'website' || 
+      (insight.content?.source === 'Website analysis') || 
+      (insight.content?.summary && insight.content.summary.includes('[Website-derived]')))
   );
+  
+  console.log("ProjectDetailContent - Document insights:", documentInsights.length);
   
   // Handle tab change without triggering re-renders
   const handleTabChange = (value: string) => {
@@ -82,6 +90,13 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
       setActiveTab(value);
     }
   };
+  
+  // Log insight categories
+  useEffect(() => {
+    if (websiteInsights.length > 0) {
+      console.log("Website insights categories:", websiteInsights.map(i => i.category));
+    }
+  }, [websiteInsights]);
   
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">

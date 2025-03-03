@@ -106,10 +106,23 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
       }
       
       // Make sure all insights have the source field set to 'website'
-      const processedInsights = data.insights.map((insight: StrategicInsight) => ({
-        ...insight,
-        source: 'website'
-      }));
+      // and have proper category values
+      const processedInsights = data.insights.map((insight: StrategicInsight) => {
+        // Ensure the insight has a valid category
+        if (!insight.category || typeof insight.category !== 'string' || 
+            !websiteInsightCategories.some(cat => cat.id === insight.category)) {
+          console.log(`Fixing invalid category for insight: ${insight.id}, setting to default 'company_positioning'`);
+          insight.category = 'company_positioning';
+        }
+        
+        return {
+          ...insight,
+          source: 'website'
+        };
+      });
+      
+      console.log(`Processed ${processedInsights.length} website insights:`, 
+        processedInsights.map(i => `${i.id}: ${i.category}`));
       
       return { insights: processedInsights };
     } catch (err) {
@@ -140,7 +153,7 @@ const generateWebsiteMockInsights = (project: Project): StrategicInsight[] => {
       confidence: 70 + Math.floor(Math.random() * 25), // Random confidence between 70-95
       needsReview: Math.random() > 0.5, // 50% chance of needing review
       content: {
-        title: categoryInfo?.label || 'Website Insight',
+        title: `${categoryInfo?.label || 'Website Insight'} for ${project.clientName}`,
         summary: `🌐 [Website-derived] Analysis of ${project.clientName}'s ${categoryInfo?.label.toLowerCase()} based on their website.`,
         details: `This insight was generated from analyzing ${project.clientWebsite} to understand ${categoryInfo?.description.toLowerCase()}.`,
         recommendations: `Consider how the ${categoryInfo?.label.toLowerCase()} could be leveraged in a gaming context.`,
@@ -149,6 +162,9 @@ const generateWebsiteMockInsights = (project: Project): StrategicInsight[] => {
       }
     };
   });
+  
+  console.log(`Generated ${websiteInsights.length} mock website insights:`, 
+    websiteInsights.map(i => `${i.id}: ${i.category}`));
     
   return websiteInsights;
 };
