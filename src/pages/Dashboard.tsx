@@ -126,7 +126,7 @@ const Dashboard = () => {
                   <Label htmlFor="industry">Industry</Label>
                   <Select 
                     value={newProject.clientIndustry}
-                    onValueChange={(value: any) => setNewProject({...newProject, clientIndustry: value})}
+                    onValueChange={(value) => setNewProject({...newProject, clientIndustry: value as any})}
                   >
                     <SelectTrigger id="industry">
                       <SelectValue placeholder="Select industry" />

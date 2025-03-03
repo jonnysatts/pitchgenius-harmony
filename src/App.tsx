@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 
-import Index from "./pages/Index";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -47,12 +46,8 @@ const App = () => (
                 </RequireAuth>
               } 
             />
-            {/* Directly render Dashboard on root path */}
-            <Route path="/" element={
-              <RequireAuth>
-                <Dashboard />
-              </RequireAuth>
-            } />
+            {/* For the root path, use Navigate component */}
+            <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
