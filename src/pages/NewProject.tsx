@@ -16,6 +16,7 @@ const NewProject = () => {
     const projectTitle = searchParams.get('title') || 'New Project';
     const clientName = searchParams.get('client') || 'Client';
     const clientIndustry = (searchParams.get('industry') || 'retail') as Project['clientIndustry'];
+    const clientWebsite = searchParams.get('website') || '';
     
     // Create a new project with a unique ID
     const createNewProject = () => {
@@ -30,6 +31,7 @@ const NewProject = () => {
           title: projectTitle,
           clientName: clientName,
           clientIndustry: clientIndustry,
+          clientWebsite: clientWebsite,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           createdBy: "1", // Current user ID

@@ -6,13 +6,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProjectFormData {
   title: string;
   clientName: string;
   clientIndustry: "retail" | "finance" | "technology" | "entertainment" | "other";
+  clientWebsite?: string;
 }
 
 interface CreateProjectDialogProps {
@@ -63,8 +64,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
       // Close the dialog
       setIsOpen(false);
       
-      // Navigate to the new project page with params
-      navigate(`/projects/new?title=${encodeURIComponent(projectData.title)}&client=${encodeURIComponent(projectData.clientName)}&industry=${projectData.clientIndustry}`);
+      // Navigate to the new project page with params including the website URL
+      navigate(`/projects/new?title=${encodeURIComponent(projectData.title)}&client=${encodeURIComponent(projectData.clientName)}&industry=${projectData.clientIndustry}${projectData.clientWebsite ? `&website=${encodeURIComponent(projectData.clientWebsite)}` : ''}`);
       
       // Call the parent function to reset the form
       onCreateProject();
@@ -131,6 +132,23 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="website">Client Website URL <span className="text-sm text-muted-foreground">(optional)</span></Label>
+            <div className="flex relative">
+              <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input 
+                id="website"
+                placeholder="https://www.example.com"
+                className="pl-9"
+                value={projectData.clientWebsite || ''}
+                onChange={(e) => setProjectData({...projectData, clientWebsite: e.target.value})}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Adding a website URL allows AI to analyze the client's online presence for additional insights
+            </p>
           </div>
         </div>
         <DialogFooter>

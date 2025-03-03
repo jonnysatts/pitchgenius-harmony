@@ -89,6 +89,16 @@ export const generateInsights = async (
                 Priority: ${doc.priority || 0}`
     }));
 
+    // Add client website context information if available
+    let websiteContext = '';
+    if (project.clientWebsite) {
+      websiteContext = `
+Additional context: The client's website is ${project.clientWebsite}. 
+This website may contain relevant information about their brand positioning, products/services, target audience, 
+current marketing approaches, and potential opportunities for gaming industry integration. 
+Please consider this information when generating insights.`;
+    }
+
     // Check if we're in development mode without Supabase or if Supabase connection failed
     const useRealApi = await checkSupabaseConnection();
     
@@ -126,12 +136,13 @@ export const generateInsights = async (
               projectId: project.id, 
               documentIds,
               clientIndustry: project.clientIndustry,
+              clientWebsite: project.clientWebsite,
               projectTitle: project.title,
               documentContents,
               processingMode: 'quick', // Use quick mode to reduce processing time
               includeComprehensiveDetails: true,
               maximumResponseTime: 110, // Tell Claude to try to respond within 110 seconds (just under our 2-minute timeout)
-              systemPrompt: GAMING_SPECIALIST_PROMPT // Add the gaming specialist prompt
+              systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext // Add the gaming specialist prompt with website context
             }
           });
           

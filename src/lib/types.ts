@@ -14,6 +14,7 @@ export interface Project {
   title: string;
   clientName: string;
   clientIndustry: "retail" | "finance" | "technology" | "entertainment" | "other";
+  clientWebsite?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;

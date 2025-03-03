@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Project, AIProcessingStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import ApiConnectionTest from "./ApiConnectionTest";
+import { Globe } from "lucide-react";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -35,6 +36,18 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
             <Badge>
               {project.clientIndustry.charAt(0).toUpperCase() + project.clientIndustry.slice(1)}
             </Badge>
+            
+            {project.clientWebsite && (
+              <a 
+                href={project.clientWebsite.startsWith('http') ? project.clientWebsite : `https://${project.clientWebsite}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-4 flex items-center text-sm text-blue-500 hover:text-blue-700 transition-colors"
+              >
+                <Globe size={14} className="mr-1" />
+                Visit website
+              </a>
+            )}
           </div>
         </div>
         
