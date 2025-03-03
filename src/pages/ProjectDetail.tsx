@@ -1,60 +1,74 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MOCK_PROJECTS } from "@/data/mockProjects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
-import { Document, Project, StrategicInsight, AIProcessingStatus } from "@/lib/types";
-import { processFiles } from "@/services/documentService";
-import { 
-  generateInsights, 
-  monitorAIProcessingProgress, 
-  calculateOverallConfidence,
-  countInsightsNeedingReview
-} from "@/services/ai";
-import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { Project } from "@/lib/types";
+import { checkSupabaseConnection } from "@/services/ai";
+import { calculateOverallConfidence, countInsightsNeedingReview } from "@/services/ai";
+import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useLocation } from "react-router-dom";
+
+// Import hooks
+import { useAiAnalysis } from "@/hooks/useAiAnalysis";
+import { useDocuments } from "@/hooks/useDocuments";
+import { useInsightsReview } from "@/hooks/useInsightsReview";
 
 // Import the components
 import ProjectHeader from "@/components/project/ProjectHeader";
+import ProjectWelcomeAlert from "@/components/project/ProjectWelcomeAlert";
+import ErrorAlert from "@/components/project/ErrorAlert";
 import DocumentsTabContent from "@/components/project/DocumentsTabContent";
 import InsightsTabContent from "@/components/project/InsightsTabContent";
 import PresentationTabContent from "@/components/project/PresentationTabContent";
 import HelpTabContent from "@/components/project/HelpTabContent";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
-  const { toast } = useToast();
+  const location = useLocation();
   
-  const project = MOCK_PROJECTS.find(p => p.id === projectId);
-  
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [insights, setInsights] = useState<StrategicInsight[]>([]);
+  const project = MOCK_PROJECTS.find(p => p.id === projectId) as Project;
   const [activeTab, setActiveTab] = useState("documents");
-  const [aiStatus, setAiStatus] = useState<AIProcessingStatus>({
-    status: 'idle',
-    progress: 0,
-    message: 'Ready to analyze documents'
-  });
-  const [useRealAI, setUseRealAI] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
-  const [reviewedInsights, setReviewedInsights] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
+  // Get state from location
+  const mockProjectWarning = location.state?.mockProjectWarning;
+  const newProjectTitle = location.state?.newProjectTitle;
+  const newProjectClient = location.state?.newProjectClient;
+  
+  // Use our custom hooks
+  const { 
+    documents, 
+    handleFilesSelected, 
+    handleRemoveDocument 
+  } = useDocuments(projectId || '', user?.id || '');
+  
+  const {
+    insights,
+    aiStatus,
+    error,
+    useRealAI,
+    setUseRealAI,
+    handleAnalyzeDocuments
+  } = useAiAnalysis(project);
+  
+  const {
+    reviewedInsights,
+    handleAcceptInsight,
+    handleRejectInsight
+  } = useInsightsReview(insights);
   
   // Check if we can use the real AI via Supabase
   useEffect(() => {
-    const checkSupabaseConnection = async () => {
+    const checkAiAvailability = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('test-connection', {
-          method: 'POST',
-          body: { test: true },
-        });
+        const anthropicKeyExists = await checkSupabaseConnection();
         
-        if (!error && data?.environmentChecks?.ANTHROPIC_API_KEY?.exists) {
+        if (anthropicKeyExists) {
           setUseRealAI(true);
           console.log("Anthropic API key detected - will use real AI");
         } else {
@@ -65,19 +79,8 @@ const ProjectDetail = () => {
       }
     };
     
-    checkSupabaseConnection();
-  }, []);
-  
-  // Initialize review status for insights
-  useEffect(() => {
-    if (insights.length > 0) {
-      const initialReviewStatus: Record<string, 'accepted' | 'rejected' | 'pending'> = {};
-      insights.forEach(insight => {
-        initialReviewStatus[insight.id] = 'pending';
-      });
-      setReviewedInsights(initialReviewStatus);
-    }
-  }, [insights]);
+    checkAiAvailability();
+  }, [setUseRealAI]);
   
   if (!project) {
     return (
@@ -90,160 +93,27 @@ const ProjectDetail = () => {
     );
   }
   
-  const handleFilesSelected = (files: File[]) => {
-    if (!user) return;
-    
-    // Reset any previous errors
-    setError(null);
-    
-    const newDocuments = processFiles(files, project.id, user.id);
-    setDocuments(prev => [...prev, ...newDocuments]);
-    
-    toast({
-      title: "Documents uploaded",
-      description: `Successfully uploaded ${files.length} document${files.length !== 1 ? 's' : ''}`,
-    });
-  };
-  
-  const handleRemoveDocument = (documentId: string) => {
-    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-    
-    toast({
-      title: "Document removed",
-      description: "Document has been removed from the project",
-    });
-  };
-  
-  const handleAnalyzeDocuments = async () => {
-    if (documents.length === 0) {
-      toast({
-        title: "No documents to analyze",
-        description: "Please upload documents before running the analysis",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Reset any previous errors
-    setError(null);
-    
-    // Update status to processing
-    setAiStatus({
-      status: 'processing',
-      progress: 0,
-      message: 'Starting document analysis...'
-    });
-    
-    // Set up progress monitoring
-    const cancelMonitoring = monitorAIProcessingProgress(
-      project.id,
-      (status) => setAiStatus(status)
-    );
-    
-    try {
-      // Display different message based on whether we're using real AI or not
-      toast({
-        title: useRealAI ? "Connecting to Anthropic API" : "Analyzing Documents",
-        description: useRealAI 
-          ? `Sending all ${documents.length} documents to Claude for in-depth analysis`
-          : `Running AI analysis on all ${documents.length} documents`,
-      });
-      
-      console.log(`Analyzing ${documents.length} documents using ${useRealAI ? 'Anthropic API' : 'mock generator'}`);
-      
-      // Call the AI service to generate insights
-      const result = await generateInsights(project, documents);
-      
-      if (result.error) {
-        toast({
-          title: "Analysis failed",
-          description: result.error,
-          variant: "destructive"
-        });
-        setAiStatus({
-          status: 'error',
-          progress: 0,
-          message: result.error
-        });
-        setError(result.error);
-      } else {
-        setInsights(result.insights);
-        
-        // Wait for the progress animation to complete
-        setTimeout(() => {
-          setActiveTab("insights");
-          toast({
-            title: "Analysis complete",
-            description: `Generated ${result.insights.length} strategic insights from ${documents.length} documents${useRealAI ? ' using Claude AI' : ''}`,
-          });
-        }, 1000);
-      }
-    } catch (error: any) {
-      console.error("Error analyzing documents:", error);
-      const errorMessage = error.message || "An unexpected error occurred";
-      toast({
-        title: "Analysis failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      setAiStatus({
-        status: 'error',
-        progress: 0,
-        message: errorMessage
-      });
-      setError(errorMessage);
-    } finally {
-      cancelMonitoring();
-    }
-  };
-  
-  const handleAcceptInsight = (insightId: string) => {
-    setReviewedInsights(prev => ({
-      ...prev,
-      [insightId]: 'accepted'
-    }));
-    
-    toast({
-      title: "Insight accepted",
-      description: "This insight will be included in the final report",
-    });
-  };
-  
-  const handleRejectInsight = (insightId: string) => {
-    setReviewedInsights(prev => ({
-      ...prev,
-      [insightId]: 'rejected'
-    }));
-    
-    toast({
-      title: "Insight rejected",
-      description: "This insight will be excluded from the final report",
-    });
-  };
-  
   // Calculate stats
   const overallConfidence = calculateOverallConfidence(insights);
   const needsReviewCount = countInsightsNeedingReview(insights);
   
+  // Handle analyze documents with setActiveTab callback
+  const onAnalyzeDocuments = () => {
+    handleAnalyzeDocuments(documents, setActiveTab);
+  };
+  
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8">
+        <ProjectWelcomeAlert 
+          mockProjectWarning={!!mockProjectWarning} 
+          newProjectTitle={newProjectTitle} 
+          newProjectClient={newProjectClient} 
+        />
+        
         <ProjectHeader project={project} />
         
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTitle>Error: Analysis Failed</AlertTitle>
-            <AlertDescription>
-              {error}
-              {error.includes("Edge Function") && (
-                <div className="mt-2">
-                  <p>This could be due to a connection issue with the Supabase Edge Function. 
-                     Please check that the function is deployed and has the correct permissions.</p>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
+        <ErrorAlert error={error} />
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
@@ -278,7 +148,7 @@ const ProjectDetail = () => {
               aiStatus={aiStatus}
               onFilesSelected={handleFilesSelected}
               onRemoveDocument={handleRemoveDocument}
-              onAnalyzeDocuments={handleAnalyzeDocuments}
+              onAnalyzeDocuments={onAnalyzeDocuments}
             />
           </TabsContent>
           
