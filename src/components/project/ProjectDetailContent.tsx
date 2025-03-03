@@ -24,9 +24,11 @@ interface ProjectDetailContentProps {
   usingFallbackInsights?: boolean;
   isNewProject: boolean;
   isLoading: boolean;
+  isAnalyzingWebsite?: boolean;
   handleFilesSelected: (files: File[]) => void;
   handleRemoveDocument: (documentId: string) => void;
   handleAnalyzeDocuments: () => void;
+  handleAnalyzeWebsite?: () => void;
   handleAcceptInsight: (insightId: string) => void;
   handleRejectInsight: (insightId: string) => void;
   handleUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
@@ -49,9 +51,11 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   usingFallbackInsights,
   isNewProject,
   isLoading,
+  isAnalyzingWebsite,
   handleFilesSelected,
   handleRemoveDocument,
   handleAnalyzeDocuments,
+  handleAnalyzeWebsite,
   handleAcceptInsight,
   handleRejectInsight,
   handleUpdateInsight,
@@ -88,6 +92,9 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
             onRemoveDocument={handleRemoveDocument}
             onAnalyzeDocuments={handleAnalyzeDocuments}
             aiStatus={aiStatus}
+            isAnalyzingWebsite={isAnalyzingWebsite}
+            onAnalyzeWebsite={handleAnalyzeWebsite}
+            websiteUrl={project.clientWebsite}
           />
         </TabsContent>
         

@@ -3,10 +3,12 @@
  * Service for analyzing client websites and generating preliminary insights
  */
 import { Project, StrategicInsight } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
 import { callClaudeApi, createTimeoutPromise } from "./apiClient";
 import { generateWebsiteResearchPrompt } from "./promptEngineering";
 import { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
 import { checkSupabaseConnection } from "./config";
+import { prepareWebsiteContent } from "./promptUtils";
 
 /**
  * Analyze a client website to generate preliminary insights
@@ -40,7 +42,7 @@ export const analyzeClientWebsite = async (
     console.log('Using Anthropic API via Supabase Edge Function to analyze website');
     
     // Create a timeout promise - 90 seconds (1.5 minutes)
-    const timeoutPromise = createTimeoutPromise(project, [], 90000, true);
+    const timeoutPromise = createTimeoutPromise(project, [], 90000);
     
     try {
       // Race between the actual API call and the timeout
@@ -79,25 +81,35 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
     // In production, this would call the Supabase Edge Function with the website URL
     // For now, we'll use the mock insights as a placeholder
     
-    // This simulates an API call to analyze the website
-    // In a real implementation, you would:
-    // 1. Call a Supabase Edge Function that uses Claude or similar AI
-    // 2. The function would fetch and analyze the website content
-    // 3. Return structured insights based on the website
-
-    // Simulate an API delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    const websiteContent = prepareWebsiteContent(project.clientWebsite || '', project);
     
-    // For now, return mock insights
-    const mockInsights = generateWebsiteMockInsights(project);
-    
-    // Tag these insights as derived from website analysis
-    mockInsights.forEach(insight => {
-      insight.source = 'website_analysis';
-      insight.content.source = 'Website analysis';
-    });
-    
-    return { insights: mockInsights };
+    try {
+      // Call the Supabase Edge Function that uses Anthropic
+      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+        body: { 
+          projectId: project.id, 
+          clientIndustry: project.clientIndustry,
+          clientWebsite: project.clientWebsite,
+          projectTitle: project.title,
+          websiteContent,
+          systemPrompt: websiteResearchPrompt
+        }
+      });
+      
+      if (error) {
+        console.error('Error from Edge Function:', error);
+        throw error;
+      }
+      
+      if (!data || !data.insights || data.insights.length === 0) {
+        throw new Error('No insights returned from website analysis');
+      }
+      
+      return { insights: data.insights };
+    } catch (err) {
+      console.error('Error calling Supabase Edge Function:', err);
+      throw err;
+    }
   } catch (error: any) {
     console.error('Error calling website analysis API:', error);
     throw error;
@@ -113,22 +125,21 @@ const generateWebsiteMockInsights = (project: Project): StrategicInsight[] => {
   const websiteInsights = generateComprehensiveInsights(project, [])
     .filter((_, index) => index < 5) // Take only first 5 insights
     .map(insight => {
-      // Mark these insights as coming from website analysis
-      insight.source = 'website_analysis';
-      
-      // Add website analysis specific information
-      if (insight.content) {
-        insight.content.source = 'Website analysis';
-        insight.content.websiteUrl = project.clientWebsite;
-        
-        // Add a flag that this is preliminary research
-        if (insight.content.summary) {
-          insight.content.summary = '🌐 [Website-derived] ' + insight.content.summary;
+      // Create a modified insight with website analysis specific information
+      return {
+        ...insight,
+        content: {
+          ...insight.content,
+          source: 'Website analysis',
+          websiteUrl: project.clientWebsite,
+          // Add a flag that this is preliminary research
+          summary: insight.content.summary 
+            ? '🌐 [Website-derived] ' + insight.content.summary 
+            : insight.content.summary
         }
-      }
-      
-      return insight;
+      };
     });
     
   return websiteInsights;
 };
+

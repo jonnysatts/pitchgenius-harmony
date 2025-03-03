@@ -1,13 +1,13 @@
 
 import { Project } from "@/lib/types";
 
-// Track newly created projects in session storage
+// Track newly created projects in localStorage instead of sessionStorage for better persistence
 const getNewProjects = (): Project[] => {
   try {
-    const storedProjects = sessionStorage.getItem('newProjects');
+    const storedProjects = localStorage.getItem('newProjects');
     return storedProjects ? JSON.parse(storedProjects) : [];
   } catch (e) {
-    console.error("Error loading projects from session storage:", e);
+    console.error("Error loading projects from localStorage:", e);
     return [];
   }
 };
@@ -75,10 +75,10 @@ export const addNewProject = (project: Project): void => {
       newProjects.unshift(project);
     }
     
-    sessionStorage.setItem('newProjects', JSON.stringify(newProjects));
-    console.log("Project saved to session storage:", project.id);
+    localStorage.setItem('newProjects', JSON.stringify(newProjects));
+    console.log("Project saved to localStorage:", project.id);
   } catch (e) {
-    console.error("Error saving project to session storage:", e);
+    console.error("Error saving project to localStorage:", e);
   }
 };
 
