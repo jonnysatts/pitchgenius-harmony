@@ -47,7 +47,12 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
     ? error
     : null;
 
-  // Website insights are already filtered in the parent component
+  // Debugging logs to help trace the issue
+  console.log("WebInsightsTabContent: websiteInsights count:", websiteInsights.length);
+  console.log("WebInsightsTabContent: Source property present?", 
+    websiteInsights.map(i => i.source).join(', '));
+  
+  // Ensure we have website insights before trying to render them
   const hasWebsiteInsights = websiteInsights.length > 0;
   
   // Group insights by category with proper type checking and fallbacks

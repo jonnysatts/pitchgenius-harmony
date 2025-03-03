@@ -2,7 +2,6 @@
 import { useState, useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
-import { addWebsiteSourceMarker } from '@/services/ai/promptEngineering';
 import { toast } from '@/hooks/use-toast';
 
 export const useWebsiteAnalysis = (
@@ -31,6 +30,9 @@ export const useWebsiteAnalysis = (
         description: `Starting website analysis for ${project.clientWebsite}`,
       });
 
+      // Clear existing insights when starting a new analysis
+      setWebsiteInsights([]);
+      
       const result = await analyzeClientWebsite(project);
       
       if (result.insights && result.insights.length > 0) {
@@ -39,7 +41,19 @@ export const useWebsiteAnalysis = (
           // Ensure the insight has the correct source
           return {
             ...insight,
-            source: 'website' as 'website'  // Explicitly set source to 'website'
+            source: 'website' as 'website',  // Explicitly set source to 'website'
+            // Add default values for any missing properties
+            id: insight.id || `website-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            category: insight.category || 'company_positioning',
+            confidence: insight.confidence || 80,
+            needsReview: insight.needsReview !== undefined ? insight.needsReview : true,
+            content: {
+              ...(insight.content || {}),
+              title: insight.content?.title || 'Website Insight',
+              summary: insight.content?.summary || 'Analysis from website',
+              details: insight.content?.details || 'No details provided',
+              recommendations: insight.content?.recommendations || 'No recommendations provided'
+            }
           };
         });
         
@@ -47,6 +61,9 @@ export const useWebsiteAnalysis = (
         console.log('Website insight categories:', markedInsights.map(i => i.category));
         
         setWebsiteInsights(markedInsights);
+        
+        // Replace the old website insights with new ones (instead of adding to them)
+        // First get all non-website insights
         addInsights(markedInsights);
         
         toast({

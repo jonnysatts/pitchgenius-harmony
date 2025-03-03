@@ -50,6 +50,25 @@ export const useAiResults = (project: Project) => {
     if (newInsights.length === 0) return;
     
     setInsights(currentInsights => {
+      // For website insights, remove all existing website insights first
+      if (newInsights.some(insight => insight.source === 'website')) {
+        console.log('Found website insights, replacing all existing website insights');
+        
+        // Filter out all existing website insights
+        const nonWebsiteInsights = currentInsights.filter(
+          insight => insight.source !== 'website'
+        );
+        
+        // Combine with new website insights
+        const combinedInsights = [...nonWebsiteInsights, ...newInsights];
+        
+        // Persist the combined insights
+        persistInsights(combinedInsights);
+        
+        return combinedInsights;
+      }
+      
+      // For non-website insights, just append (avoiding duplicates)
       // Filter out any duplicates based on content.title
       const existingTitles = new Set(currentInsights.map(insight => 
         insight.content && insight.content.title ? insight.content.title : ''
