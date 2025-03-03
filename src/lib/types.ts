@@ -58,3 +58,20 @@ export interface Presentation {
   createdAt: string;
   updatedAt: string;
 }
+
+// New type for the 6-step narrative framework
+export interface NarrativeFramework {
+  gamingRevolution: string;
+  currentLandscape: string;
+  culturalInsight: string;
+  strategicSolution: string;
+  tangibleVision: string;
+  proofOfConcept: string;
+}
+
+// Type for AI processing status
+export interface AIProcessingStatus {
+  status: "idle" | "processing" | "completed" | "error";
+  progress: number;
+  message: string;
+}

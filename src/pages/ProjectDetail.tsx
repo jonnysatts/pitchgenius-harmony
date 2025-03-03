@@ -2,224 +2,166 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { FileUpload } from "@/components/FileUpload";
+import { MOCK_PROJECTS } from "@/data/mockProjects";
 import { Button } from "@/components/ui/button";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  ArrowRight, 
-  ChevronRight, 
-  FileText, 
-  FolderOpen, 
-  LayoutTemplate, 
-  MessageSquare, 
-  Upload, 
-  Users 
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-// Mock project data (would come from an API in a real app)
-const MOCK_PROJECT = {
-  id: "1",
-  title: "MegaMart Gaming Strategy",
-  clientName: "MegaMart Retail",
-  clientIndustry: "retail",
-  createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-  updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  createdBy: "1",
-  collaborators: ["2"],
-  status: "in_progress",
-  description: "Create a compelling gaming strategy presentation for MegaMart to engage Gen Z customers through authentic gaming activations in retail stores."
-};
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/context/AuthContext";
+import { FileUpload } from "@/components/FileUpload";
+import { Document, Project } from "@/lib/types";
+import { processFiles } from "@/services/documentService";
+import DocumentList from "@/components/project/DocumentList";
+import { CircleHelp, FileText, Lightbulb, Presentation } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{projectId: string}>();
-  const [activeTab, setActiveTab] = useState("materials");
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const { projectId } = useParams<{ projectId: string }>();
+  const { user } = useAuth();
+  const { toast } = useToast();
   
-  // This would fetch project data in a real app
-  const project = MOCK_PROJECT;
+  const project = MOCK_PROJECTS.find(p => p.id === projectId);
+  
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [activeTab, setActiveTab] = useState("documents");
+  
+  if (!project) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto px-4 py-12">
+          <h1 className="text-2xl font-bold text-red-500">Project not found</h1>
+          <p className="mt-2">The project you're looking for doesn't exist or has been deleted.</p>
+        </div>
+      </AppLayout>
+    );
+  }
   
   const handleFilesSelected = (files: File[]) => {
-    setUploadedFiles(files);
+    if (!user) return;
+    
+    const newDocuments = processFiles(files, project.id, user.id);
+    setDocuments(prev => [...prev, ...newDocuments]);
+    
+    toast({
+      title: "Documents uploaded",
+      description: `Successfully uploaded ${files.length} document${files.length !== 1 ? 's' : ''}`,
+    });
   };
   
-  const handleAnalyzeMaterials = () => {
-    // In a real app, this would send files to a backend for processing
-    console.log("Analyzing materials:", uploadedFiles);
+  const handleRemoveDocument = (documentId: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    
+    toast({
+      title: "Document removed",
+      description: "Document has been removed from the project",
+    });
   };
-  
-  const steps = [
-    { id: "materials", title: "Client Materials", icon: FolderOpen, description: "Upload and analyze client documents" },
-    { id: "narrative", title: "Strategic Narrative", icon: MessageSquare, description: "Build your strategic narrative framework" },
-    { id: "slides", title: "Create Slides", icon: LayoutTemplate, description: "Design and customize your presentation" },
-    { id: "export", title: "Export & Share", icon: Upload, description: "Export and share your finalized deck" }
-  ];
   
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-8">
-          <div className="flex items-center text-sm text-slate-500 mb-2">
-            <a href="/dashboard" className="hover:text-brand-orange transition-colors">Dashboard</a>
-            <ChevronRight size={16} className="mx-1" />
-            <a href="/projects" className="hover:text-brand-orange transition-colors">Projects</a>
-            <ChevronRight size={16} className="mx-1" />
-            <span className="text-slate-700">{project.title}</span>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-3xl font-bold text-slate-900">{project.title}</h1>
+              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize bg-slate-100 text-slate-800">
+                {project.status.replace('_', ' ')}
+              </span>
+            </div>
+            <p className="text-slate-500 mt-2">Client: {project.clientName} · Industry: {project.clientIndustry}</p>
           </div>
           
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-1">{project.title}</h1>
-              <p className="text-slate-500 mb-2">Client: {project.clientName}</p>
-              <p className="text-sm text-slate-600 max-w-2xl">{project.description}</p>
+          <div className="mt-4 md:mt-0">
+            <Button>Generate Slides</Button>
+          </div>
+        </div>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="documents" className="flex items-center gap-2">
+              <FileText size={16} />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="flex items-center gap-2">
+              <Lightbulb size={16} />
+              Strategic Insights
+            </TabsTrigger>
+            <TabsTrigger value="presentation" className="flex items-center gap-2">
+              <Presentation size={16} />
+              Presentation
+            </TabsTrigger>
+            <TabsTrigger value="help" className="flex items-center gap-2">
+              <CircleHelp size={16} />
+              Help
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="documents" className="space-y-6">
+            <div className="bg-white p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Upload Documents</h2>
+              <p className="text-slate-500 mb-4">
+                Upload your client documents. We support PDFs, Office documents, images, and text files.
+              </p>
+              
+              <FileUpload 
+                onFilesSelected={handleFilesSelected}
+                acceptedFileTypes={['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.rtf', '.md', '.jpg', '.png']}
+                maxFileSizeMB={25}
+                maxFiles={20}
+              />
             </div>
             
-            <div className="mt-4 md:mt-0">
-              <Button variant="outline" className="mr-2">
-                <Users size={16} className="mr-2" />
-                Invite
-              </Button>
-              
-              <Button 
-                className="bg-brand-orange hover:opacity-90 transition-opacity"
-                onClick={() => setActiveTab("narrative")}
-              >
-                Next Step
-                <ArrowRight size={16} className="ml-2" />
-              </Button>
+            <div className="bg-white p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Project Documents</h2>
+              <DocumentList 
+                documents={documents}
+                onRemoveDocument={handleRemoveDocument}
+              />
             </div>
-          </div>
-        </div>
-        
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white rounded-xl p-4 border border-slate-200">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <button 
-                  className={cn(
-                    "flex items-center px-2 py-3 rounded-lg transition-colors",
-                    activeTab === step.id 
-                      ? "bg-orange-50 text-brand-orange" 
-                      : "text-slate-500 hover:text-slate-700"
-                  )}
-                  onClick={() => setActiveTab(step.id)}
-                >
-                  <div 
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center mr-3",
-                      activeTab === step.id 
-                        ? "bg-brand-orange text-white" 
-                        : "bg-slate-100 text-slate-500"
-                    )}
-                  >
-                    <step.icon size={16} />
-                  </div>
-                  <div className="text-left">
-                    <p className={cn(
-                      "font-medium",
-                      activeTab === step.id ? "text-brand-orange" : "text-slate-700"
-                    )}>
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-slate-500 hidden md:block">
-                      {step.description}
-                    </p>
-                  </div>
-                </button>
-                
-                {index < steps.length - 1 && (
-                  <div className="hidden sm:block text-slate-300">
-                    <ChevronRight size={20} />
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-        
-        {/* Tab Content */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsContent value="materials" className="mt-0">
-              <div className="max-w-3xl mx-auto">
-                <div className="text-center mb-8">
-                  <FileText size={40} className="mx-auto mb-4 text-slate-400" />
-                  <h2 className="text-2xl font-bold mb-2">Upload Client Materials</h2>
-                  <p className="text-slate-500 mb-6">
-                    Upload client documents for analysis. We'll automatically extract key insights to help build your presentation.
+          </TabsContent>
+          
+          <TabsContent value="insights">
+            <div className="bg-white p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Strategic Insights</h2>
+              <p className="text-slate-500">
+                Strategic insights will appear here after documents are processed.
+              </p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="presentation">
+            <div className="bg-white p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Presentation Slides</h2>
+              <p className="text-slate-500">
+                Your presentation slides will appear here after generating insights.
+              </p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="help">
+            <div className="bg-white p-6 rounded-lg border">
+              <h2 className="text-xl font-semibold mb-4">Help & Instructions</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium text-slate-900">Getting Started</h3>
+                  <p className="text-slate-500">
+                    Upload your client documents to begin analyzing their gaming opportunities.
                   </p>
                 </div>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Document Upload</CardTitle>
-                    <CardDescription>
-                      Drag and drop files or click to browse. We support PDF, Word, PowerPoint, Excel, and image files.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FileUpload onFilesSelected={handleFilesSelected} />
-                  </CardContent>
-                  <CardFooter className="flex justify-end">
-                    <Button 
-                      className="bg-brand-orange hover:opacity-90 transition-opacity"
-                      disabled={uploadedFiles.length === 0}
-                      onClick={handleAnalyzeMaterials}
-                    >
-                      Analyze Materials
-                      <ArrowRight size={16} className="ml-2" />
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <div>
+                  <h3 className="text-lg font-medium text-slate-900">Document Processing</h3>
+                  <p className="text-slate-500">
+                    Our AI will analyze your documents to extract strategic insights for gaming narratives.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-slate-900">Slide Generation</h3>
+                  <p className="text-slate-500">
+                    Based on the strategic insights, the system will generate presentation slides following the 6-step narrative framework.
+                  </p>
+                </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="narrative">
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold mb-2">Strategic Narrative Builder</h2>
-                <p className="text-slate-500 mb-6">
-                  This section will be implemented in the next phase
-                </p>
-                <Button variant="outline">
-                  Continue to Slides
-                  <ArrowRight size={16} className="ml-2" />
-                </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="slides">
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold mb-2">Slide Creation</h2>
-                <p className="text-slate-500 mb-6">
-                  This section will be implemented in the next phase
-                </p>
-                <Button variant="outline">
-                  Continue to Export
-                  <ArrowRight size={16} className="ml-2" />
-                </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="export">
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold mb-2">Export & Share</h2>
-                <p className="text-slate-500 mb-6">
-                  This section will be implemented in the next phase
-                </p>
-                <Button variant="outline">
-                  Back to Dashboard
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
