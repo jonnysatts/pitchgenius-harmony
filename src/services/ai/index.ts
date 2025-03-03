@@ -8,4 +8,4 @@ export { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
 export { getAIProcessingStatus, monitorAIProcessingProgress } from "./statusTracking";
 export { calculateOverallConfidence, countInsightsNeedingReview } from "./insightAnalytics";
 export { GAMING_SPECIALIST_PROMPT, generateWebsiteContext, generateWebsiteResearchPrompt } from "./promptEngineering";
-export { analyzeClientWebsite as analyzeWebsite } from "./websiteAnalysis";
+export { analyzeClientWebsite as analyzeWebsite } from "./websiteAnalysis/websiteAnalysisService";
