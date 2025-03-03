@@ -75,7 +75,8 @@ export const callClaudeApi = async (
     
     return { 
       insights: markedInsights || [],
-      error: undefined
+      error: undefined,
+      insufficientContent: false
     };
   } catch (apiError: any) {
     console.error('Error calling Anthropic API:', apiError);
@@ -93,8 +94,8 @@ export const createTimeoutPromise = (
   project: Project, 
   documents: Document[],
   timeoutMs: number = 120000 // 2 minutes default
-): Promise<{ insights: StrategicInsight[], error?: string }> => {
-  return new Promise<{ insights: StrategicInsight[], error?: string }>((resolve) => {
+): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
+  return new Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }>((resolve) => {
     setTimeout(() => {
       console.log('API request taking too long, falling back to mock insights');
       const mockInsights = generateComprehensiveInsights(project, documents);
@@ -107,7 +108,8 @@ export const createTimeoutPromise = (
       
       resolve({ 
         insights: markedInsights, 
-        error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please use the Retry Analysis button." 
+        error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please use the Retry Analysis button.",
+        insufficientContent: false
       });
     }, timeoutMs); // timeout in milliseconds
   });

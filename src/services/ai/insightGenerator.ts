@@ -49,7 +49,8 @@ export const generateInsights = async (
       const mockInsights = generateComprehensiveInsights(project, documents);
       return { 
         insights: mockInsights,
-        error: "Using sample insights - no Supabase connection available"
+        error: "Using sample insights - no Supabase connection available",
+        insufficientContent: false
       };
     }
     
@@ -66,21 +67,18 @@ export const generateInsights = async (
       ]);
       
       // Pass through the insufficientContent flag if it exists
-      if (result.insufficientContent) {
-        return {
-          insights: [],
-          insufficientContent: true,
-          error: result.error
-        };
-      }
-      
-      return result;
+      return {
+        insights: result.insights,
+        error: result.error,
+        insufficientContent: result.insufficientContent || false
+      };
     } catch (apiError: any) {
       console.log('Falling back to mock insights generator due to API error');
       const mockInsights = generateComprehensiveInsights(project, documents);
       return { 
         insights: mockInsights,
-        error: "Claude AI error - using generated sample insights instead. Error: " + (apiError.message || String(apiError))
+        error: "Claude AI error - using generated sample insights instead. Error: " + (apiError.message || String(apiError)),
+        insufficientContent: false
       };
     }
   } catch (err: any) {
@@ -89,7 +87,8 @@ export const generateInsights = async (
     const mockInsights = generateComprehensiveInsights(project, documents);
     return { 
       insights: mockInsights,
-      error: "Using generated sample insights due to an error: " + (err.message || 'An unexpected error occurred while analyzing documents')
+      error: "Using generated sample insights due to an error: " + (err.message || 'An unexpected error occurred while analyzing documents'),
+      insufficientContent: false
     };
   }
 };
