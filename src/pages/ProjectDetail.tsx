@@ -1,54 +1,26 @@
 
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { MOCK_PROJECTS, findProjectById } from "@/data/mockProjects";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { findProjectById } from "@/data/mockProjects";
 import { useAuth } from "@/context/AuthContext";
-import { Project } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
-import { calculateOverallConfidence, countInsightsNeedingReview } from "@/services/ai";
-import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useLocation } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { Project } from "@/lib/types";
 
 // Import hooks
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useInsightsReview } from "@/hooks/useInsightsReview";
+import { useProjectDetail } from "@/hooks/useProjectDetail";
 
 // Import the components
-import ProjectHeader from "@/components/project/ProjectHeader";
-import ProjectWelcomeAlert from "@/components/project/ProjectWelcomeAlert";
-import ErrorAlert from "@/components/project/ErrorAlert";
-import DocumentsTabContent from "@/components/project/DocumentsTabContent";
-import InsightsTabContent from "@/components/project/InsightsTabContent";
-import PresentationTabContent from "@/components/project/PresentationTabContent";
-import HelpTabContent from "@/components/project/HelpTabContent";
+import ProjectDetailContent from "@/components/project/ProjectDetailContent";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { toast } = useToast();
   
   const project = findProjectById(projectId || '');
-  const [activeTab, setActiveTab] = useState("documents");
-  
-  useEffect(() => {
-    if (!project && projectId) {
-      toast({
-        title: "Project not found",
-        description: "The project you're looking for doesn't exist or has been deleted.",
-        variant: "destructive"
-      });
-      navigate("/dashboard");
-    }
-  }, [project, projectId, navigate, toast]);
-  
-  const isNewProject = project?.id.startsWith('new_');
   
   const { 
     documents, 
@@ -74,11 +46,14 @@ const ProjectDetail = () => {
     handleRejectInsight
   } = useInsightsReview(insights);
   
-  useEffect(() => {
-    if (processingComplete && insights.length > 0) {
-      setActiveTab("insights");
-    }
-  }, [processingComplete, insights.length]);
+  const {
+    activeTab,
+    setActiveTab,
+    overallConfidence,
+    needsReviewCount,
+    navigateToPresentation,
+    isNewProject
+  } = useProjectDetail(project, projectId, insights, processingComplete);
   
   useEffect(() => {
     const checkAiAvailability = async () => {
@@ -110,9 +85,6 @@ const ProjectDetail = () => {
     );
   }
   
-  const overallConfidence = calculateOverallConfidence(insights);
-  const needsReviewCount = countInsightsNeedingReview(insights);
-  
   const onAnalyzeDocuments = () => {
     handleAnalyzeDocuments(documents, setActiveTab);
   };
@@ -121,91 +93,30 @@ const ProjectDetail = () => {
     const retry = retryAnalysis(setActiveTab);
     retry(documents);
   };
-
-  const navigateToPresentation = () => {
-    setActiveTab("presentation");
-    toast({
-      title: "Proceeding to presentation",
-      description: "Now you can create a presentation based on your accepted insights"
-    });
-  };
   
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8">
-        <ProjectWelcomeAlert 
-          mockProjectWarning={false} 
-          newProjectTitle={project.title} 
-          newProjectClient={project.clientName} 
-          isNewProject={isNewProject}
-        />
-        
-        <ProjectHeader project={project} />
-        
-        <ErrorAlert error={error} />
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="documents" className="flex items-center gap-2">
-              <FileText size={16} />
-              Documents
-              {documents.length > 0 && (
-                <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="flex items-center gap-2">
-              <Lightbulb size={16} />
-              Strategic Insights
-              {insights.length > 0 && (
-                <Badge variant="secondary" className="ml-1">{insights.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="presentation" className="flex items-center gap-2">
-              <Presentation size={16} />
-              Presentation
-            </TabsTrigger>
-            <TabsTrigger value="help" className="flex items-center gap-2">
-              <CircleHelp size={16} />
-              Help
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="documents">
-            <DocumentsTabContent 
-              documents={documents}
-              project={project}
-              aiStatus={aiStatus}
-              onFilesSelected={handleFilesSelected}
-              onRemoveDocument={handleRemoveDocument}
-              onAnalyzeDocuments={onAnalyzeDocuments}
-            />
-          </TabsContent>
-          
-          <TabsContent value="insights">
-            <InsightsTabContent 
-              insights={insights}
-              reviewedInsights={reviewedInsights}
-              overallConfidence={overallConfidence}
-              needsReviewCount={needsReviewCount}
-              error={error}
-              usingFallbackInsights={usingFallbackInsights}
-              onAcceptInsight={handleAcceptInsight}
-              onRejectInsight={handleRejectInsight}
-              onNavigateToDocuments={() => setActiveTab("documents")}
-              onNavigateToPresentation={navigateToPresentation}
-              onRetryAnalysis={onRetryAnalysis}
-            />
-          </TabsContent>
-          
-          <TabsContent value="presentation">
-            <PresentationTabContent />
-          </TabsContent>
-          
-          <TabsContent value="help">
-            <HelpTabContent />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <ProjectDetailContent
+        project={project}
+        documents={documents}
+        insights={insights}
+        reviewedInsights={reviewedInsights}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        error={error}
+        aiStatus={aiStatus}
+        overallConfidence={overallConfidence}
+        needsReviewCount={needsReviewCount}
+        usingFallbackInsights={usingFallbackInsights}
+        isNewProject={isNewProject}
+        handleFilesSelected={handleFilesSelected}
+        handleRemoveDocument={handleRemoveDocument}
+        handleAnalyzeDocuments={onAnalyzeDocuments}
+        handleAcceptInsight={handleAcceptInsight}
+        handleRejectInsight={handleRejectInsight}
+        navigateToPresentation={navigateToPresentation}
+        onRetryAnalysis={onRetryAnalysis}
+      />
     </AppLayout>
   );
 };
