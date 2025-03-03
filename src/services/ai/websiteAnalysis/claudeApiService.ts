@@ -31,7 +31,7 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
           projectTitle: project.title,
           websiteContent,
           systemPrompt: websiteResearchPrompt,
-          // Add the website insight categories to the request
+          // Add the website insight categories to the request as explicit array
           websiteInsightCategories: websiteInsightCategories.map(cat => cat.id)
         }
       });
@@ -44,6 +44,9 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
       if (!data || !data.insights || data.insights.length === 0) {
         throw new Error('No insights returned from website analysis');
       }
+      
+      // Log raw insights data for debugging
+      console.log("Raw insights from API:", JSON.stringify(data.insights.slice(0, 2)));
       
       return { insights: processWebsiteInsights(data.insights, project) };
     } catch (err) {
@@ -62,6 +65,39 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
 export const processWebsiteInsights = (rawInsights: any[], project: Project): StrategicInsight[] => {
   // Log the raw categories from API for debugging
   console.log('Raw categories from API:', rawInsights.map((i: any) => i.category));
+  
+  // Ensure we have insights in all categories
+  const availableCategories = new Set(rawInsights.map((i: any) => 
+    normalizeWebsiteCategory(i.category || 'company_positioning')
+  ));
+  
+  console.log('Available categories after normalization:', Array.from(availableCategories));
+  
+  // If we have fewer than 3 categories, we need to supplement with more varied insights
+  if (availableCategories.size < 3) {
+    console.log('Not enough varied categories, redistributing insights');
+    
+    // List all possible categories
+    const allCategories: WebsiteInsightCategory[] = websiteInsightCategories.map(c => c.id as WebsiteInsightCategory);
+    
+    // Redistribute some insights to other categories to ensure variety
+    rawInsights = rawInsights.map((insight: any, index: number) => {
+      // Leave the first few insights as they are
+      if (index < 3) return insight;
+      
+      // For others, assign to under-represented categories
+      const targetCategory = allCategories[index % allCategories.length];
+      if (!availableCategories.has(targetCategory)) {
+        console.log(`Reassigning insight ${index} to category ${targetCategory}`);
+        return {
+          ...insight,
+          category: targetCategory
+        };
+      }
+      
+      return insight;
+    });
+  }
   
   // Make sure all insights have the source field set to 'website'
   // and have proper category values
