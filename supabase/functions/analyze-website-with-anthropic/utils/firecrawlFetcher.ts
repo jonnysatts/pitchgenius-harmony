@@ -6,7 +6,8 @@ import { fetchWebsiteContentBasic } from './websiteFetcher.ts';
  * If Firecrawl fails, fall back to basic fetching
  */
 export async function fetchWebsiteContentWithFirecrawl(url: string): Promise<string> {
-  const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY');
+  // Check for both potential key names to be safe
+  const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
   
   // If no API key is available, use basic fetch
   if (!firecrawlApiKey) {
