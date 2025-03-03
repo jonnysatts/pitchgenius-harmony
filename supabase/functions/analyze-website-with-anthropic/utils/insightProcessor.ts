@@ -1,61 +1,63 @@
 
 /**
- * Process insights from Claude API response
+ * Process and normalize the Claude response
  */
-export function parseClaudeResponse(completion: string): any[] {
+export function parseClaudeResponse(claudeResponse: string): any[] {
   try {
-    // Extract JSON from the response
-    const jsonMatch = completion.match(/\[[\s\S]*\]/);
+    // Extract JSON from Claude's response
+    // Claude might wrap the JSON in text, markdown code blocks, etc.
+    const jsonMatches = claudeResponse.match(/\[[\s\S]*?\]/g);
     
-    if (jsonMatch) {
-      // Parse the JSON array
-      return JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error('Could not extract JSON array from response');
+    if (!jsonMatches || jsonMatches.length === 0) {
+      console.error('No JSON array found in Claude response');
+      throw new Error('No JSON array found in Claude response');
     }
-  } catch (parseError) {
-    console.error('Error parsing Claude response:', parseError);
     
-    // Try a more lenient approach to find and parse JSON objects
-    try {
-      const jsonStart = completion.indexOf('[');
-      const jsonEnd = completion.lastIndexOf(']');
-      
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonStr = completion.substring(jsonStart, jsonEnd + 1);
-        return JSON.parse(jsonStr);
-      } else {
-        throw new Error('Could not find JSON array in response');
+    // Find the longest JSON match which is likely the insights array
+    let longestMatch = '';
+    for (const match of jsonMatches) {
+      if (match.length > longestMatch.length) {
+        longestMatch = match;
       }
-    } catch (fallbackError) {
-      console.error('Fallback parsing also failed:', fallbackError);
-      throw fallbackError;
     }
+    
+    // Parse the JSON
+    const insights = JSON.parse(longestMatch);
+    
+    if (!Array.isArray(insights)) {
+      console.error('Parsed content is not an array:', insights);
+      throw new Error('Parsed content from Claude is not an array');
+    }
+    
+    console.log(`Successfully parsed ${insights.length} insights from Claude response`);
+    return insights;
+  } catch (error) {
+    console.error('Error parsing Claude response:', error);
+    console.error('Raw Claude response:', claudeResponse);
+    throw new Error(`Failed to parse Claude response: ${error.message}`);
   }
 }
 
 /**
- * Process insights to ensure they have required fields
+ * Process insights to ensure they have all required fields
  */
 export function processInsights(insights: any[]): any[] {
   return insights.map(insight => {
-    // Generate an ID if one wasn't provided
-    if (!insight.id) {
-      const category = insight.category || 'general';
-      insight.id = `website-${category}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    }
+    // Generate a unique ID if one doesn't exist
+    const id = insight.id || `website-${insight.category || 'general'}-${Date.now()}`;
     
-    // Set default values for missing fields
+    // Ensure all required fields are present
     return {
-      ...insight,
-      confidence: insight.confidence || 80,
+      id,
+      source: 'website',
+      category: insight.category || 'company_positioning',
+      confidence: insight.confidence || 75,
       needsReview: insight.needsReview !== undefined ? insight.needsReview : true,
       content: {
-        ...(insight.content || {}),
-        title: insight.content?.title || `Website Analysis: ${insight.category}`,
-        summary: insight.content?.summary || `Analysis of website.`,
-        details: insight.content?.details || 'No specific details found on the website.',
-        recommendations: insight.content?.recommendations || 'Consider how this insight could be leveraged in gaming context.'
+        title: insight.content?.title || 'Website Analysis Insight',
+        summary: insight.content?.summary || 'Analysis from website content',
+        details: insight.content?.details || 'No specific details available',
+        recommendations: insight.content?.recommendations || 'No specific recommendations available',
       }
     };
   });
