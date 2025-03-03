@@ -1,8 +1,6 @@
-
-import { useCallback } from "react";
-import { Project, Document } from "@/lib/types";
+import { useCallback, useEffect } from "react";
+import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
-import { useEffect } from "react";
 import { useToast, toast } from "@/hooks/use-toast";
 
 // Import the new smaller hooks
@@ -18,7 +16,8 @@ export const useAiAnalysis = (project: Project) => {
     setInsights,
     error,
     setError,
-    handleCompletionToast
+    handleCompletionToast,
+    persistInsights
   } = useAiResults(project);
   
   const {
@@ -48,6 +47,26 @@ export const useAiAnalysis = (project: Project) => {
     setUsingFallbackInsights
   );
 
+  // Check for stored insights & setup processing status
+  useEffect(() => {
+    if (project?.id) {
+      const storedData = localStorage.getItem(`project_insights_${project.id}`);
+      if (storedData) {
+        try {
+          const parsedData: StoredInsightData = JSON.parse(storedData);
+          
+          // If we have insights stored, mark processing as complete
+          if (parsedData.insights.length > 0) {
+            completeProcessing('Loaded previous insights');
+            setUsingFallbackInsights(parsedData.usingFallbackInsights);
+          }
+        } catch (err) {
+          console.error('Error parsing stored insights status:', err);
+        }
+      }
+    }
+  }, [project.id, completeProcessing, setUsingFallbackInsights]);
+
   // Check for Anthropic API key on load
   useEffect(() => {
     const checkAiAvailability = async () => {
@@ -72,9 +91,12 @@ export const useAiAnalysis = (project: Project) => {
   const handleProcessingComplete = useCallback((setActiveTab: (tab: string) => void) => {
     handleCompletionToast(usingFallbackInsights);
     
+    // Ensure insights are persisted with fallback status
+    persistInsights(insights, usingFallbackInsights);
+    
     // Navigate to insights tab
     setActiveTab("insights");
-  }, [handleCompletionToast, usingFallbackInsights]);
+  }, [handleCompletionToast, usingFallbackInsights, persistInsights, insights]);
 
   // Main function to analyze documents
   const handleAnalyzeDocuments = async (documents: Document[], setActiveTab: (tab: string) => void) => {

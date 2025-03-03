@@ -1,4 +1,3 @@
-
 export type UserRole = "admin" | "standard" | "viewer";
 
 export interface User {
@@ -136,4 +135,12 @@ export interface AIProcessingStatus {
   status: "idle" | "processing" | "completed" | "error" | "finalizing";
   progress: number;
   message: string;
+}
+
+// Type for storing insights in localStorage/database
+export interface StoredInsightData {
+  projectId: string;
+  insights: StrategicInsight[];
+  timestamp: string;
+  usingFallbackInsights: boolean;
 }

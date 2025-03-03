@@ -1,84 +1,51 @@
 
 import { useState, useCallback } from "react";
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { generateInsights } from "@/services/ai";
-import { useToast } from "@/hooks/use-toast";
+import { generateInsightsWithAI } from "@/services/ai";
 
 export const useAiGeneration = (
-  project: Project, 
-  setInsights: (insights: StrategicInsight[]) => void,
+  project: Project,
+  setInsights: (insights: StrategicInsight[], usingFallback: boolean) => void,
   setError: (error: string | null) => void,
   completeProcessing: (message: string) => void,
-  setUsingFallbackInsights: (value: boolean) => void
+  setUsingFallbackInsights: (usingFallback: boolean) => void
 ) => {
-  const { toast } = useToast();
-  const [useRealAI, setUseRealAI] = useState(false);
+  const [useRealAI, setUseRealAI] = useState<boolean>(false);
 
-  const updateUseRealAI = (value: boolean) => {
-    setUseRealAI(value);
-    console.log(`${value ? 'Using real AI' : 'Using mock AI'} for document analysis`);
-  };
+  const generateProjectInsights = useCallback(
+    async (documents: Document[], isRetry = false): Promise<boolean> => {
+      if (!useRealAI) {
+        console.log("Real AI disabled, skipping generation");
+        return false;
+      }
 
-  const generateProjectInsights = async (documents: Document[], isRetry = false) => {
-    if (documents.length === 0) {
-      toast({
-        title: "No documents to analyze",
-        description: "Please upload documents before running the analysis",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    // Display different message based on whether it's a retry attempt and if we're using real Claude
-    toast({
-      title: isRetry 
-        ? "Retrying Claude AI Analysis" 
-        : (useRealAI ? "Starting Claude AI Analysis" : "Analyzing Documents"),
-      description: useRealAI 
-        ? `Analyzing ${documents.length} documents with Claude AI (this may take up to 2 minutes)`
-        : `Running AI analysis on all ${documents.length} documents`,
-    });
-    
-    console.log(`${isRetry ? 'Retrying analysis' : 'Analyzing'} ${documents.length} documents using ${useRealAI ? 'Anthropic API' : 'mock generator'}`);
-    
-    try {
-      // Call the AI service to generate insights
-      const result = await generateInsights(project, documents);
-      
-      if (result.error) {
-        // If there was an error or we fell back to sample insights, update the fallback state
-        setUsingFallbackInsights(true);
-        
-        toast({
-          title: "Analysis notice",
-          description: result.error,
-          variant: "default"
-        });
-        completeProcessing('Analysis complete with fallback to sample insights');
-        setError(result.error);
-      } else {
-        // If we got real insights, make sure we're not in fallback mode
-        setUsingFallbackInsights(false);
+      try {
+        console.log(`Generating insights with ${isRetry ? "retry" : "initial"} attempt`);
+        const generatedInsights = await generateInsightsWithAI(project, documents);
+
+        if (generatedInsights && generatedInsights.length > 0) {
+          // Set insights with fallback flag to false
+          setInsights(generatedInsights, false);
+          setError(null);
+          completeProcessing("Analysis complete");
+          setUsingFallbackInsights(false);
+          return true;
+        } else {
+          setError("No insights were generated. Using mock insights instead.");
+          return false;
+        }
+      } catch (err) {
+        console.error("Error generating insights:", err);
+        setError(`Error generating insights: ${err instanceof Error ? err.message : String(err)}`);
+        return false;
       }
-      
-      // Check if we received any insights
-      if (result.insights && result.insights.length > 0) {
-        setInsights(result.insights);
-        return true;
-      }
-      
-      return false;
-    } catch (error: any) {
-      console.error("Error analyzing documents:", error);
-      setError(error.message || "An unexpected error occurred");
-      completeProcessing('Analysis failed with error');
-      return false;
-    }
-  };
+    },
+    [project, useRealAI, setInsights, setError, completeProcessing, setUsingFallbackInsights]
+  );
 
   return {
     useRealAI,
-    setUseRealAI: updateUseRealAI,
-    generateProjectInsights
+    setUseRealAI,
+    generateProjectInsights,
   };
 };
