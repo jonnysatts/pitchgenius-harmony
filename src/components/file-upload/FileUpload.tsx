@@ -1,0 +1,65 @@
+
+import React from "react";
+import { cn } from "@/lib/utils";
+import { useFileUpload } from "./useFileUpload";
+import { DropZone } from "./DropZone";
+import { FileList } from "./FileList";
+
+interface FileUploadProps {
+  onFilesSelected: (files: File[]) => void;
+  acceptedFileTypes?: string[];
+  maxFileSizeMB?: number;
+  maxFiles?: number;
+  className?: string;
+}
+
+const FileUpload: React.FC<FileUploadProps> = ({
+  onFilesSelected,
+  acceptedFileTypes = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.rtf', '.md', '.jpg', '.png'],
+  maxFileSizeMB = 10,
+  maxFiles = 10,
+  className
+}) => {
+  const {
+    dragActive,
+    selectedFiles,
+    uploadProgress,
+    fileErrors,
+    handleDrag,
+    handleDrop,
+    handleChange,
+    removeFile,
+    dismissError
+  } = useFileUpload({
+    onFilesSelected,
+    acceptedFileTypes,
+    maxFileSizeMB,
+    maxFiles
+  });
+  
+  return (
+    <div className={cn("w-full", className)}>
+      <DropZone
+        dragActive={dragActive}
+        acceptedFileTypes={acceptedFileTypes}
+        maxFileSizeMB={maxFileSizeMB}
+        maxFiles={maxFiles}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        onFileInputChange={handleChange}
+      />
+      
+      <FileList
+        selectedFiles={selectedFiles}
+        uploadProgress={uploadProgress}
+        fileErrors={fileErrors}
+        onRemoveFile={removeFile}
+        onDismissError={dismissError}
+      />
+    </div>
+  );
+};
+
+export default FileUpload;
