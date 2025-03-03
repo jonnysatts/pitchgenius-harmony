@@ -80,9 +80,9 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   
   return (
     <div className="bg-white p-6 rounded-lg border">
-      {/* Header with project passed as prop */}
+      {/* Header with proper props */}
       <WebInsightsHeader 
-        project={project}
+        websiteUrl={project.clientWebsite}
         hasWebsiteUrl={hasWebsiteUrl}
         isAnalyzing={isAnalyzingWebsite}
         onAnalyzeWebsite={onAnalyzeWebsite}

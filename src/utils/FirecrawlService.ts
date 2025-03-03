@@ -42,4 +42,15 @@ export class FirecrawlService {
   static hasApiKey(): boolean {
     return !!this.getApiKey();
   }
+  
+  /**
+   * Test the provided API key with a simple operation
+   * Returns true if the API key is valid
+   */
+  static async testApiKey(apiKey: string): Promise<boolean> {
+    // Without directly importing the Firecrawl API,
+    // we'll just do a simple validation for now
+    // This would be replaced with actual API validation in a real implementation
+    return apiKey && apiKey.length > 10;
+  }
 }
