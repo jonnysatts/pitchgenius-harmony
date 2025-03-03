@@ -38,11 +38,23 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is stored in localStorage
+    // For development, auto-login with admin user
+    const autoLoginForDevelopment = () => {
+      // Remove password from user object
+      const { password: _, ...adminUser } = MOCK_USERS[0];
+      setUser(adminUser);
+      localStorage.setItem("user", JSON.stringify(adminUser));
+    };
+    
+    // Check if user is stored in localStorage first
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    } else {
+      // If no stored user, auto-login for development
+      autoLoginForDevelopment();
     }
+    
     setIsLoading(false);
   }, []);
 
