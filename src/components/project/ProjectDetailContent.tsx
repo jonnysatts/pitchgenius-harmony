@@ -63,24 +63,29 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   navigateToPresentation,
   onRetryAnalysis
 }) => {
-  // Filter insights to separate website-derived insights
-  const websiteInsights = insights.filter(insight => 
-    insight.source === 'website' || 
-    (insight.content?.source === 'Website analysis') || 
-    (insight.content?.summary && insight.content.summary.includes('[Website-derived]'))
-  );
-  
-  // Debug log for insight filtering
-  console.log("ProjectDetailContent - Total insights:", insights.length);
-  console.log("ProjectDetailContent - Website insights:", websiteInsights.length);
+  // Improved website insights filtering
+  const websiteInsights = insights.filter(insight => {
+    // Check if the insight has the 'website' source or any website-related markers
+    return insight.source === 'website' || 
+      insight.content?.source === 'Website analysis' || 
+      (insight.content?.summary && typeof insight.content.summary === 'string' && 
+       insight.content.summary.includes('[Website-derived]'));
+  });
   
   // Document-derived insights (exclude website insights)
-  const documentInsights = insights.filter(insight => 
-    !(insight.source === 'website' || 
-      (insight.content?.source === 'Website analysis') || 
-      (insight.content?.summary && insight.content.summary.includes('[Website-derived]')))
-  );
+  const documentInsights = insights.filter(insight => {
+    const isWebsiteInsight = 
+      insight.source === 'website' || 
+      insight.content?.source === 'Website analysis' || 
+      (insight.content?.summary && typeof insight.content.summary === 'string' && 
+       insight.content.summary.includes('[Website-derived]'));
+    
+    return !isWebsiteInsight;
+  });
   
+  // Debug logging
+  console.log("ProjectDetailContent - Total insights:", insights.length);
+  console.log("ProjectDetailContent - Website insights:", websiteInsights.length);
   console.log("ProjectDetailContent - Document insights:", documentInsights.length);
   
   // Handle tab change without triggering re-renders
@@ -91,7 +96,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
     }
   };
   
-  // Log insight categories
+  // Log insight categories for debugging
   useEffect(() => {
     if (websiteInsights.length > 0) {
       console.log("Website insights categories:", websiteInsights.map(i => i.category));

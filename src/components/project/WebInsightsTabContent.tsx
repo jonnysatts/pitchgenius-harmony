@@ -47,18 +47,26 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   // Website insights are already filtered in the parent component
   const hasWebsiteInsights = websiteInsights.length > 0;
   
-  // Debug logs to help diagnose the issue
+  // Debug logs
   console.log("WebInsightsTabContent - Total websiteInsights:", websiteInsights.length);
+  console.log("WebInsightsTabContent - Insights data:", websiteInsights);
   
-  // Group insights by category - print debugging info
+  // Group insights by category with proper type checking and fallbacks
   const insightsByCategory = websiteInsights.reduce((acc, insight) => {
     // Add a fallback for category - default to "company_positioning" if not set
-    const category = (insight.category || "company_positioning") as WebsiteInsightCategory;
-    console.log(`WebInsightsTabContent - Insight category: ${category}, title: ${insight.content?.title || 'No title'}`);
+    // Make sure category is a valid WebsiteInsightCategory
+    let category = (insight.category || "company_positioning") as WebsiteInsightCategory;
+    
+    // Validate that the category exists in our defined categories, if not use default
+    if (!websiteInsightCategories.some(cat => cat.id === category)) {
+      console.warn(`Invalid category ${category} for insight ${insight.id}, defaulting to company_positioning`);
+      category = "company_positioning";
+    }
     
     if (!acc[category]) {
       acc[category] = [];
     }
+    
     acc[category].push(insight);
     return acc;
   }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
@@ -66,9 +74,13 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   // Log categories that have insights
   console.log("WebInsightsTabContent - Categories with insights:", Object.keys(insightsByCategory));
   
-  // Check if there's at least one insight in each category
+  // Make sure every category has an array, even if empty
   websiteInsightCategories.forEach(category => {
-    const count = insightsByCategory[category.id as WebsiteInsightCategory]?.length || 0;
+    const categoryId = category.id as WebsiteInsightCategory;
+    if (!insightsByCategory[categoryId]) {
+      insightsByCategory[categoryId] = [];
+    }
+    const count = insightsByCategory[categoryId].length;
     console.log(`WebInsightsTabContent - Category ${category.id}: ${count} insights`);
   });
   
@@ -180,8 +192,9 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             
             <TabsContent value="all" className="space-y-8">
               {websiteInsightCategories.map((category) => {
-                // Use the category.id directly to access the insights
-                const categoryInsights = insightsByCategory[category.id as WebsiteInsightCategory] || [];
+                // Use the category.id with proper type casting
+                const categoryId = category.id as WebsiteInsightCategory;
+                const categoryInsights = insightsByCategory[categoryId] || [];
                 
                 // Skip empty categories in the "all" view
                 if (categoryInsights.length === 0) return null;
@@ -211,8 +224,9 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             </TabsContent>
             
             {websiteInsightCategories.map((category) => {
-              // Use the category.id directly to access the insights
-              const categoryInsights = insightsByCategory[category.id as WebsiteInsightCategory] || [];
+              // Use the category.id with proper type casting
+              const categoryId = category.id as WebsiteInsightCategory;
+              const categoryInsights = insightsByCategory[categoryId] || [];
               
               return (
                 <TabsContent key={category.id} value={category.id} className="space-y-4">

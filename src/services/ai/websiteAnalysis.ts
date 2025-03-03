@@ -109,15 +109,33 @@ const callWebsiteAnalysisApi = async (project: Project): Promise<{ insights: Str
       // and have proper category values
       const processedInsights = data.insights.map((insight: StrategicInsight) => {
         // Ensure the insight has a valid category
-        if (!insight.category || typeof insight.category !== 'string' || 
+        if (!insight.category || 
+            typeof insight.category !== 'string' || 
             !websiteInsightCategories.some(cat => cat.id === insight.category)) {
           console.log(`Fixing invalid category for insight: ${insight.id}, setting to default 'company_positioning'`);
           insight.category = 'company_positioning';
         }
         
+        // Ensure title is set
+        if (!insight.content?.title || typeof insight.content.title !== 'string') {
+          insight.content = insight.content || {};
+          insight.content.title = `Website Insight for ${project.clientName}`;
+        }
+        
+        // Ensure summary is set
+        if (!insight.content?.summary || typeof insight.content.summary !== 'string') {
+          insight.content = insight.content || {};
+          insight.content.summary = `🌐 [Website-derived] Analysis of ${project.clientName}'s website.`;
+        }
+        
         return {
           ...insight,
-          source: 'website'
+          source: 'website',
+          content: {
+            ...insight.content,
+            websiteUrl: project.clientWebsite,
+            source: 'Website analysis'
+          }
         };
       });
       
@@ -146,8 +164,13 @@ const generateWebsiteMockInsights = (project: Project): StrategicInsight[] => {
   // Generate a set of mock insights (one for each category)
   const websiteInsights = categoryDistribution.map((category, index) => {
     const categoryInfo = websiteInsightCategories.find(cat => cat.id === category);
+    
+    // Generate a unique ID with timestamp to prevent duplicates
+    const timestamp = Date.now();
+    const uniqueId = `website-insight-${index + 1}-${timestamp}`;
+    
     return {
-      id: `website-insight-${index + 1}`,
+      id: uniqueId,
       category: category as WebsiteInsightCategory,
       source: 'website' as 'website',
       confidence: 70 + Math.floor(Math.random() * 25), // Random confidence between 70-95
