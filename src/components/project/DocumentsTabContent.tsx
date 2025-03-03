@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
@@ -35,12 +34,10 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
                                aiStatus.status === 'processing' || 
                                isLoading;
   
-  console.log("Analyze button state:", {
-    documentsLength: documents.length,
-    aiStatusProcessing: aiStatus.status === 'processing',
-    isLoading,
-    disabled: analyzeButtonDisabled
-  });
+  // Determine if Claude is in the intensive processing phase
+  const isClaudeProcessing = aiStatus.status === 'processing' && 
+                            aiStatus.progress >= 30 && 
+                            aiStatus.progress < 60;
   
   return (
     <div className="space-y-6">
@@ -81,10 +78,14 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
             </div>
             <Progress 
               value={aiStatus.progress} 
-              className="mb-2" 
+              className="mb-2"
+              showAnimation={isClaudeProcessing}
+              indicatorColor={isClaudeProcessing ? "bg-blue-500" : undefined}
             />
-            <p className="text-xs text-slate-500 italic">
-              Our AI is thoroughly analyzing all of your documents to extract strategic gaming opportunities...
+            <p className={`text-xs italic ${isClaudeProcessing ? 'text-blue-600 font-medium' : 'text-slate-500'}`}>
+              {isClaudeProcessing 
+                ? "Claude AI is processing your documents. This may take up to 2 minutes for complex analyses..." 
+                : "Our AI is thoroughly analyzing all of your documents to extract strategic gaming opportunities..."}
             </p>
           </div>
         )}

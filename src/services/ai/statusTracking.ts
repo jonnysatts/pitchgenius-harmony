@@ -45,8 +45,17 @@ export const monitorAIProcessingProgress = (
       return;
     }
     
+    // Slow down the progress bar for more realistic Claude timing (up to 2 minutes)
+    // Claude needs more time, so we'll make the progress bar move slower
+    
     // Simulate different phases of processing with appropriate messages
-    if (progress < 15) {
+    if (progress < 10) {
+      onStatusUpdate({
+        status: 'processing',
+        progress,
+        message: `Preparing documents for Claude AI...`
+      });
+    } else if (progress < 20) {
       onStatusUpdate({
         status: 'processing',
         progress,
@@ -56,25 +65,20 @@ export const monitorAIProcessingProgress = (
       onStatusUpdate({
         status: 'processing',
         progress,
-        message: `Analyzing document relationships...`
-      });
-    } else if (progress < 45) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Analyzing business context...`
+        message: `Sending documents to Claude AI...`
       });
     } else if (progress < 60) {
+      // This is the main Claude processing phase - spend most time here
       onStatusUpdate({
         status: 'processing',
         progress,
-        message: `Identifying gaming opportunities...`
+        message: `Claude AI is analyzing documents (this may take up to 2 minutes)...`
       });
     } else if (progress < 75) {
       onStatusUpdate({
         status: 'processing',
         progress,
-        message: `Generating AI insights...`
+        message: `Claude AI is generating strategic insights...`
       });
     } else if (progress < 90) {
       onStatusUpdate({
@@ -116,19 +120,24 @@ export const monitorAIProcessingProgress = (
       interval = null;
     }
     
-    // Slow down the progress a bit to reflect real API processing time
-    // Make the last part of the progress slower to better match API behavior
-    if (progress < 85) {
-      progress += Math.random() * 4 + 1;
-    } else if (progress < 95) {
-      progress += Math.random() * 1.5 + 0.5;
+    // Make the progress much slower to accommodate the 2-minute Claude processing time
+    if (progress < 30) {
+      // Initial stages move at moderate speed
+      progress += Math.random() * 2 + 0.5;
+    } else if (progress < 60) {
+      // Claude processing stage (moves very slowly)
+      progress += Math.random() * 0.5 + 0.1;
+    } else if (progress < 90) {
+      // Processing insights (moderate speed)
+      progress += Math.random() * 1 + 0.3;
     } else {
-      progress += Math.random() * 0.8 + 0.2;
+      // Final stages (slow)
+      progress += Math.random() * 0.3 + 0.1;
     }
     
     // Don't let progress exceed 100
     if (progress > 100) progress = 100;
-  }, 800);
+  }, 1000); // Update every second
   
   // Return a function to cancel the monitoring
   return () => {

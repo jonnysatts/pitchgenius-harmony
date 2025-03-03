@@ -1,21 +1,35 @@
-
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, LoaderCircle } from "lucide-react";
 
 interface InsightsErrorAlertProps {
   error?: string | null;
   usingFallbackInsights?: boolean;
   onRetryAnalysis?: () => void;
+  isClaudeProcessing?: boolean;
 }
 
 const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({ 
   error, 
   usingFallbackInsights, 
-  onRetryAnalysis 
+  onRetryAnalysis,
+  isClaudeProcessing = false
 }) => {
-  if (!error && !usingFallbackInsights) return null;
+  if (!error && !usingFallbackInsights && !isClaudeProcessing) return null;
+  
+  if (isClaudeProcessing) {
+    return (
+      <Alert variant="default" className="mb-4 border-blue-300 bg-blue-50">
+        <LoaderCircle className="h-4 w-4 text-blue-500 animate-spin" />
+        <AlertDescription className="flex justify-between items-center text-blue-800">
+          <div>
+            Claude AI is currently analyzing your documents. This may take up to 2 minutes. Please wait...
+          </div>
+        </AlertDescription>
+      </Alert>
+    );
+  }
   
   return (
     <Alert variant="default" className="mb-4 border-amber-300 bg-amber-50">
@@ -32,7 +46,7 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
             onClick={onRetryAnalysis}
           >
             <RefreshCw size={14} />
-            Retry Analysis
+            Retry with Claude AI
           </Button>
         )}
       </AlertDescription>

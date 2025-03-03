@@ -29,11 +29,13 @@ export const useAiGeneration = (
       return false;
     }
     
-    // Display different message based on whether it's a retry attempt
+    // Display different message based on whether it's a retry attempt and if we're using real Claude
     toast({
-      title: isRetry ? "Retrying Claude AI Analysis" : (useRealAI ? "Starting Claude AI Analysis" : "Analyzing Documents"),
+      title: isRetry 
+        ? "Retrying Claude AI Analysis" 
+        : (useRealAI ? "Starting Claude AI Analysis" : "Analyzing Documents"),
       description: useRealAI 
-        ? `Analyzing ${documents.length} documents with Claude AI (this may take up to 45 seconds)`
+        ? `Analyzing ${documents.length} documents with Claude AI (this may take up to 2 minutes)`
         : `Running AI analysis on all ${documents.length} documents`,
     });
     
