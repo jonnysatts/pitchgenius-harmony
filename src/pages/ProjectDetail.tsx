@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -12,7 +11,7 @@ import {
   monitorAIProcessingProgress, 
   calculateOverallConfidence,
   countInsightsNeedingReview
-} from "@/services/aiService";
+} from "@/services/ai";
 import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
