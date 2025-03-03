@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Project, StrategicInsight } from "@/lib/types";
+import { Project, StrategicInsight, AIProcessingStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import {
@@ -25,9 +25,12 @@ interface InsightsTabContentProps {
   overallConfidence?: number;
   needsReviewCount?: number;
   usingFallbackInsights?: boolean;
+  aiStatus?: AIProcessingStatus;
   onAcceptInsight: (insightId: string) => void;
   onRejectInsight: (insightId: string) => void;
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
+  onNavigateToDocuments?: () => void;
+  onNavigateToPresentation?: () => void;
   onRetryAnalysis?: () => void;
 }
 
@@ -36,12 +39,15 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   insights,
   reviewedInsights,
   error,
-  overallConfidence,
-  needsReviewCount,
-  usingFallbackInsights,
+  overallConfidence = 0,
+  needsReviewCount = 0,
+  usingFallbackInsights = false,
+  aiStatus,
   onAcceptInsight,
   onRejectInsight,
   onUpdateInsight,
+  onNavigateToDocuments,
+  onNavigateToPresentation,
   onRetryAnalysis
 }) => {
   // Only show document insights, not website insights
@@ -138,6 +144,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         </div>
       ) : (
         <InsightsEmptyState 
+          onNavigateToDocuments={onNavigateToDocuments} 
           onRetryAnalysis={onRetryAnalysis} 
         />
       )}

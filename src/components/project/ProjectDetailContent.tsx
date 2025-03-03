@@ -141,6 +141,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
         
         <TabsContent value="insights">
           <InsightsTabContent
+            project={project}
             insights={documentInsights}
             reviewedInsights={reviewedInsights}
             overallConfidence={overallConfidence}

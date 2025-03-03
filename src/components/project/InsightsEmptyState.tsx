@@ -1,13 +1,17 @@
 
 import React from "react";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface InsightsEmptyStateProps {
-  onNavigateToDocuments: () => void;
+  onNavigateToDocuments?: () => void;
+  onRetryAnalysis?: () => void;
 }
 
-const InsightsEmptyState: React.FC<InsightsEmptyStateProps> = ({ onNavigateToDocuments }) => {
+const InsightsEmptyState: React.FC<InsightsEmptyStateProps> = ({ 
+  onNavigateToDocuments,
+  onRetryAnalysis 
+}) => {
   return (
     <div className="text-center py-12 border border-dashed rounded-lg">
       <Lightbulb className="mx-auto h-12 w-12 text-slate-300" />
@@ -15,12 +19,25 @@ const InsightsEmptyState: React.FC<InsightsEmptyStateProps> = ({ onNavigateToDoc
       <p className="mt-1 text-slate-500 max-w-md mx-auto">
         Upload documents and run the AI analysis to generate strategic insights for gaming opportunities
       </p>
-      <Button 
-        className="mt-4"
-        onClick={onNavigateToDocuments}
-      >
-        Go to Documents
-      </Button>
+      <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+        {onNavigateToDocuments && (
+          <Button 
+            onClick={onNavigateToDocuments}
+          >
+            Go to Documents
+          </Button>
+        )}
+        {onRetryAnalysis && (
+          <Button 
+            variant="outline"
+            onClick={onRetryAnalysis}
+            className="flex items-center gap-2"
+          >
+            <RefreshCcw size={16} />
+            Retry Analysis
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
