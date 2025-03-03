@@ -56,7 +56,7 @@ export const callClaudeApi = async (
     const markedInsights = data.insights.map((insight: StrategicInsight) => {
       return {
         ...insight,
-        source: 'document'  // Explicitly mark as document-derived
+        source: 'document' as 'document'  // Explicitly cast to the literal type
       };
     });
     
@@ -89,10 +89,10 @@ export const createTimeoutPromise = (
       console.log('API request taking too long, falling back to mock insights');
       const mockInsights = generateComprehensiveInsights(project, documents);
       
-      // Ensure all mock insights are marked as document-derived
+      // Ensure all mock insights are marked as document-derived with proper typing
       const markedInsights = mockInsights.map(insight => ({
         ...insight,
-        source: 'document'
+        source: 'document' as 'document'  // Explicitly cast to the literal type
       }));
       
       resolve({ 

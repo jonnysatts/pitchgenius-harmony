@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
-import { analyzeWebsite } from '@/services/ai/websiteAnalysis';
+import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
 import { addWebsiteSourceMarker } from '@/services/ai/promptEngineering';
 import { toast } from '@/hooks/use-toast';
 
@@ -26,7 +26,7 @@ export const useWebsiteAnalysis = (
         description: `Starting website analysis for ${project.clientWebsite}`,
       });
 
-      const result = await analyzeWebsite(project);
+      const result = await analyzeClientWebsite(project);
       
       if (result.insights && result.insights.length > 0) {
         // Explicitly mark all insights as website-derived
