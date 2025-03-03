@@ -24,6 +24,13 @@ export class DocumentNotFoundError extends Error {
   }
 }
 
+export class AuthenticationError extends Error {
+  constructor() {
+    super("User is not authenticated");
+    this.name = "AuthenticationError";
+  }
+}
+
 /**
  * Upload a file to Supabase Storage
  */
@@ -40,9 +47,18 @@ export const uploadDocumentToStorage = async (
     throw new Error("User ID and Project ID are required for document upload");
   }
 
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new AuthenticationError();
+  }
+
   try {
     // Create a path with user ID and project ID to organize files
-    const storagePath = `${userId}/${projectId}/${file.name}`;
+    const fileName = encodeURIComponent(file.name.replace(/[^\x00-\x7F]/g, '_'));
+    const storagePath = `${userId}/${projectId}/${fileName}`;
+    
+    console.log(`Attempting to upload file to storage path: ${storagePath}`);
     
     // Upload the file to Supabase Storage
     const { data, error } = await supabase.storage
@@ -65,9 +81,10 @@ export const uploadDocumentToStorage = async (
       .from('project_documents')
       .getPublicUrl(storagePath);
       
+    console.log('File uploaded successfully:', { storagePath, publicUrl });
     return { storagePath, publicUrl };
   } catch (error) {
-    if (error instanceof StorageUploadError) {
+    if (error instanceof StorageUploadError || error instanceof AuthenticationError) {
       throw error;
     }
     console.error('Unexpected error during file upload:', error);
@@ -86,7 +103,16 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
     throw new Error("Project ID is required to fetch documents");
   }
 
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    console.warn("User is not authenticated, returning empty document list");
+    return [];
+  }
+
   try {
+    console.log(`Fetching documents for project: ${projectId}`);
+    
     const { data, error } = await supabase
       .from('documents')
       .select('*')
@@ -100,6 +126,8 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
 
     if (!data) return [];
 
+    console.log(`Found ${data.length} documents for project ${projectId}`);
+    
     // Convert retrieved documents to our Document type
     return data.map(doc => ({
       id: doc.id,
@@ -137,7 +165,15 @@ export const insertDocumentRecord = async (
     throw new Error("Missing required fields for document record insertion");
   }
 
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new AuthenticationError();
+  }
+
   try {
+    console.log(`Inserting document record for: ${fileName}`);
+    
     const { data, error } = await supabase
       .from('documents')
       .insert({
@@ -163,6 +199,8 @@ export const insertDocumentRecord = async (
     
     if (!data) return null;
     
+    console.log('Document record inserted successfully:', data.id);
+    
     // Convert to Document type
     return {
       id: data.id,
@@ -175,7 +213,7 @@ export const insertDocumentRecord = async (
       priority: data.priority
     };
   } catch (error) {
-    if (error instanceof DatabaseError) {
+    if (error instanceof DatabaseError || error instanceof AuthenticationError) {
       throw error;
     }
     console.error('Unexpected error inserting document record:', error);
@@ -194,7 +232,15 @@ export const removeDocument = async (documentId: string): Promise<void> => {
     throw new Error("Document ID is required to remove a document");
   }
 
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new AuthenticationError();
+  }
+
   try {
+    console.log(`Removing document with ID: ${documentId}`);
+    
     // Get the storage path from the database
     const { data: docData, error: fetchError } = await supabase
       .from('documents')
@@ -215,6 +261,8 @@ export const removeDocument = async (documentId: string): Promise<void> => {
     }
     
     if (docData?.storage_path) {
+      console.log(`Removing file from storage: ${docData.storage_path}`);
+      
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('project_documents')
@@ -240,8 +288,10 @@ export const removeDocument = async (documentId: string): Promise<void> => {
         deleteError
       );
     }
+    
+    console.log(`Document ${documentId} successfully removed`);
   } catch (error) {
-    if (error instanceof DatabaseError || error instanceof DocumentNotFoundError) {
+    if (error instanceof DatabaseError || error instanceof DocumentNotFoundError || error instanceof AuthenticationError) {
       throw error;
     }
     console.error('Unexpected error removing document:', error);
