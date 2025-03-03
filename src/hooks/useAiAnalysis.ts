@@ -71,6 +71,9 @@ export const useAiAnalysis = (project: Project) => {
   // Define the completion callback
   const handleProcessingComplete = useCallback((setActiveTab: (tab: string) => void) => {
     handleCompletionToast(usingFallbackInsights);
+    
+    // Navigate to insights tab
+    setActiveTab("insights");
   }, [handleCompletionToast, usingFallbackInsights]);
 
   // Main function to analyze documents
@@ -121,8 +124,8 @@ export const useAiAnalysis = (project: Project) => {
         description: `Analyzing ${documents.length} documents again with Claude AI...`,
       });
       
-      // Try to generate insights
-      const success = await generateProjectInsights(documents);
+      // Try to generate insights with retry flag
+      const success = await generateProjectInsights(documents, true);
       
       // If generation failed, use fallback insights
       if (!success) {

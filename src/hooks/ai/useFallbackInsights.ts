@@ -15,7 +15,7 @@ export const useFallbackInsights = (
 
   // Ensure we always have insights, even when unexpected delays occur
   useEffect(() => {
-    // If analysis is in progress but we have no insights after 30 seconds,
+    // If analysis is in progress but we have no insights after 45 seconds,
     // generate mock insights as a fallback
     let fallbackTimer: NodeJS.Timeout | null = null;
     
@@ -34,7 +34,7 @@ export const useFallbackInsights = (
             variant: "default"
           });
         }
-      }, 30000); // 30 seconds timeout (increased from 20 seconds)
+      }, 45000); // 45 seconds timeout (increased from 30 seconds)
     }
     
     return () => {

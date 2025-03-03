@@ -19,7 +19,7 @@ export const useAiGeneration = (
     console.log(`${value ? 'Using real AI' : 'Using mock AI'} for document analysis`);
   };
 
-  const generateProjectInsights = async (documents: Document[]) => {
+  const generateProjectInsights = async (documents: Document[], isRetry = false) => {
     if (documents.length === 0) {
       toast({
         title: "No documents to analyze",
@@ -29,15 +29,15 @@ export const useAiGeneration = (
       return false;
     }
     
-    // Display different message based on whether we're using real AI or not
+    // Display different message based on whether it's a retry attempt
     toast({
-      title: useRealAI ? "Starting Claude AI Analysis" : "Analyzing Documents",
+      title: isRetry ? "Retrying Claude AI Analysis" : (useRealAI ? "Starting Claude AI Analysis" : "Analyzing Documents"),
       description: useRealAI 
-        ? `Analyzing ${documents.length} documents with Claude AI (this may take a few moments)`
+        ? `Analyzing ${documents.length} documents with Claude AI (this may take up to 45 seconds)`
         : `Running AI analysis on all ${documents.length} documents`,
     });
     
-    console.log(`Analyzing ${documents.length} documents using ${useRealAI ? 'Anthropic API' : 'mock generator'}`);
+    console.log(`${isRetry ? 'Retrying analysis' : 'Analyzing'} ${documents.length} documents using ${useRealAI ? 'Anthropic API' : 'mock generator'}`);
     
     try {
       // Call the AI service to generate insights
@@ -54,6 +54,9 @@ export const useAiGeneration = (
         });
         completeProcessing('Analysis complete with fallback to sample insights');
         setError(result.error);
+      } else {
+        // If we got real insights, make sure we're not in fallback mode
+        setUsingFallbackInsights(false);
       }
       
       // Check if we received any insights
