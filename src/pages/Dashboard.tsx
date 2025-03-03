@@ -16,7 +16,8 @@ const Dashboard = () => {
   const [newProject, setNewProject] = useState({
     title: "",
     clientName: "",
-    clientIndustry: "retail" as "retail" | "finance" | "technology" | "entertainment" | "other"
+    clientIndustry: "retail" as "retail" | "finance" | "technology" | "entertainment" | "other",
+    clientWebsite: ""
   });
   
   const navigate = useNavigate();
@@ -34,34 +35,16 @@ const Dashboard = () => {
   });
   
   const handleCreateProject = () => {
-    // In a real app, this would make an API call
-    // For now, we'll simulate creating a new project by navigating to an existing one
+    // Reset the form data after the user clicks create
+    setNewProject({
+      title: "",
+      clientName: "",
+      clientIndustry: "retail",
+      clientWebsite: ""
+    });
+    
+    // Navigation is now handled in CreateProjectDialog component
     setIsCreateDialogOpen(false);
-    
-    // Find the first project from mock data to use as demo
-    const firstProject = MOCK_PROJECTS[0];
-    
-    if (firstProject) {
-      // Log the action for debugging
-      console.log(`Creating new project "${newProject.title}" and navigating to ${firstProject.id}`);
-      
-      // Navigate to an existing project instead of a non-existent "new" one
-      navigate(`/projects/${firstProject.id}`);
-      
-      // Reset the form data
-      setNewProject({
-        title: "",
-        clientName: "",
-        clientIndustry: "retail"
-      });
-    } else {
-      // Handle the case where there are no mock projects
-      toast({
-        title: "Error",
-        description: "Unable to create a new project. No demo projects available.",
-        variant: "destructive"
-      });
-    }
   };
   
   return (

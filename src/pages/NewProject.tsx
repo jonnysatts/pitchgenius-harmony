@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { MOCK_PROJECTS, addNewProject } from "@/data/mockProjects";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { addNewProject } from "@/data/mockProjects";
 import { useToast } from "@/hooks/use-toast";
 import { Project } from "@/lib/types";
 
@@ -48,19 +48,19 @@ const NewProject = () => {
           description: `${projectTitle} has been created successfully`,
         });
         
-        // Force a reload of the mock projects before navigating
+        console.log("Project created successfully:", newProject);
         console.log("Navigating to new project:", newProjectId);
-        console.log("Project details:", newProject);
         
-        // Navigate to the new project with state information
+        // Navigate to the new project with isNewProject flag in state
         navigate(`/projects/${newProjectId}`, {
           state: {
+            isNewProject: true,
             newProjectTitle: projectTitle,
             newProjectClient: clientName
           }
         });
         setLoading(false);
-      }, 1500);
+      }, 1000);
     };
     
     createNewProject();

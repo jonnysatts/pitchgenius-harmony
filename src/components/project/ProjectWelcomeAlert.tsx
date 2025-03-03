@@ -30,7 +30,7 @@ const ProjectWelcomeAlert: React.FC<ProjectWelcomeAlertProps> = ({
           </>
         ) : (
           <>
-            Welcome to your new project "{newProjectTitle}" for {newProjectClient}! 
+            Welcome to your new project! 
             You can start by uploading documents to analyze.
           </>
         )}
