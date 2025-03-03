@@ -1,5 +1,6 @@
 
 // Main entry point for website analysis using Claude/Anthropic
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflightRequest } from './utils/corsHandlers.ts';
 import { fetchWebsiteContentBasic } from './utils/websiteFetcher.ts';
 import { analyzeWebsiteWithAnthropic } from './services/anthropicService.ts';
@@ -16,7 +17,7 @@ const websiteInsightCategories = [
 ];
 
 // Handle CORS for preflight requests
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
