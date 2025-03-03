@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Project, Document } from "@/lib/types";
 import { useDocuments } from "@/hooks/documents/useDocuments";
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
@@ -6,6 +7,7 @@ import useInsightsReview from "@/hooks/useInsightsReview";
 
 export const useProjectDetail = (projectId: string, userId: string, project: Project) => {
   const [activeTab, setActiveTab] = useState<string>("documents");
+  const previousTabRef = useRef<string>("documents");
   const [isNewProject] = useState<boolean>(project.createdAt ? 
     Date.now() - new Date(project.createdAt).getTime() < 5 * 60 * 1000 : false); // 5 minutes
   
@@ -67,7 +69,7 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     // We'll handle the tab navigation in the effect below instead of here
   }, [project.clientWebsite, analyzeWebsite]);
   
-  // Navigate to documents tab
+  // Stable tab navigation functions that won't change on re-render
   const handleNavigateToDocuments = useCallback(() => {
     setActiveTab("documents");
   }, []);
@@ -82,12 +84,17 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     setActiveTab("webinsights");
   }, []);
   
+  // When activeTab changes, store the previous value
+  useEffect(() => {
+    previousTabRef.current = activeTab;
+  }, [activeTab]);
+  
   // Automatically navigate to insights tab when document processing completes
   useEffect(() => {
-    if (processingComplete && activeTab === "documents") {
+    if (processingComplete && previousTabRef.current === "documents") {
       setActiveTab("insights");
     }
-  }, [processingComplete, activeTab]);
+  }, [processingComplete]);
   
   // Handle website analysis completion - switch to webinsights tab
   useEffect(() => {

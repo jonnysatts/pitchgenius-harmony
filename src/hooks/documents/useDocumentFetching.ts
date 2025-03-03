@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -15,9 +15,13 @@ export const useDocumentFetching = (
   setError: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
   const { toast } = useToast();
+  const hasFetchedRef = useRef<boolean>(false);
   
   useEffect(() => {
     if (!projectId) return;
+    
+    // Only fetch if we haven't already fetched for this projectId
+    if (hasFetchedRef.current) return;
     
     console.log("Fetching documents for project:", projectId);
     const loadDocuments = async () => {
@@ -28,6 +32,7 @@ export const useDocumentFetching = (
         const docs = await fetchProjectDocuments(projectId);
         console.log("Fetched documents:", docs);
         setDocuments(docs);
+        hasFetchedRef.current = true;
       } catch (err) {
         console.error('Error fetching documents:', err);
         
@@ -58,5 +63,10 @@ export const useDocumentFetching = (
     };
 
     loadDocuments();
+    
+    // Cleanup function to reset the fetch state when component unmounts
+    return () => {
+      hasFetchedRef.current = false;
+    };
   }, [projectId, toast, setDocuments, setIsLoading, setError]);
 };

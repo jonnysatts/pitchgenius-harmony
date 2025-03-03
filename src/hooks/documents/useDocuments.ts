@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Document } from "@/lib/types";
 import { useDocumentFetching } from "./useDocumentFetching";
 import { useDocumentActions } from "./useDocumentActions";
 
 export const useDocuments = (projectId: string, userId: string) => {
+  // Use useEffect for initialization to avoid recreating state on every render
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +16,7 @@ export const useDocuments = (projectId: string, userId: string) => {
     error: string;
   }[]>([]);
 
-  // Handle document fetching
+  // Use a separate function for document fetching to avoid recreation
   useDocumentFetching(projectId, setDocuments, setIsLoading, setError);
   
   // Handle document actions (upload, remove)

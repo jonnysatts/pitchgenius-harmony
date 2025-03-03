@@ -2,8 +2,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Document } from "@/lib/types";
 
+// Create a cache for documents by project
+const documentCache = new Map<string, {
+  documents: Document[],
+  timestamp: number
+}>();
+
+// Cache expiration time (5 minutes)
+const CACHE_EXPIRATION = 5 * 60 * 1000;
+
 /**
- * Fetch documents for a specific project
+ * Fetch documents for a specific project with caching
  */
 export const fetchProjectDocuments = async (projectId: string): Promise<Document[]> => {
   if (!projectId) {
@@ -12,6 +21,15 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
 
   try {
     console.log(`Fetching documents for project: ${projectId}`);
+    
+    // Check cache first
+    const cachedData = documentCache.get(projectId);
+    const now = Date.now();
+    
+    if (cachedData && (now - cachedData.timestamp < CACHE_EXPIRATION)) {
+      console.log(`Using cached documents for project ${projectId}`);
+      return cachedData.documents;
+    }
 
     // For development/mock environment, get documents from localStorage if available
     const storageKey = `project_documents_${projectId}`;
@@ -19,7 +37,15 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
     
     if (storedDocuments) {
       console.log(`Found documents in localStorage for project ${projectId}`);
-      return JSON.parse(storedDocuments);
+      const documents = JSON.parse(storedDocuments);
+      
+      // Update cache
+      documentCache.set(projectId, {
+        documents,
+        timestamp: now
+      });
+      
+      return documents;
     }
     
     // Try to get from Supabase if not in localStorage
@@ -55,6 +81,12 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
       // Store in localStorage as backup
       localStorage.setItem(storageKey, JSON.stringify(documents));
       
+      // Update cache
+      documentCache.set(projectId, {
+        documents,
+        timestamp: now
+      });
+      
       return documents;
     } catch (supabaseError) {
       console.error('Failed to fetch from Supabase, returning empty list:', supabaseError);
@@ -64,4 +96,9 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
     console.error('Unexpected error fetching documents:', error);
     return [];
   }
+};
+
+// Add a method to clear the cache for testing
+export const clearDocumentCache = () => {
+  documentCache.clear();
 };
