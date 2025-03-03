@@ -47,8 +47,7 @@ const App = () => (
                 </RequireAuth>
               } 
             />
-            {/* Changed the default route to go directly to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Index />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
