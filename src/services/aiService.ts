@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 import { Document, StrategicInsight, AIProcessingStatus, Project } from "@/lib/types";
 

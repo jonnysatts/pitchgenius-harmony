@@ -18,12 +18,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
-// Import the new components
+// Import the components
 import ProjectHeader from "@/components/project/ProjectHeader";
 import DocumentsTabContent from "@/components/project/DocumentsTabContent";
 import InsightsTabContent from "@/components/project/InsightsTabContent";
 import PresentationTabContent from "@/components/project/PresentationTabContent";
 import HelpTabContent from "@/components/project/HelpTabContent";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -41,6 +42,7 @@ const ProjectDetail = () => {
     message: 'Ready to analyze documents'
   });
   const [useRealAI, setUseRealAI] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [reviewedInsights, setReviewedInsights] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
   
@@ -55,6 +57,9 @@ const ProjectDetail = () => {
         
         if (!error && data?.environmentChecks?.ANTHROPIC_API_KEY?.exists) {
           setUseRealAI(true);
+          console.log("Anthropic API key detected - will use real AI");
+        } else {
+          console.log("Anthropic API key not detected - will use mock AI");
         }
       } catch (err) {
         console.error('Error checking Supabase connection:', err);
@@ -89,6 +94,9 @@ const ProjectDetail = () => {
   const handleFilesSelected = (files: File[]) => {
     if (!user) return;
     
+    // Reset any previous errors
+    setError(null);
+    
     const newDocuments = processFiles(files, project.id, user.id);
     setDocuments(prev => [...prev, ...newDocuments]);
     
@@ -117,6 +125,9 @@ const ProjectDetail = () => {
       return;
     }
     
+    // Reset any previous errors
+    setError(null);
+    
     // Update status to processing
     setAiStatus({
       status: 'processing',
@@ -135,9 +146,11 @@ const ProjectDetail = () => {
       toast({
         title: useRealAI ? "Connecting to Anthropic API" : "Analyzing Documents",
         description: useRealAI 
-          ? "Sending your documents to Claude for in-depth analysis"
-          : "Running AI analysis on your documents",
+          ? `Sending all ${documents.length} documents to Claude for in-depth analysis`
+          : `Running AI analysis on all ${documents.length} documents`,
       });
+      
+      console.log(`Analyzing ${documents.length} documents using ${useRealAI ? 'Anthropic API' : 'mock generator'}`);
       
       // Call the AI service to generate insights
       const result = await generateInsights(project, documents);
@@ -153,6 +166,7 @@ const ProjectDetail = () => {
           progress: 0,
           message: result.error
         });
+        setError(result.error);
       } else {
         setInsights(result.insights);
         
@@ -161,22 +175,24 @@ const ProjectDetail = () => {
           setActiveTab("insights");
           toast({
             title: "Analysis complete",
-            description: `Generated ${result.insights.length} strategic insights${useRealAI ? ' using Claude AI' : ''}`,
+            description: `Generated ${result.insights.length} strategic insights from ${documents.length} documents${useRealAI ? ' using Claude AI' : ''}`,
           });
         }, 1000);
       }
     } catch (error: any) {
       console.error("Error analyzing documents:", error);
+      const errorMessage = error.message || "An unexpected error occurred";
       toast({
         title: "Analysis failed",
-        description: error.message || "An unexpected error occurred",
+        description: errorMessage,
         variant: "destructive"
       });
       setAiStatus({
         status: 'error',
         progress: 0,
-        message: error.message || "Analysis failed"
+        message: errorMessage
       });
+      setError(errorMessage);
     } finally {
       cancelMonitoring();
     }
@@ -215,11 +231,29 @@ const ProjectDetail = () => {
       <div className="container mx-auto px-4 py-8">
         <ProjectHeader project={project} />
         
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTitle>Error: Analysis Failed</AlertTitle>
+            <AlertDescription>
+              {error}
+              {error.includes("Edge Function") && (
+                <div className="mt-2">
+                  <p>This could be due to a connection issue with the Supabase Edge Function. 
+                     Please check that the function is deployed and has the correct permissions.</p>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="documents" className="flex items-center gap-2">
               <FileText size={16} />
               Documents
+              {documents.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="insights" className="flex items-center gap-2">
               <Lightbulb size={16} />
