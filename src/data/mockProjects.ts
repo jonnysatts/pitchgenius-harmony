@@ -3,8 +3,13 @@ import { Project } from "@/lib/types";
 
 // Track newly created projects in session storage
 const getNewProjects = (): Project[] => {
-  const storedProjects = sessionStorage.getItem('newProjects');
-  return storedProjects ? JSON.parse(storedProjects) : [];
+  try {
+    const storedProjects = sessionStorage.getItem('newProjects');
+    return storedProjects ? JSON.parse(storedProjects) : [];
+  } catch (e) {
+    console.error("Error loading projects from session storage:", e);
+    return [];
+  }
 };
 
 // Base mock projects
@@ -47,17 +52,41 @@ const BASE_MOCK_PROJECTS: Project[] = [
   }
 ];
 
+// Helper function to get all projects (including new ones)
+export const getAllProjects = (): Project[] => {
+  return [...getNewProjects(), ...BASE_MOCK_PROJECTS];
+};
+
 // Combine base mock projects with any new projects
-export const MOCK_PROJECTS: Project[] = [...getNewProjects(), ...BASE_MOCK_PROJECTS];
+export const MOCK_PROJECTS: Project[] = getAllProjects();
 
 // Helper function to add a new project
 export const addNewProject = (project: Project): void => {
-  const newProjects = getNewProjects();
-  newProjects.unshift(project); // Add to beginning
-  sessionStorage.setItem('newProjects', JSON.stringify(newProjects));
+  try {
+    const newProjects = getNewProjects();
+    // Check if project with this ID already exists
+    const existingIndex = newProjects.findIndex(p => p.id === project.id);
+    
+    if (existingIndex >= 0) {
+      // Update existing project
+      newProjects[existingIndex] = project;
+    } else {
+      // Add new project to beginning
+      newProjects.unshift(project);
+    }
+    
+    sessionStorage.setItem('newProjects', JSON.stringify(newProjects));
+    console.log("Project saved to session storage:", project.id);
+  } catch (e) {
+    console.error("Error saving project to session storage:", e);
+  }
 };
 
 // Helper to find a project by ID
 export const findProjectById = (id: string): Project | undefined => {
-  return MOCK_PROJECTS.find(p => p.id === id);
+  // Get all projects including new ones from storage
+  const allProjects = getAllProjects();
+  const foundProject = allProjects.find(p => p.id === id);
+  console.log("Finding project by ID:", id, "Found:", !!foundProject);
+  return foundProject;
 };

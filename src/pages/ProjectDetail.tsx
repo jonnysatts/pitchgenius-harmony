@@ -11,6 +11,7 @@ import { calculateOverallConfidence, countInsightsNeedingReview } from "@/servic
 import { FileText, Lightbulb, Presentation, CircleHelp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 // Import hooks
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
@@ -31,6 +32,7 @@ const ProjectDetail = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Get the project by ID
   const project = findProjectById(projectId || '');
@@ -46,7 +48,7 @@ const ProjectDetail = () => {
       });
       navigate("/dashboard");
     }
-  }, [project, projectId, navigate]);
+  }, [project, projectId, navigate, toast]);
   
   // Check if this is a newly created project
   const isNewProject = project?.id.startsWith('new_');

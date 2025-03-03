@@ -46,7 +46,10 @@ const NewProject = () => {
           description: `${projectTitle} has been created successfully`,
         });
         
-        // Navigate to the new project
+        // Force a reload of the mock projects before navigating
+        console.log("Navigating to new project:", newProjectId);
+        
+        // Navigate to the new project with state information
         navigate(`/projects/${newProjectId}`);
         setLoading(false);
       }, 1500);
