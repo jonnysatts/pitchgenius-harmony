@@ -10,7 +10,7 @@ import CreateProjectDialog from "@/components/dashboard/CreateProjectDialog";
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all"); // Changed from empty string to "all"
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     title: "",
@@ -26,7 +26,7 @@ const Dashboard = () => {
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.clientName.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "" || project.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter; // Changed condition to handle "all" value
     
     return matchesSearch && matchesStatus;
   });
