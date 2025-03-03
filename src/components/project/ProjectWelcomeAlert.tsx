@@ -4,14 +4,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 
 interface ProjectWelcomeAlertProps {
-  mockProjectWarning: boolean;
+  mockProjectWarning?: boolean;
   newProjectTitle?: string;
   newProjectClient?: string;
   isNewProject?: boolean;
 }
 
 const ProjectWelcomeAlert: React.FC<ProjectWelcomeAlertProps> = ({ 
-  mockProjectWarning, 
+  mockProjectWarning = false, 
   newProjectTitle, 
   newProjectClient,
   isNewProject

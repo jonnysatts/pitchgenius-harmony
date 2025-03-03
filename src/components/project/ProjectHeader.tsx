@@ -1,15 +1,21 @@
 
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Project } from "@/lib/types";
+import { Project, AIProcessingStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import ApiConnectionTest from "./ApiConnectionTest";
 
 interface ProjectHeaderProps {
   project: Project;
+  activeTab?: string;
+  aiStatus?: AIProcessingStatus;
 }
 
-const ProjectHeader: React.FC<ProjectHeaderProps> = ({ project }) => {
+const ProjectHeader: React.FC<ProjectHeaderProps> = ({ 
+  project,
+  activeTab,
+  aiStatus
+}) => {
   const location = useLocation();
   
   const newProjectTitle = location.state?.newProjectTitle;

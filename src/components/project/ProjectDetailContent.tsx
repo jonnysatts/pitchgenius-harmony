@@ -66,7 +66,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
         aiStatus={aiStatus}
       />
       
-      {isNewProject && <ProjectWelcomeAlert />}
+      {isNewProject && <ProjectWelcomeAlert isNewProject={isNewProject} />}
       
       <Tabs 
         value={activeTab} 
@@ -87,7 +87,6 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
             onFilesSelected={handleFilesSelected}
             onRemoveDocument={handleRemoveDocument}
             onAnalyzeDocuments={handleAnalyzeDocuments}
-            hasDocuments={documents.length > 0}
             aiStatus={aiStatus}
           />
         </TabsContent>

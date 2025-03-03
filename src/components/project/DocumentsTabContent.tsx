@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
@@ -9,12 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 
 interface DocumentsTabContentProps {
   documents: Document[];
-  project: Project;
-  aiStatus: AIProcessingStatus;
+  project?: Project;
+  aiStatus?: AIProcessingStatus;
   isLoading?: boolean;
   onFilesSelected: (files: File[]) => void;
   onRemoveDocument: (documentId: string) => void;
   onAnalyzeDocuments: () => void;
+  hasDocuments?: boolean;
 }
 
 const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
@@ -25,17 +27,19 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   onFilesSelected,
   onRemoveDocument,
   onAnalyzeDocuments,
+  hasDocuments,
 }) => {
   // Only disable the Analyze button if:
   // 1. There are no documents OR
   // 2. AI processing is currently happening OR
   // 3. Documents are currently being loaded/uploaded
   const analyzeButtonDisabled = documents.length === 0 || 
-                               aiStatus.status === 'processing' || 
+                               (aiStatus && aiStatus.status === 'processing') || 
                                isLoading;
   
   // Determine if Claude is in the intensive processing phase
-  const isClaudeProcessing = aiStatus.status === 'processing' && 
+  const isClaudeProcessing = aiStatus && 
+                            aiStatus.status === 'processing' && 
                             aiStatus.progress >= 30 && 
                             aiStatus.progress < 60;
   
@@ -66,11 +70,11 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
             className="flex items-center gap-2"
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain size={16} />}
-            {aiStatus.status === 'processing' ? 'Analyzing...' : 'Analyze with AI'}
+            {aiStatus && aiStatus.status === 'processing' ? 'Analyzing...' : 'Analyze with AI'}
           </Button>
         </div>
         
-        {aiStatus.status === 'processing' && (
+        {aiStatus && aiStatus.status === 'processing' && (
           <div className="mb-6">
             <div className="flex justify-between text-sm mb-1">
               <span className="font-medium">{aiStatus.message}</span>
