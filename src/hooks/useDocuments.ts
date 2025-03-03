@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Document } from "@/lib/types";
 import { calculateDocumentPriority } from "@/services/documentService";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   fetchProjectDocuments, 
   uploadDocumentToStorage, 
