@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { generateMockInsights } from "@/services/ai";
+import { generateComprehensiveInsights } from "@/services/ai";
 
 export const useFallbackInsights = (
   project: Project,
@@ -16,7 +16,7 @@ export const useFallbackInsights = (
       if (!isAnalysisInProgress) return;
 
       console.log("Generating fallback insights for project", project.id);
-      const mockInsights = generateMockInsights(project, documents);
+      const mockInsights = generateComprehensiveInsights(project, documents);
       
       // Set insights with fallback flag to true
       setInsights(mockInsights, true);

@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { generateInsightsWithAI } from "@/services/ai";
+import { generateInsights } from "@/services/ai";
 
 export const useAiGeneration = (
   project: Project,
@@ -21,15 +21,26 @@ export const useAiGeneration = (
 
       try {
         console.log(`Generating insights with ${isRetry ? "retry" : "initial"} attempt`);
-        const generatedInsights = await generateInsightsWithAI(project, documents);
-
-        if (generatedInsights && generatedInsights.length > 0) {
-          // Set insights with fallback flag to false
-          setInsights(generatedInsights, false);
-          setError(null);
+        const result = await generateInsights(project, documents);
+        
+        if (result.insights && result.insights.length > 0) {
+          // Determine if we are using fallback insights from the error
+          const usingFallback = !!result.error && result.error.includes("using generated sample insights");
+          
+          // Set insights with appropriate fallback flag
+          setInsights(result.insights, usingFallback);
+          
+          // If there's an error but we still got insights, it's likely fallback
+          if (result.error) {
+            setError(result.error);
+            setUsingFallbackInsights(usingFallback);
+          } else {
+            setError(null);
+            setUsingFallbackInsights(false);
+          }
+          
           completeProcessing("Analysis complete");
-          setUsingFallbackInsights(false);
-          return true;
+          return !usingFallback; // Return true only if we used real AI
         } else {
           setError("No insights were generated. Using mock insights instead.");
           return false;
