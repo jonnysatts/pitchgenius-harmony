@@ -1,8 +1,8 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, XCircle, KeyRound, LoaderCircle, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle2, XCircle, KeyRound, LoaderCircle, AlertTriangle, Server } from "lucide-react";
 import { testSupabaseConnection } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -76,6 +76,21 @@ const ApiConnectionTest: React.FC<ApiConnectionTestProps> = ({ onApiConnectionRe
     }
   };
 
+  const getClaudeStatus = () => {
+    if (!apiConnectionResult?.keysDetails?.ANTHROPIC_API_KEY?.exists) {
+      return {
+        available: false,
+        message: "Anthropic API Key not found in Supabase secrets"
+      };
+    }
+    return {
+      available: true,
+      message: "Anthropic API available for Claude AI analysis"
+    };
+  };
+
+  const claudeStatus = apiConnectionResult ? getClaudeStatus() : null;
+
   return (
     <div className="flex flex-col items-end">
       {apiConnectionResult && (
@@ -88,6 +103,16 @@ const ApiConnectionTest: React.FC<ApiConnectionTestProps> = ({ onApiConnectionRe
             <AlertDescription className={apiConnectionResult.success ? 'text-green-700' : 'text-red-700'}>
               {apiConnectionResult.message}
             </AlertDescription>
+            
+            {claudeStatus && (
+              <div className={`mt-2 p-2 rounded ${claudeStatus.available ? 'bg-blue-50' : 'bg-amber-50'}`}>
+                <h4 className="font-semibold mb-1 flex items-center gap-1 text-sm">
+                  <Server size={14} className={claudeStatus.available ? 'text-blue-500' : 'text-amber-500'} /> 
+                  Claude AI Status: <span className={claudeStatus.available ? 'text-blue-600' : 'text-amber-600'}>{claudeStatus.available ? 'Available' : 'Unavailable'}</span>
+                </h4>
+                <p className="text-xs text-gray-600">{claudeStatus.message}</p>
+              </div>
+            )}
             
             {apiConnectionResult.keysDetails && (
               <div className="mt-2 text-sm">
@@ -139,7 +164,7 @@ const ApiConnectionTest: React.FC<ApiConnectionTestProps> = ({ onApiConnectionRe
             <LoaderCircle className="h-4 w-4 animate-spin" />
             Testing...
           </>
-        ) : "Test Supabase Secrets"}
+        ) : "Test Supabase Connection"}
       </Button>
     </div>
   );

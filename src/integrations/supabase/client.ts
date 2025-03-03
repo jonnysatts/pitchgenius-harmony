@@ -28,6 +28,7 @@ export const testSupabaseConnection = async () => {
     
     if (error) {
       console.error('Error testing Supabase connection:', error);
+      console.error('Error details:', JSON.stringify(error));
       return { 
         success: false, 
         error,

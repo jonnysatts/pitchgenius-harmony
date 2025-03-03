@@ -66,6 +66,7 @@ export const generateInsights = async (
       // Race between the actual API call and the timeout
       return await Promise.race([
         (async () => {
+          console.log('Making API call to Supabase Edge Function for Claude analysis...');
           // Call the Supabase Edge Function that uses Anthropic
           const { data, error } = await supabase.functions.invoke('generate-insights-with-anthropic', {
             body: { 
@@ -81,12 +82,16 @@ export const generateInsights = async (
           });
           
           if (error) {
-            console.error('Error generating insights with Anthropic:', error);
-            console.log('Falling back to mock insights generator due to API error');
+            console.error('Error from Edge Function:', error);
+            const errorMessage = error.message || 'Unknown error';
+            const statusCode = error.code || 'No status code';
+            console.error(`Edge Function error: ${errorMessage} (Status: ${statusCode})`);
+            
+            console.log('Falling back to mock insights generator due to Edge Function error');
             const mockInsights = generateComprehensiveInsights(project, documents);
             return { 
               insights: mockInsights,
-              error: "Claude AI error - using generated sample insights instead. Error: " + error.message
+              error: `Claude AI error - using generated sample insights instead. Error: Edge Function returned a non-2xx status code`
             };
           }
           
@@ -110,11 +115,14 @@ export const generateInsights = async (
       ]);
     } catch (apiError: any) {
       console.error('Error calling Anthropic API:', apiError);
+      const errorDetails = apiError instanceof Error ? apiError.message : JSON.stringify(apiError);
+      console.error(`API call error details: ${errorDetails}`);
+      
       console.log('Falling back to mock insights generator due to API error');
       const mockInsights = generateComprehensiveInsights(project, documents);
       return { 
         insights: mockInsights,
-        error: "Claude AI error - using generated sample insights instead. Error: " + apiError.message
+        error: "Claude AI error - using generated sample insights instead. Error: " + errorDetails
       };
     }
   } catch (err: any) {
