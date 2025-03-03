@@ -2,6 +2,7 @@
 import React from "react";
 import { Info } from "lucide-react";
 import { WebsiteAnalysisControls } from "./WebsiteAnalysisControls";
+import { Project } from "@/lib/types";
 
 interface WebInsightsHeaderProps {
   websiteUrl?: string;
@@ -19,11 +20,18 @@ const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
   hasInsights
 }) => {
   // Create a mock project with the websiteUrl for WebsiteAnalysisControls
-  const project = {
+  // Include all required properties from the Project type
+  const project: Project = {
     clientWebsite: websiteUrl || '',
     id: '',
     clientName: '',
-    clientIndustry: ''
+    clientIndustry: 'other',
+    title: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdBy: '',
+    collaborators: [],
+    status: 'draft'
   };
   
   return (
