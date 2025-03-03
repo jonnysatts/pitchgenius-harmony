@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
@@ -57,7 +56,6 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
         </TabsContent>
         
         {websiteInsightCategories.map((category) => {
-          // Use the category.id with proper type casting
           const categoryId = category.id as WebsiteInsightCategory;
           const categoryInsights = insightsByCategory[categoryId] || [];
           

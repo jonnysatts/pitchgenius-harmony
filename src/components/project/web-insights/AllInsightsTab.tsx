@@ -1,4 +1,3 @@
-
 import React from "react";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
@@ -28,11 +27,9 @@ const AllInsightsTab: React.FC<AllInsightsTabProps> = ({
   return (
     <div className="space-y-8">
       {websiteInsightCategories.map((category) => {
-        // Use the category.id with proper type casting
         const categoryId = category.id as WebsiteInsightCategory;
         const categoryInsights = insightsByCategory[categoryId] || [];
         
-        // Skip empty categories in the "all" view
         if (categoryInsights.length === 0) return null;
         
         return (

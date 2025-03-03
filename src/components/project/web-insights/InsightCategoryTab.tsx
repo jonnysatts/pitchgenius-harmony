@@ -1,4 +1,3 @@
-
 import React from "react";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
