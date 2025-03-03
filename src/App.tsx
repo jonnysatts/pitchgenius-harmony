@@ -6,19 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 
-import Login from "./pages/auth/Login";
-import Signup from "./pages/auth/Signup";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-
-// Modified RequireAuth component - temporarily disabled for development
-const RequireAuth = ({ children }: { children: JSX.Element }) => {
-  // During development, we'll skip authentication checks
-  return children;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -28,27 +20,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <RequireAuth>
-                  <Dashboard />
-                </RequireAuth>
-              } 
-            />
-            <Route 
-              path="/projects/:projectId" 
-              element={
-                <RequireAuth>
-                  <ProjectDetail />
-                </RequireAuth>
-              } 
-            />
-            {/* For the root path, use Navigate component */}
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/projects/:projectId" element={<ProjectDetail />} />
+            {/* Route directly to Dashboard */}
+            <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
