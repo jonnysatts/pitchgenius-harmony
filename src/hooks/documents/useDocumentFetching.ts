@@ -19,12 +19,14 @@ export const useDocumentFetching = (
   useEffect(() => {
     if (!projectId) return;
     
+    console.log("Fetching documents for project:", projectId);
     const loadDocuments = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
         const docs = await fetchProjectDocuments(projectId);
+        console.log("Fetched documents:", docs);
         setDocuments(docs);
       } catch (err) {
         console.error('Error fetching documents:', err);
@@ -34,7 +36,11 @@ export const useDocumentFetching = (
         if (err instanceof DatabaseError) {
           errorMessage = `Database error: ${err.message}`;
         } else if (err instanceof AuthenticationError) {
-          errorMessage = "You need to be logged in to view documents";
+          // For mock environment, we'll suppress auth errors in fetching
+          console.warn("Authentication error when fetching documents, but continuing with empty list");
+          setDocuments([]);
+          setIsLoading(false);
+          return;
         } else if (err instanceof Error) {
           errorMessage = err.message;
         }

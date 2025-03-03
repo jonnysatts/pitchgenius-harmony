@@ -35,6 +35,13 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
                                aiStatus.status === 'processing' || 
                                isLoading;
   
+  console.log("Analyze button state:", {
+    documentsLength: documents.length,
+    aiStatusProcessing: aiStatus.status === 'processing',
+    isLoading,
+    disabled: analyzeButtonDisabled
+  });
+  
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg border">

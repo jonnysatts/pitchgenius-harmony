@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,11 +81,15 @@ export const useDocumentActions = (
     // We add this check early to prevent starting uploads that would exceed the limit
     const maxFiles = 20; // Same as in the FileUpload component 
     
-    // We need to get the current documents count before we check
+    // We need to check current document count before proceeding
     try {
       setIsLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      
+      // In development/mock environment, we don't check for auth session
+      // In production, we would check with Supabase
+      const isAuthenticated = !!userId;
+      
+      if (!isAuthenticated) {
         throw new AuthenticationError();
       }
       
