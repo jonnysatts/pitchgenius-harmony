@@ -14,6 +14,7 @@ const ProjectWelcomeAlert: React.FC<ProjectWelcomeAlertProps> = ({
   newProjectTitle, 
   newProjectClient 
 }) => {
+  // Only show the alert if mockProjectWarning is explicitly true
   if (!mockProjectWarning) return null;
   
   return (

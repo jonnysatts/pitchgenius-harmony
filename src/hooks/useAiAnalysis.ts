@@ -78,14 +78,18 @@ export const useAiAnalysis = (project: Project) => {
       } else {
         setInsights(result.insights);
         
-        // Wait for the progress animation to complete
-        setTimeout(() => {
+        // We don't need to immediately set the active tab here
+        // Let the progress monitor handle the completion state
+        // This prevents premature navigation
+        
+        // Only set the active tab and show toast when the analysis is complete
+        if (aiStatus.status === 'completed' || aiStatus.progress === 100) {
           setActiveTab("insights");
           toast({
             title: "Analysis complete",
             description: `Generated ${result.insights.length} strategic insights from ${documents.length} documents${useRealAI ? ' using Claude AI' : ''}`,
           });
-        }, 1000);
+        }
       }
     } catch (error: any) {
       console.error("Error analyzing documents:", error);
@@ -102,7 +106,10 @@ export const useAiAnalysis = (project: Project) => {
       });
       setError(errorMessage);
     } finally {
-      cancelMonitoring();
+      // Don't cancel monitoring here - let it complete naturally
+      // This allows us to see the 100% completion state
+      // cancelMonitoring will be called when the component unmounts
+      // or when a new analysis is started
     }
   };
 

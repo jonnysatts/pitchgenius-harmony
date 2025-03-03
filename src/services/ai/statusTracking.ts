@@ -27,11 +27,15 @@ export const monitorAIProcessingProgress = (
 ): () => void => {
   let cancelled = false;
   let progress = 0;
+  let interval: NodeJS.Timeout | null = null;
   
   // This simulates the AI processing progress
   // In a production app, this would connect to a real-time status endpoint
-  const interval = setInterval(() => {
-    if (cancelled) return;
+  interval = setInterval(() => {
+    if (cancelled) {
+      if (interval) clearInterval(interval);
+      return;
+    }
     
     // Simulate different phases of processing with appropriate messages
     if (progress < 15) {
@@ -70,32 +74,35 @@ export const monitorAIProcessingProgress = (
         progress,
         message: `Processing AI-generated insights...`
       });
-    } else if (progress < 100) {
+    } else if (progress < 99) { // Changed from 100 to 99 to avoid the edge case
       onStatusUpdate({
         status: 'processing',
         progress,
         message: `Finalizing comprehensive insights...`
       });
     } else {
+      // When we reach 100%, we don't clear the interval immediately
+      // Instead, we send the completed status and then clear
       onStatusUpdate({
         status: 'completed',
         progress: 100,
         message: 'AI analysis complete!'
       });
-      clearInterval(interval);
+      
+      // Clear the interval *after* sending the status update
+      if (interval) clearInterval(interval);
+      interval = null;
     }
     
     // Slow down the progress a bit to reflect real API processing time
+    // Don't let progress exceed 100
     progress += Math.random() * 4 + 1;
-    
-    if (progress > 100) {
-      clearInterval(interval);
-    }
+    if (progress > 100) progress = 100;
   }, 800);
   
   // Return a function to cancel the monitoring
   return () => {
     cancelled = true;
-    clearInterval(interval);
+    if (interval) clearInterval(interval);
   };
 };
