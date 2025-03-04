@@ -49,3 +49,44 @@ export const generateDetailedInsight = (
     source: 'document'
   };
 };
+
+/**
+ * Generate a set of fallback insights when the AI service is unavailable
+ */
+export const generateFallbackInsights = (
+  industry: string = 'gaming', 
+  documentCount: number = 3
+): StrategicInsight[] => {
+  // Create a mock array of documents for reference
+  const mockDocuments: Document[] = Array(documentCount).fill(null).map((_, index) => ({
+    id: `doc_${index}`,
+    name: `Document ${index + 1}`,
+    type: 'pdf',
+    size: 1024 * 1024,
+    url: '',
+    projectId: '',
+    createdAt: new Date()
+  }));
+  
+  // Mock project for insight generation
+  const mockProject: Project = {
+    id: 'fallback_project',
+    title: 'Fallback Project',
+    clientName: 'Sample Client',
+    clientIndustry: industry,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ownerId: 'system',
+    description: 'This is a fallback project for sample insights'
+  };
+  
+  // Generate one insight for each category
+  return [
+    generateDetailedInsight('business_challenges', mockProject, mockDocuments),
+    generateDetailedInsight('audience_gaps', mockProject, mockDocuments),
+    generateDetailedInsight('competitive_threats', mockProject, mockDocuments),
+    generateDetailedInsight('gaming_opportunities', mockProject, mockDocuments),
+    generateDetailedInsight('strategic_recommendations', mockProject, mockDocuments),
+    generateDetailedInsight('key_narratives', mockProject, mockDocuments)
+  ];
+};

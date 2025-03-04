@@ -17,7 +17,7 @@ export const generateWebsiteContext = (website: string): string => {
 export const createTimeoutPromise = async (
   project: Project, 
   documents: Document[]
-): Promise<{ insights: StrategicInsight[], error?: string }> => {
+): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
   // Import the fallback insights generator
   const { generateFallbackInsights } = await import('./mockGenerators/insightGenerator');
   
@@ -27,7 +27,8 @@ export const createTimeoutPromise = async (
       const fallbackInsights = generateFallbackInsights(project.clientIndustry || 'technology', documents.length);
       resolve({
         insights: fallbackInsights,
-        error: "API call timed out - using generated sample insights as fallback"
+        error: "API call timed out - using generated sample insights as fallback",
+        insufficientContent: false // Explicitly set to false for fallback data
       });
     }, 110000); // 110 seconds timeout
   });
