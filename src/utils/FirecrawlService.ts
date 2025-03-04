@@ -1,4 +1,6 @@
 
+import { supabase } from "@/integrations/supabase/client";
+
 // This service connects to the Supabase Edge Function to analyze websites
 export class FirecrawlService {
   // Test if the website analysis function is accessible
@@ -7,34 +9,22 @@ export class FirecrawlService {
       // Test connection to the Edge Function
       console.log("Testing website analysis function");
       
-      // Setting a short timeout for the test to fail fast if no response
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for test
-      
       try {
-        // In a real implementation, this would call the Edge Function with test_mode: true
-        const response = await fetch('/api/analyze-website-test', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ test_mode: true }),
-          signal: controller.signal
+        // Directly call the Supabase Edge Function with test_mode: true
+        const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+          body: { test_mode: true }
         });
         
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
+        if (error) {
+          console.error('Error testing website analysis:', error);
           return { 
             success: false, 
-            error: errorData.error || "API test failed. Please check configuration." 
+            error: error.message || "API test failed. Please check configuration." 
           };
         }
         
         return { success: true };
       } catch (error) {
-        clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
           return { 
             success: false, 
@@ -61,36 +51,30 @@ export class FirecrawlService {
     try {
       console.log(`Analyzing website: ${websiteUrl}`);
       
-      // First, simulate a progress check to ensure the Edge Function is responding
+      // First, check the analysis progress (also confirms the Edge Function is responsive)
       const progressCheck = await this.checkAnalysisProgress(websiteUrl);
       if (!progressCheck.success) {
         console.warn("Progress check failed, but continuing with analysis attempt");
       }
       
-      // Call the actual Edge Function for website analysis
-      const response = await fetch('/api/analyze-website', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call the Supabase Edge Function for website analysis
+      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+        body: {
           website_url: websiteUrl,
           client_name: clientName,
           client_industry: clientIndustry,
           timeout_seconds: 60,
           max_pages: 10
-        })
+        }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (error) {
+        console.error('Error from Edge Function:', error);
         return {
           success: false,
-          error: errorData.error || `API error: ${response.status}`
+          error: error.message || `API error: ${error.code || 'unknown'}`
         };
       }
-      
-      const data = await response.json();
       
       // Check if the API returned proper insights
       if (data.insights && Array.isArray(data.insights) && data.insights.length > 0) {
@@ -123,34 +107,31 @@ export class FirecrawlService {
     }
   }
   
-  // Add a new method to check progress of analysis
-  // This helps reduce timeouts by splitting the request into smaller parts
+  // Check progress of analysis
   private static async checkAnalysisProgress(
     websiteUrl: string
   ): Promise<{success: boolean, progress?: number, error?: string}> {
     try {
       console.log(`Checking analysis progress for: ${websiteUrl}`);
       
-      const response = await fetch('/api/analyze-website-progress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ website_url: websiteUrl })
+      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+        body: { 
+          website_url: websiteUrl,
+          check_progress: true 
+        }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (error) {
+        console.error('Error checking analysis progress:', error);
         return {
           success: false,
-          error: errorData.error || `API error: ${response.status}`
+          error: error.message || `API error: ${error.code || 'unknown'}`
         };
       }
       
-      const data = await response.json();
       return {
         success: true,
-        progress: data.progress || 0
+        progress: data?.progress || 0
       };
     } catch (error) {
       console.warn("Error checking analysis progress:", error);

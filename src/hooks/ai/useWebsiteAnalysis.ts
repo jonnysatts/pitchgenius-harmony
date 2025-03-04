@@ -53,33 +53,20 @@ export const useWebsiteAnalysis = (
     analysisTimeout: NodeJS.Timeout
   ) => {
     try {
-      // Add a random parameter to avoid caching
-      const result = await fetch(`/api/analyze-website-progress?t=${Date.now()}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ website_url: websiteUrl })
-      });
+      const result = await FirecrawlService.checkAnalysisProgress(websiteUrl);
       
-      if (!result.ok) {
+      if (!result.success) {
         console.log("Progress check failed, continuing simulation");
         return;
       }
       
-      const data = await result.json();
-      
       // If we got valid progress data, update the UI
-      if (data && typeof data.progress === 'number') {
+      if (typeof result.progress === 'number') {
         // Only update if the new progress is higher
-        setAnalysisProgress(prev => Math.max(prev, data.progress));
-        
-        if (data.status) {
-          setAnalysisStatus(data.status);
-        }
+        setAnalysisProgress(prev => Math.max(prev, result.progress || 0));
         
         // If analysis is complete, stop checking
-        if (data.progress >= 100 || data.status === 'complete') {
+        if ((result.progress || 0) >= 100) {
           clearInterval(progressInterval);
           clearTimeout(analysisTimeout);
           
@@ -211,7 +198,7 @@ export const useWebsiteAnalysis = (
       // Add a faster progress boost after successful connection test
       setAnalysisProgress(prev => Math.min(prev + 10, 40));
       
-      // Call the Firecrawl service via our Next.js API route
+      // Call the Firecrawl service
       const result = await FirecrawlService.analyzeWebsiteViaSupabase(
         project.clientWebsite,
         project.clientName || "",
