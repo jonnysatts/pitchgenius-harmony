@@ -27,14 +27,24 @@ serve(async (req) => {
     console.log('Website analysis Edge Function starting...');
     
     // Parse the request body
-    const requestData = await req.json();
-    console.log('Request data received:', {
-      projectId: requestData.projectId,
-      clientIndustry: requestData.clientIndustry,
-      clientWebsite: requestData.clientWebsite,
-      hasWebsiteContent: !!requestData.websiteContent,
-      timestamp: requestData.timestamp
-    });
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log('Request data received:', {
+        projectId: requestData.projectId,
+        clientIndustry: requestData.clientIndustry,
+        clientWebsite: requestData.clientWebsite,
+        hasWebsiteContent: !!requestData.websiteContent,
+        timestamp: requestData.timestamp,
+        debugInfo: requestData.debugInfo
+      });
+    } catch (parseError) {
+      console.error('Error parsing request JSON:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     const { 
       projectId, 
@@ -43,14 +53,19 @@ serve(async (req) => {
       websiteContent,
       systemPrompt,
       projectTitle,
-      clientName
+      clientName,
+      debugInfo = false
     } = requestData;
     
     // Check we have the minimum required data
     if (!projectId || !clientWebsite) {
-      console.error('Missing required fields in request');
+      console.error('Missing required fields in request:', JSON.stringify(requestData));
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ 
+          error: 'Missing required fields', 
+          required: ['projectId', 'clientWebsite'],
+          received: Object.keys(requestData) 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -62,9 +77,10 @@ serve(async (req) => {
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
     
     console.log(`Environment check: Firecrawl API Key exists: ${!!firecrawlKey} (${firecrawlKey ? firecrawlKey.substring(0, 3) + '...' : 'missing'})`);
-    console.log(`Environment check: Anthropic API Key exists: ${!!anthropicKey}`);
+    console.log(`Environment check: Anthropic API Key exists: ${!!anthropicKey} (${anthropicKey ? anthropicKey.substring(0, 3) + '...' : 'missing'})`);
     
     if (!anthropicKey) {
+      console.error('Anthropic API key not configured');
       return new Response(
         JSON.stringify({ 
           error: 'Anthropic API key not configured',
@@ -86,15 +102,27 @@ serve(async (req) => {
           console.log(`Attempting to fetch content with Firecrawl for ${clientWebsite}...`);
           contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
           console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
+          
+          if (debugInfo) {
+            console.log('First 200 chars of Firecrawl content:', contentToAnalyze.substring(0, 200));
+          }
         } catch (fetchError) {
           console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
           contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
           console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
+          
+          if (debugInfo) {
+            console.log('First 200 chars of basic fetch content:', contentToAnalyze.substring(0, 200));
+          }
         }
       } else {
         console.log("No Firecrawl API key found, using basic fetch");
         contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
         console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
+        
+        if (debugInfo) {
+          console.log('First 200 chars of basic fetch content:', contentToAnalyze.substring(0, 200));
+        }
       }
     }
     
@@ -111,57 +139,78 @@ serve(async (req) => {
     
     // Call Claude to analyze the content
     console.log("Calling Claude API to analyze content...");
-    const claudeResponse = await analyzeWebsiteWithAnthropic(
-      contentToAnalyze,
-      systemPrompt || "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
-      clientName || "the client",
-      clientIndustry || "general"
-    );
-    
-    console.log(`Claude API response received (${claudeResponse.length} chars)`);
-    
-    // Process the response to extract insights
-    let insights;
     try {
-      console.log("Parsing Claude response into insights...");
-      insights = parseClaudeResponse(claudeResponse);
-      console.log(`Parsed ${insights.length} insights from Claude response`);
-    } catch (parseError) {
-      console.error('Failed to parse Claude response:', parseError);
+      const claudeResponse = await analyzeWebsiteWithAnthropic(
+        contentToAnalyze,
+        systemPrompt || "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
+        clientName || "the client",
+        clientIndustry || "general"
+      );
+      
+      console.log(`Claude API response received (${claudeResponse.length} chars)`);
+      
+      if (debugInfo) {
+        console.log('First 500 chars of Claude response:', claudeResponse.substring(0, 500));
+      }
+      
+      // Process the response to extract insights
+      let insights;
+      try {
+        console.log("Parsing Claude response into insights...");
+        insights = parseClaudeResponse(claudeResponse);
+        console.log(`Parsed ${insights.length} insights from Claude response`);
+        
+        if (debugInfo && insights.length > 0) {
+          console.log('First insight:', JSON.stringify(insights[0]));
+        }
+      } catch (parseError) {
+        console.error('Failed to parse Claude response:', parseError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to parse Claude response', 
+            rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Check if we got valid insights
+      if (!insights || !Array.isArray(insights) || insights.length === 0) {
+        console.error('No valid insights generated from Claude response');
+        return new Response(
+          JSON.stringify({ 
+            error: 'No valid insights generated', 
+            rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Log insights categories for debugging
+      console.log('Generated insight categories:', insights.map(i => i.category));
+      
+      // Process insights to ensure they have all required fields
+      const processedInsights = processInsights(insights);
+      console.log(`Processed ${processedInsights.length} insights, sending response`);
+      
+      // Return the insights
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to parse Claude response', 
-          rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
+          insights: processedInsights,
+          message: 'Successfully analyzed website and generated insights'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (claudeError) {
+      console.error('Error calling Claude API:', claudeError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Error calling Claude API', 
+          details: claudeError.message || 'Unknown Claude API error'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Check if we got valid insights
-    if (!insights || !Array.isArray(insights) || insights.length === 0) {
-      console.error('No valid insights generated from Claude response');
-      return new Response(
-        JSON.stringify({ 
-          error: 'No valid insights generated', 
-          rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Log insights categories for debugging
-    console.log('Generated insight categories:', insights.map(i => i.category));
-    
-    // Process insights to ensure they have all required fields
-    const processedInsights = processInsights(insights);
-    console.log(`Processed ${processedInsights.length} insights, sending response`);
-    
-    // Return the insights
-    return new Response(
-      JSON.stringify({ insights: processedInsights }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-    
   } catch (error) {
     console.error('Error in analyze-website-with-anthropic:', error);
     
