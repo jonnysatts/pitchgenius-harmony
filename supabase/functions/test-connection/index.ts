@@ -1,142 +1,164 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+/**
+ * Test Connection Edge Function
+ * Provides diagnostic information about the Supabase environment
+ */
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// Enable debug mode for detailed logging
+const DEBUG_MODE = true;
+
+// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-console.log('Test connection function loaded')
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request')
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
-    console.log('Received test connection request', new Date().toISOString())
+    if (DEBUG_MODE) console.log('🔍 Test connection function received request');
     
-    // Parse the request body if present
-    let requestData = {};
+    // Parse request body
+    let requestData = { testType: 'basic', debugMode: false };
     try {
-      const requestText = await req.text();
-      if (requestText) {
-        requestData = JSON.parse(requestText);
-        console.log('Request data:', requestData);
+      const bodyText = await req.text();
+      if (bodyText) {
+        requestData = JSON.parse(bodyText);
       }
-    } catch (parseError) {
-      console.log('No valid JSON in request body or empty body');
+    } catch (e) {
+      // If parsing fails, use default values
+      console.log('⚠️ Failed to parse request body, using defaults');
     }
     
-    // Check if this is a specific test for the Anthropic API key
-    const isAnthropicKeyCheck = requestData?.testType === 'anthropic-key-check';
+    // Extract request options
+    const { testType, debugMode = false } = requestData;
     
-    // Check for environment variables
-    const keys = [
-      'ANTHROPIC_API_KEY',
-      'OPEN_API_KEY',
-      'SUPABASE_URL',
-      'SUPABASE_ANON_KEY',
-      'SUPABASE_SERVICE_ROLE_KEY',
-      'FIRECRAWL_API_KEY',
-      'FIRECRAWL_API_KPI'
-    ]
+    // Override DEBUG_MODE if specified in request
+    const useDebugMode = debugMode || DEBUG_MODE;
     
-    const results = {}
-    let allKeysFound = true
-    let anthropicKeyFound = false
-    let keysFound = []
-    let keysMissing = []
+    if (useDebugMode) console.log(`🔄 Processing ${testType} test`);
     
-    console.log('Checking for environment variables...')
+    // Check for environment variables and their values (showing first few chars only)
+    const keys = ['ANTHROPIC_API_KEY', 'OPEN_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'FIRECRAWL_API_KEY', 'FIRECRAWL_API_KPI'];
+    const environmentChecks = {};
+    let anthropicKeyExists = false;
     
     for (const key of keys) {
-      const value = Deno.env.get(key)
-      const exists = !!value
-      console.log(`Checking ${key}: ${exists ? 'Found' : 'Not found'}`)
-      
-      if (exists) {
-        keysFound.push(key)
-        // For security, only show first few chars of the actual key
-        results[key] = {
-          exists,
-          preview: `${value.substring(0, 3)}...${value.substring(value.length - 3)}`
-        }
+      const value = Deno.env.get(key);
+      if (value) {
+        const preview = value.substring(0, 3) + '...' + value.substring(value.length - 3);
+        environmentChecks[key] = {
+          exists: true,
+          preview
+        };
         
-        // Check specifically for Anthropic API key
+        // Check ANTHROPIC_API_KEY format if it exists
         if (key === 'ANTHROPIC_API_KEY') {
-          anthropicKeyFound = true
-          console.log('ANTHROPIC_API_KEY found!', value.substring(0, 3) + '...')
+          anthropicKeyExists = true;
+          environmentChecks[key].startsWithPrefix = value.startsWith('sk-ant-');
+          environmentChecks[key].validLength = value.length > 20;
+          
+          if (useDebugMode) {
+            console.log(`🔑 ANTHROPIC_API_KEY check:`, {
+              exists: true, 
+              prefix: value.substring(0, 7) + '...', 
+              validPrefix: value.startsWith('sk-ant-'),
+              length: value.length,
+              validLength: value.length > 20
+            });
+          }
         }
       } else {
-        keysMissing.push(key)
-        results[key] = { exists: false }
-        allKeysFound = false
-        
-        // Log if we're missing critical keys
-        if (key === 'ANTHROPIC_API_KEY') {
-          console.log('CRITICAL: ANTHROPIC_API_KEY is missing!')
-        }
+        environmentChecks[key] = { exists: false };
       }
     }
     
-    console.log(`Keys check results: ${allKeysFound ? 'All keys found' : 'Some keys missing'}`)
-    console.log(`Found keys: ${keysFound.join(', ')}`)
-    console.log(`Missing keys: ${keysMissing.join(', ')}`)
+    const keysFound = Object.keys(environmentChecks).filter(key => environmentChecks[key].exists);
+    const keysMissing = Object.keys(environmentChecks).filter(key => !environmentChecks[key].exists);
+    const allKeysFound = keysMissing.length === 0;
     
-    // For Anthropic specific checks, validate that we got a valid key format 
-    if (isAnthropicKeyCheck && anthropicKeyFound) {
-      const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') || '';
-      const isValidFormat = anthropicKey.startsWith('sk-ant-') && anthropicKey.length > 20;
+    if (useDebugMode) {
+      console.log('📊 Environment check result:', {
+        keysFound: keysFound.length,
+        keysMissing: keysMissing.length,
+        anthropicKeyExists,
+        anthropicKeyValid: anthropicKeyExists && environmentChecks['ANTHROPIC_API_KEY']?.startsWithPrefix
+      });
+    }
+    
+    // For anthropic-key-check type, perform extra tests
+    if (testType === 'anthropic-key-check') {
+      const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+      const anthropicKeyValid = anthropicKey && anthropicKey.startsWith('sk-ant-') && anthropicKey.length > 20;
       
-      if (!isValidFormat) {
-        console.log('ANTHROPIC_API_KEY is present but format looks invalid!');
-        anthropicKeyFound = false;
-      } else {
-        console.log('ANTHROPIC_API_KEY has valid format');
+      if (useDebugMode) {
+        console.log('🔑 Anthropic API Key detailed check:', {
+          exists: !!anthropicKey,
+          prefix: anthropicKey ? anthropicKey.substring(0, 7) + '...' : 'N/A',
+          length: anthropicKey ? anthropicKey.length : 0,
+          validFormat: anthropicKeyValid
+        });
       }
+      
+      return new Response(
+        JSON.stringify({
+          message: "Connection test successful",
+          timestamp: new Date().toISOString(),
+          environmentChecks,
+          allKeysFound,
+          anthropicKeyExists,
+          anthropicKeyValidFormat: anthropicKey ? anthropicKey.startsWith('sk-ant-') : false,
+          anthropicKeyValidLength: anthropicKey ? anthropicKey.length > 20 : false,
+          keysFound,
+          keysMissing
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
     
-    const responseData = {
-      message: 'Connection test successful',
-      timestamp: new Date().toISOString(),
-      environmentChecks: results,
-      allKeysFound,
-      anthropicKeyExists: anthropicKeyFound,
-      keysFound,
-      keysMissing
-    }
-    
-    console.log('Sending test-connection response')
-    
+    // Basic connection test
     return new Response(
-      JSON.stringify(responseData),
-      { 
+      JSON.stringify({
+        message: "Connection test successful",
+        timestamp: new Date().toISOString(),
+        environmentChecks,
+        allKeysFound,
+        anthropicKeyExists,
+        keysFound,
+        keysMissing
+      }),
+      {
         headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        } 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
-    )
+    );
   } catch (error) {
-    console.error('Error in test connection function:', error.message)
-    console.error('Error stack:', error.stack)
+    console.error('❌ Error in test-connection function:', error);
     
     return new Response(
       JSON.stringify({
-        error: error.message,
-        stack: error.stack,
+        error: `Test connection failed: ${error instanceof Error ? error.message : String(error)}`,
         timestamp: new Date().toISOString()
       }),
-      { 
+      {
         status: 500,
         headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        } 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
-    )
+    );
   }
-})
+});

@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Project, Document, StrategicInsight } from "@/lib/types";
 import { GAMING_SPECIALIST_PROMPT } from "./config";
 
+// Enable debug mode for detailed logging
+const DEBUG_MODE = true;
+
 /**
  * Generate a context string from the client website
  */
@@ -23,7 +26,7 @@ export const createTimeoutPromise = async (
   
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log("API call timed out, using fallback insights");
+      console.log("⏱️ API call timed out, using fallback insights");
       const fallbackInsights = generateFallbackInsights(project.clientIndustry || 'technology', documents.length);
       resolve({
         insights: fallbackInsights,
@@ -39,27 +42,31 @@ export const createTimeoutPromise = async (
  */
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    console.log("Checking Supabase Edge Function connection...");
+    if (DEBUG_MODE) console.log("🔄 Checking Supabase Edge Function connection...");
     
     const { data, error } = await supabase.functions.invoke('test-connection', {
       method: 'POST',
-      body: { testType: 'anthropic-key-check', timestamp: new Date().toISOString() }
+      body: { 
+        testType: 'anthropic-key-check', 
+        timestamp: new Date().toISOString(),
+        debugMode: DEBUG_MODE
+      }
     });
     
     if (error) {
-      console.error("Connection test failed:", error);
-      console.error("Error details:", JSON.stringify(error));
+      console.error("❌ Connection test failed:", error);
+      console.error("❌ Error details:", JSON.stringify(error));
       return false;
     }
     
-    console.log('Supabase connection test result:', data);
+    if (DEBUG_MODE) console.log('✅ Supabase connection test result:', data);
     
     // Check specifically for ANTHROPIC_API_KEY
     const anthropicKeyExists = data?.anthropicKeyExists === true;
     
     return anthropicKeyExists;
   } catch (err) {
-    console.error("Error checking Supabase connection:", err);
+    console.error("❌ Error checking Supabase connection:", err);
     return false;
   }
 };
@@ -72,19 +79,23 @@ export const callClaudeApi = async (
   documents: Document[],
   documentContents: any[]
 ): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
-  console.log('Making API call to Supabase Edge Function for Claude analysis...');
+  if (DEBUG_MODE) console.log('🔄 Making API call to Supabase Edge Function for Claude analysis...');
   
   // First, verify Edge Function connectivity and API key
   try {
-    console.log("Testing Edge Function connectivity and API key...");
+    if (DEBUG_MODE) console.log("🔍 Testing Edge Function connectivity and API key...");
     const { data: testData, error: testError } = await supabase.functions.invoke('test-connection', {
       method: 'POST',
-      body: { testType: 'anthropic-key-check', timestamp: new Date().toISOString() }
+      body: { 
+        testType: 'anthropic-key-check', 
+        timestamp: new Date().toISOString(),
+        debugMode: DEBUG_MODE
+      }
     });
     
     // Handle test error
     if (testError) {
-      console.error("Edge Function test failed:", testError);
+      console.error("❌ Edge Function test failed:", testError);
       return {
         insights: [],
         error: `Edge Function connectivity error: ${testError.message || JSON.stringify(testError)}`,
@@ -94,7 +105,7 @@ export const callClaudeApi = async (
     
     // Check if API key exists
     if (!testData || !testData.anthropicKeyExists) {
-      console.error("Anthropic API key not found in Edge Function environment");
+      console.error("❌ Anthropic API key not found in Edge Function environment");
       return {
         insights: [],
         error: "Anthropic API key not configured in Supabase. Please add ANTHROPIC_API_KEY to Supabase secrets.",
@@ -102,9 +113,9 @@ export const callClaudeApi = async (
       };
     }
     
-    console.log("Edge Function connectivity and API key validation completed:", testData);
+    if (DEBUG_MODE) console.log("✅ Edge Function connectivity and API key validation completed:", testData);
   } catch (testErr) {
-    console.error("Error testing Edge Function:", testErr);
+    console.error("❌ Error testing Edge Function:", testErr);
     return {
       insights: [],
       error: `Failed to connect to Edge Function: ${testErr instanceof Error ? testErr.message : String(testErr)}`,
@@ -121,16 +132,20 @@ export const callClaudeApi = async (
     const timeoutPromise = createTimeoutPromise(project, documents);
     
     // Call the proper edge function
-    console.log("Calling generate-insights-with-anthropic with project:", project.id);
+    if (DEBUG_MODE) console.log("🔄 Calling generate-insights-with-anthropic with project:", project.id);
     
     // Add some diagnostic info to help debug
-    console.log("Edge function request payload:", {
-      projectId: project.id,
-      documentCount: documentContents.length,
-      clientIndustry: project.clientIndustry || 'technology',
-      clientWebsite: project.clientWebsite,
-      projectTitle: project.title
-    });
+    if (DEBUG_MODE) {
+      console.log("📡 Edge function request payload:", {
+        projectId: project.id,
+        documentCount: documentContents.length,
+        contentSize: documentContents.reduce((acc, doc) => acc + (doc.content?.length || 0), 0),
+        clientIndustry: project.clientIndustry || 'technology',
+        clientWebsite: project.clientWebsite,
+        projectTitle: project.title,
+        debugMode: DEBUG_MODE
+      });
+    }
     
     // Make the actual request to the edge function with error handling
     const responsePromise = supabase.functions.invoke('generate-insights-with-anthropic', {
@@ -144,7 +159,8 @@ export const callClaudeApi = async (
         processingMode: 'comprehensive',
         includeComprehensiveDetails: true,
         maximumResponseTime: 110,
-        systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext
+        systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext,
+        debugMode: DEBUG_MODE
       }
     });
     
@@ -153,27 +169,32 @@ export const callClaudeApi = async (
       responsePromise,
       // Wait 110 seconds then resolve with null to indicate timeout
       new Promise<{data: null, error: {message: string}}>((resolve) => 
-        setTimeout(() => resolve({
-          data: null,
-          error: {message: "Edge Function timed out after 110 seconds"}
-        }), 110000)
+        setTimeout(() => {
+          if (DEBUG_MODE) console.log("⏱️ Edge Function timed out after 110 seconds");
+          resolve({
+            data: null,
+            error: {message: "Edge Function timed out after 110 seconds"}
+          });
+        }, 110000)
       )
     ]);
     
-    console.log("Edge Function response received:", 
-      data ? "data present" : "no data", 
-      error ? `error: ${error.message}` : "no error"
-    );
+    if (DEBUG_MODE) {
+      console.log("📡 Edge Function response received:", 
+        data ? "data present" : "no data", 
+        error ? `error: ${error.message}` : "no error"
+      );
+    }
     
     // If there was an error or timeout, use the fallback data
     if (error || !data) {
-      console.error('Error from Edge Function:', error);
+      console.error('❌ Error from Edge Function:', error);
       return await timeoutPromise;
     }
     
     // Check for insufficient content flag
     if (data && data.insufficientContent === true) {
-      console.log('Claude AI reported insufficient document content for meaningful insights');
+      if (DEBUG_MODE) console.log('⚠️ Claude AI reported insufficient document content for meaningful insights');
       return {
         insights: [],
         insufficientContent: true,
@@ -183,7 +204,7 @@ export const callClaudeApi = async (
     
     // Validate insights from API
     if (!data || !data.insights || data.insights.length === 0) {
-      console.error('No insights returned from Claude AI, using fallback');
+      console.error('❌ No insights returned from Claude AI, using fallback');
       return await timeoutPromise;
     }
     
@@ -195,7 +216,7 @@ export const callClaudeApi = async (
       };
     });
     
-    console.log('Successfully received insights from Anthropic:', markedInsights.length);
+    if (DEBUG_MODE) console.log('✅ Successfully received insights from Anthropic:', markedInsights.length);
     
     return { 
       insights: markedInsights,
@@ -203,7 +224,7 @@ export const callClaudeApi = async (
       insufficientContent: false
     };
   } catch (apiError: any) {
-    console.error('Error calling Anthropic API:', apiError);
+    console.error('❌ Error calling Anthropic API:', apiError);
     
     // Return a more helpful error message based on the type of error
     let errorMessage = "Claude AI error";
@@ -218,6 +239,8 @@ export const callClaudeApi = async (
       errorMessage = "Anthropic API rate limit exceeded. Please try again later.";
     } else if (apiError.message && apiError.message.includes('500')) {
       errorMessage = "Anthropic API server error. Please try again later.";
+    } else if (apiError.message && apiError.message.includes('non-2xx status code')) {
+      errorMessage = "Edge Function returned an error. Please check the Edge Function logs.";
     } else {
       errorMessage = `Claude AI error: ${apiError instanceof Error ? apiError.message : String(apiError)}`;
     }

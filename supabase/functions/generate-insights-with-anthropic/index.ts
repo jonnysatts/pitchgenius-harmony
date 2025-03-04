@@ -4,6 +4,9 @@
  */
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
+// Enable debug mode for detailed logging
+const DEBUG_MODE = true;
+
 // Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,14 +20,24 @@ serve(async (req) => {
   }
   
   try {
-    console.log('Generate insights function received request');
+    if (DEBUG_MODE) console.log('🔍 Generate insights function received request');
     
     // Parse the request body
     let requestData;
     try {
       requestData = await req.json();
+      if (DEBUG_MODE) {
+        console.log('📄 Request data received:', JSON.stringify({
+          projectId: requestData.projectId,
+          documentCount: requestData.documentContents?.length || 0,
+          contentChars: requestData.documentContents?.reduce((acc, doc) => acc + (doc.content?.length || 0), 0) || 0,
+          clientIndustry: requestData.clientIndustry,
+          clientWebsite: requestData.clientWebsite ? (requestData.clientWebsite.substring(0, 30) + '...') : 'none',
+          systemPromptLength: requestData.systemPrompt?.length || 0
+        }));
+      }
     } catch (jsonError) {
-      console.error('Failed to parse request JSON:', jsonError);
+      console.error('❌ Failed to parse request JSON:', jsonError);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid JSON in request body',
@@ -48,7 +61,9 @@ serve(async (req) => {
       systemPrompt = ''
     } = requestData;
     
-    console.log(`Processing analysis for project ${projectId} with ${documentContents.length} documents in ${clientIndustry} industry`);
+    if (DEBUG_MODE) {
+      console.log(`🔄 Processing analysis for project ${projectId} with ${documentContents.length} documents in ${clientIndustry} industry`);
+    }
     
     // Import required modules
     const { validateDocumentContent } = await import('./services/errorHandler.ts');
@@ -59,7 +74,7 @@ serve(async (req) => {
     
     // Validate the request parameters
     if (!projectId) {
-      console.error('Missing required parameter: projectId');
+      console.error('❌ Missing required parameter: projectId');
       return new Response(
         JSON.stringify({ 
           error: 'Missing required parameter: projectId',
@@ -75,7 +90,10 @@ serve(async (req) => {
     // Validate document content
     const contentValidation = validateDocumentContent(documentContents);
     if (!contentValidation.valid) {
-      console.log('Document content validation failed:', contentValidation.message);
+      if (DEBUG_MODE) {
+        console.log('❌ Document content validation failed:', contentValidation.message);
+        console.log('📄 Content validation details:', JSON.stringify(contentValidation));
+      }
       return new Response(
         JSON.stringify({ 
           error: contentValidation.message,
@@ -87,7 +105,9 @@ serve(async (req) => {
     }
     
     // Log content length for debugging
-    console.log(`Total content length: ${contentValidation.contentLength || 'unknown'} characters`);
+    if (DEBUG_MODE) {
+      console.log(`📊 Total content length: ${contentValidation.contentLength || 'unknown'} characters`);
+    }
     
     // Generate the prompts for Claude
     const userPrompt = generatePrompt(
@@ -103,52 +123,89 @@ serve(async (req) => {
       projectTitle
     );
     
+    if (DEBUG_MODE) {
+      console.log('📝 Generated prompts:');
+      console.log(`  System prompt length: ${finalSystemPrompt.length} chars`);
+      console.log(`  User prompt length: ${userPrompt.length} chars`);
+      console.log(`  System prompt preview: ${finalSystemPrompt.substring(0, 100)}...`);
+      console.log(`  User prompt preview: ${userPrompt.substring(0, 100)}...`);
+    }
+    
     // Call the Anthropic API with proper timeout
-    console.log('Calling Anthropic API...');
+    if (DEBUG_MODE) console.log('🔄 Calling Anthropic API...');
     const startTime = Date.now();
     
-    const claudeResponse = await callAnthropicAPI(userPrompt, finalSystemPrompt, {
-      timeoutMs: 90000, // 90 second timeout
-      temperature: 0.3,  // Lower temperature for more focused responses
-      maxTokens: 4000    // Reasonable token limit for insights
-    });
-    
-    const endTime = Date.now();
-    console.log(`Claude API call completed in ${(endTime - startTime) / 1000} seconds`);
-    
-    // Parse Claude's response
-    console.log('Parsing Claude response...');
-    const insights = parseClaudeResponse(claudeResponse);
-    
-    if (!insights || insights.length === 0) {
-      console.warn('No insights extracted from Claude response');
+    try {
+      const claudeResponse = await callAnthropicAPI(userPrompt, finalSystemPrompt, {
+        timeoutMs: 90000, // 90 second timeout
+        temperature: 0.3,  // Lower temperature for more focused responses
+        maxTokens: 4000    // Reasonable token limit for insights
+      });
+      
+      const endTime = Date.now();
+      if (DEBUG_MODE) {
+        console.log(`✅ Claude API call completed in ${(endTime - startTime) / 1000} seconds`);
+        console.log(`📄 Response length: ${claudeResponse.length} chars`);
+        console.log(`📄 Response preview: ${claudeResponse.substring(0, 150)}...`);
+      }
+      
+      // Parse Claude's response
+      if (DEBUG_MODE) console.log('🔄 Parsing Claude response...');
+      const insights = parseClaudeResponse(claudeResponse);
+      
+      if (!insights || insights.length === 0) {
+        console.warn('⚠️ No insights extracted from Claude response');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to extract insights from Claude response',
+            rawResponse: claudeResponse.substring(0, 1000) + '...',
+            insights: []
+          }),
+          { 
+            status: 422, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      if (DEBUG_MODE) console.log(`✅ Successfully extracted ${insights.length} insights from Claude response`);
+      
+      // Return the insights
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to extract insights from Claude response',
-          rawResponse: claudeResponse.substring(0, 1000) + '...',
-          insights: []
+          insights,
+          count: insights.length,
+          processingTimeMs: endTime - startTime
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (apiError) {
+      const endTime = Date.now();
+      console.error('❌ Error calling Anthropic API:', apiError);
+      console.error('⏱️ Failed after', (endTime - startTime) / 1000, 'seconds');
+      
+      if (DEBUG_MODE && apiError instanceof Error) {
+        console.error('❌ Error details:', {
+          name: apiError.name,
+          message: apiError.message,
+          stack: apiError.stack
+        });
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          error: apiError instanceof Error ? apiError.message : String(apiError),
+          errorType: apiError instanceof Error ? apiError.name : 'Unknown',
+          insights: [] 
         }),
         { 
-          status: 422, 
+          status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
-    
-    console.log(`Successfully extracted ${insights.length} insights from Claude response`);
-    
-    // Return the insights
-    return new Response(
-      JSON.stringify({ 
-        insights,
-        count: insights.length,
-        processingTimeMs: endTime - startTime
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-    
   } catch (error) {
-    console.error('Error in generate-insights-with-anthropic:', error);
+    console.error('❌ Error in generate-insights-with-anthropic:', error);
     
     // Import error handling module using dynamic import
     try {
@@ -156,7 +213,7 @@ serve(async (req) => {
       return createErrorResponse(error);
     } catch (importError) {
       // If even the error handler can't be imported, return a basic error response
-      console.error('Failed to import error handler:', importError);
+      console.error('❌ Failed to import error handler:', importError);
       return new Response(
         JSON.stringify({ 
           error: error instanceof Error ? error.message : 'Unknown error processing insights',

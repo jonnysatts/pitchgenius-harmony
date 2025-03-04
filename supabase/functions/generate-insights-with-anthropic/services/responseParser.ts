@@ -3,19 +3,22 @@
  * Service for parsing Claude API responses
  */
 
+// Enable debug mode for detailed logging
+const DEBUG_MODE = true;
+
 /**
  * Parse Claude's response text into structured data
  */
 export function parseClaudeResponse(responseText: string): any[] {
-  console.log('Parsing Claude response...');
-  console.log('Response length:', responseText.length);
+  if (DEBUG_MODE) {
+    console.log('🔄 Parsing Claude response...');
+    console.log('📄 Response length:', responseText.length);
+    console.log('📄 Response sample:', responseText.substring(0, 200) + '...');
+  }
   
   try {
     // First try to extract JSON if it's wrapped in markdown code blocks
     let jsonString = responseText;
-    
-    // Log a sample of the response for debugging
-    console.log('Response sample:', responseText.substring(0, 200) + '...');
     
     // Try multiple approaches to extract JSON
     
@@ -23,52 +26,89 @@ export function parseClaudeResponse(responseText: string): any[] {
     const jsonBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (jsonBlockMatch && jsonBlockMatch[1]) {
       jsonString = jsonBlockMatch[1];
-      console.log('Extracted JSON from code block, length:', jsonString.length);
+      if (DEBUG_MODE) console.log('📄 Extracted JSON from code block, length:', jsonString.length);
     } 
-    // Approach 2: Look for a JSON object structure
+    // Approach 2: Look for a JSON object structure with insights
     else {
       const possibleJsonMatch = responseText.match(/{[\s\S]*"insights"[\s\S]*?}/);
       if (possibleJsonMatch) {
         jsonString = possibleJsonMatch[0];
-        console.log('Extracted JSON object by pattern matching, length:', jsonString.length);
+        if (DEBUG_MODE) console.log('📄 Extracted JSON object by pattern matching, length:', jsonString.length);
       }
     }
     
     // Try to clean up the JSON string
     jsonString = jsonString.trim();
     
+    // Log the extracted JSON string for debugging
+    if (DEBUG_MODE) {
+      console.log('📄 Extracted JSON string (first 200 chars):', jsonString.substring(0, 200) + '...');
+    }
+    
     // Try to parse the JSON with detailed error handling
     let parsedData;
     try {
       parsedData = JSON.parse(jsonString);
-      console.log('Successfully parsed JSON');
+      if (DEBUG_MODE) console.log('✅ Successfully parsed JSON on first attempt');
     } catch (parseError) {
-      console.error('JSON parsing error:', parseError);
-      console.log('Attempting to fix common JSON issues...');
+      console.error('❌ JSON parsing error:', parseError);
+      if (DEBUG_MODE) console.log('🔄 Attempting to fix common JSON issues...');
       
       // Try to fix common JSON issues
       const fixedJsonString = jsonString
         .replace(/(\w+):/g, "\"$1\":") // Add quotes around keys
         .replace(/,\s*}/g, "}") // Remove trailing commas
         .replace(/,\s*]/g, "]") // Remove trailing commas in arrays
-        .replace(/'/g, "\""); // Replace single quotes with double quotes
+        .replace(/'/g, "\"")    // Replace single quotes with double quotes
+        .replace(/\n/g, " ");   // Remove newlines which can cause parsing issues
+      
+      if (DEBUG_MODE) {
+        console.log('📄 Fixed JSON string (first 200 chars):', fixedJsonString.substring(0, 200) + '...');
+      }
       
       try {
         parsedData = JSON.parse(fixedJsonString);
-        console.log('Successfully parsed JSON after fixing format issues');
+        if (DEBUG_MODE) console.log('✅ Successfully parsed JSON after fixing format issues');
       } catch (fixError) {
-        console.error('Failed to fix JSON:', fixError);
+        console.error('❌ Failed to fix JSON:', fixError);
         
         // Last resort: Try to extract just the insights array
+        if (DEBUG_MODE) console.log('🔄 Attempting to extract just the insights array...');
         const insightsArrayMatch = responseText.match(/"insights"\s*:\s*\[([\s\S]*?)\]/);
-        if (insightsArrayMatch) {
+        if (insightsArrayMatch && insightsArrayMatch[1]) {
           try {
-            const insightsArray = JSON.parse(`[${insightsArrayMatch[1]}]`);
-            console.log('Extracted insights array directly');
+            const insightsArrayText = `[${insightsArrayMatch[1]}]`;
+            if (DEBUG_MODE) console.log('📄 Extracted insights array text:', insightsArrayText.substring(0, 100) + '...');
+            
+            // Fix potential issues in the array
+            const fixedArrayText = insightsArrayText
+              .replace(/'/g, "\"")
+              .replace(/(\w+):/g, "\"$1\":")
+              .replace(/,\s*]/g, "]");
+              
+            const insightsArray = JSON.parse(fixedArrayText);
+            if (DEBUG_MODE) console.log('✅ Successfully extracted insights array directly');
             return insightsArray;
           } catch (arrayError) {
-            console.error('Failed to extract insights array:', arrayError);
+            console.error('❌ Failed to extract insights array:', arrayError);
           }
+        }
+        
+        // Try another approach with a more lenient regex
+        if (DEBUG_MODE) console.log('🔄 Trying more lenient regex pattern...');
+        try {
+          // Look for any array structure that might contain our insights
+          const anyArrayMatch = responseText.match(/\[([\s\S]*?)\]/);
+          if (anyArrayMatch && anyArrayMatch[1]) {
+            const possibleArray = `[${anyArrayMatch[1]}]`;
+            const arrayData = JSON.parse(possibleArray);
+            if (Array.isArray(arrayData) && arrayData.length > 0) {
+              if (DEBUG_MODE) console.log('✅ Found an array structure, using it as insights');
+              return arrayData;
+            }
+          }
+        } catch (lenientError) {
+          console.error('❌ Lenient parsing approach failed:', lenientError);
         }
         
         // If all parsing attempts fail, throw the original error
@@ -78,14 +118,15 @@ export function parseClaudeResponse(responseText: string): any[] {
     
     // Check if the expected structure exists
     if (!parsedData.insights || !Array.isArray(parsedData.insights)) {
-      console.error('Invalid response structure - missing insights array:', 
+      console.error('❌ Invalid response structure - missing insights array:', 
                     Object.keys(parsedData));
       
       // Try to convert the structure if possible
       if (Array.isArray(parsedData)) {
-        console.log('Data is an array, using as insights directly');
+        if (DEBUG_MODE) console.log('✅ Data is an array, using as insights directly');
         parsedData = { insights: parsedData };
       } else {
+        console.error('❌ Could not find or create a valid insights array structure');
         // Create a default structure
         return [];
       }
@@ -100,11 +141,11 @@ export function parseClaudeResponse(responseText: string): any[] {
       return insight;
     });
     
-    console.log(`Successfully parsed ${parsedData.insights.length} insights`);
+    if (DEBUG_MODE) console.log(`✅ Successfully parsed ${parsedData.insights.length} insights`);
     return parsedData.insights;
   } catch (error) {
-    console.error('Error parsing Claude response:', error);
-    console.error('Response text sample:', responseText.substring(0, 500) + '...');
+    console.error('❌ Error parsing Claude response:', error);
+    console.error('📄 Response text sample:', responseText.substring(0, 500) + '...');
     return [];
   }
 }
