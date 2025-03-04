@@ -1,40 +1,85 @@
-import React from "react";
+
+import React, { useMemo } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import NoWebsiteCard from "./web-insights/NoWebsiteCard";
 import WebsiteUrlCard from "./web-insights/WebsiteUrlCard";
 import { FirecrawlApiKeyForm } from "./web-insights/FirecrawlApiKeyForm";
-import WebInsightsHeader from "./web-insights/WebInsightsHeader";
+import { WebInsightsHeader } from "./web-insights/WebInsightsHeader";
 import WebInsightsTabs from "./web-insights/WebInsightsTabs";
-import AllInsightsTab from "./web-insights/AllInsightsTab";
-import InsightCategoryTab from "./web-insights/InsightCategoryTab";
-import WebsiteAnalysisControls from "./web-insights/WebsiteAnalysisControls";
-import NoInsightsEmptyState from "./web-insights/NoInsightsEmptyState";
-import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
+import { NoInsightsEmptyState } from "./web-insights/NoInsightsEmptyState";
+import { WebsiteAnalysisControls } from "./web-insights/WebsiteAnalysisControls";
+import { WebsiteInsightCategory, StrategicInsight, AIProcessingStatus, Project } from "@/lib/types";
+import { websiteInsightCategories } from "@/components/project/insights/constants";
 
 interface WebInsightsTabContentProps {
-  websiteUrl: string | undefined;
+  websiteUrl?: string;
   isAnalyzingWebsite: boolean;
   insights: StrategicInsight[];
+  reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
   error: string | null | undefined;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   handleAnalyzeWebsite: () => void;
+  onAcceptInsight: (insightId: string) => void;
+  onRejectInsight: (insightId: string) => void;
+  onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
+  aiStatus?: AIProcessingStatus;
 }
 
 const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   websiteUrl,
   isAnalyzingWebsite,
   insights,
+  reviewedInsights,
   error,
   activeTab,
   setActiveTab,
-  handleAnalyzeWebsite
+  handleAnalyzeWebsite,
+  onAcceptInsight,
+  onRejectInsight,
+  onUpdateInsight,
+  aiStatus
 }) => {
   const hasInsights = insights && insights.length > 0;
+  
+  // Organize insights by category
+  const insightsByCategory = useMemo(() => {
+    const categories = {} as Record<WebsiteInsightCategory, StrategicInsight[]>;
+    
+    // Initialize categories with empty arrays
+    websiteInsightCategories.forEach(category => {
+      categories[category.id as WebsiteInsightCategory] = [];
+    });
+    
+    // Populate categories with insights
+    insights.forEach(insight => {
+      const category = insight.category as WebsiteInsightCategory;
+      if (categories[category]) {
+        categories[category].push(insight);
+      }
+    });
+    
+    return categories;
+  }, [insights]);
+
+  // Get filtered categories that have insights
+  const filteredCategories = useMemo(() => {
+    return websiteInsightCategories.filter(category => {
+      const categoryId = category.id as WebsiteInsightCategory;
+      return insightsByCategory[categoryId]?.length > 0;
+    });
+  }, [insightsByCategory]);
 
   return (
     <div>
-      <WebInsightsHeader />
+      <WebInsightsHeader 
+        websiteUrl={websiteUrl}
+        hasWebsiteUrl={!!websiteUrl}
+        isAnalyzing={isAnalyzingWebsite}
+        onAnalyzeWebsite={handleAnalyzeWebsite}
+        hasInsights={hasInsights}
+        aiStatus={aiStatus}
+      />
       
       {!websiteUrl ? (
         <NoWebsiteCard />
@@ -43,8 +88,21 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
           <WebsiteUrlCard websiteUrl={websiteUrl} />
           <FirecrawlApiKeyForm />
           <WebsiteAnalysisControls 
-            isAnalyzingWebsite={isAnalyzingWebsite}
+            project={{
+              id: '1',
+              clientWebsite: websiteUrl,
+              title: '',
+              clientName: '',
+              clientIndustry: '',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              ownerId: '',
+              description: ''
+            } as Project}
+            isAnalyzing={isAnalyzingWebsite}
             onAnalyzeWebsite={handleAnalyzeWebsite}
+            hasInsights={hasInsights}
+            aiStatus={aiStatus}
           />
 
           {error && (
@@ -56,77 +114,21 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
           )}
 
           {hasInsights ? (
-            <Tabs defaultValue="all" className="mt-4" onValueChange={setActiveTab}>
-              <WebInsightsTabs />
-              <TabsContent value="all" className="mt-2">
-                <AllInsightsTab insights={insights} />
-              </TabsContent>
-              <TabsContent value="business_imperatives" className="mt-2">
-                <InsightCategoryTab 
-                  insights={insights} 
-                  category="business_imperatives" 
-                  categoryTitle="Business Imperatives"
-                />
-              </TabsContent>
-              <TabsContent value="gaming_audience_opportunity" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="gaming_audience_opportunity"
-                  categoryTitle="Gaming Audience Opportunity"
-                />
-              </TabsContent>
-              <TabsContent value="strategic_activation_pathways" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="strategic_activation_pathways"
-                  categoryTitle="Strategic Activation Pathways"
-                />
-              </TabsContent>
-              <TabsContent value="company_positioning" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="company_positioning"
-                  categoryTitle="Company Positioning"
-                />
-              </TabsContent>
-              <TabsContent value="competitive_landscape" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="competitive_landscape"
-                  categoryTitle="Competitive Landscape"
-                />
-              </TabsContent>
-              <TabsContent value="key_partnerships" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="key_partnerships"
-                  categoryTitle="Key Partnerships"
-                />
-              </TabsContent>
-              <TabsContent value="public_announcements" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="public_announcements"
-                  categoryTitle="Public Announcements"
-                />
-              </TabsContent>
-               <TabsContent value="product_service_fit" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="product_service_fit"
-                  categoryTitle="Product Service Fit"
-                />
-              </TabsContent>
-              <TabsContent value="consumer_engagement" className="mt-2">
-                <InsightCategoryTab
-                  insights={insights}
-                  category="consumer_engagement"
-                  categoryTitle="Consumer Engagement"
-                />
-              </TabsContent>
-            </Tabs>
+            <WebInsightsTabs
+              insightsByCategory={insightsByCategory}
+              reviewedInsights={reviewedInsights}
+              onAcceptInsight={onAcceptInsight}
+              onRejectInsight={onRejectInsight}
+              onUpdateInsight={onUpdateInsight}
+              totalInsightsCount={insights.length}
+              insights={insights}
+            />
           ) : (
-            <NoInsightsEmptyState />
+            <NoInsightsEmptyState 
+              hasWebsiteUrl={!!websiteUrl}
+              isAnalyzing={isAnalyzingWebsite}
+              onAnalyzeWebsite={handleAnalyzeWebsite}
+            />
           )}
         </>
       )}

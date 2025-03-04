@@ -123,18 +123,18 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
           
           <TabsContent value="webinsights">
             <WebInsightsTabContent 
-              project={project}
-              websiteInsights={websiteInsights}
-              reviewedInsights={reviewedInsights}
+              websiteUrl={project.clientWebsite}
               isAnalyzingWebsite={isAnalyzingWebsite}
+              insights={websiteInsights}
+              reviewedInsights={reviewedInsights}
               error={error}
-              onAnalyzeWebsite={handleAnalyzeWebsite}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              handleAnalyzeWebsite={handleAnalyzeWebsite}
               onAcceptInsight={handleAcceptInsight}
               onRejectInsight={handleRejectInsight}
               onUpdateInsight={handleUpdateInsight}
-              onNavigateToInsights={() => setActiveTab("insights")}
-              onRetryAnalysis={onRetryAnalysis}
-              aiStatus={aiStatus} // Add this missing prop
+              aiStatus={aiStatus}
             />
           </TabsContent>
           
