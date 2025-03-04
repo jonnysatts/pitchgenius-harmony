@@ -1,4 +1,3 @@
-
 /**
  * Service for interacting with Firecrawl API to extract website content
  */
@@ -9,18 +8,17 @@
 export async function extractContentWithFirecrawl(websiteUrl: string): Promise<string> {
   console.log(`Extracting content from ${websiteUrl} with Firecrawl`);
   
-  // Check if we have the Firecrawl API key (checking both possible environment variable names)
+  // Retrieve Firecrawl API key from environment variables
   const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
   
   if (!firecrawlApiKey) {
-    console.warn('FIRECRAWL_API_KEY or FIRECRAWL_API_KPI not found in environment');
+    console.warn('Firecrawl API key not found in environment variables');
     throw new Error('Firecrawl API key not found in environment variables');
   }
   
-  // Log the key being used (safely)
+  // Identify the source of the API key for logging
   const keySource = Deno.env.get('FIRECRAWL_API_KEY') ? 'FIRECRAWL_API_KEY' : 'FIRECRAWL_API_KPI';
-  const keyPrefix = firecrawlApiKey.substring(0, 5) + '...';
-  console.log(`Using ${keySource} with prefix: ${keyPrefix}`);
+  console.log(`Using ${keySource}`);
   
   try {
     console.log('Making request to Firecrawl API...');
@@ -39,7 +37,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
       body: JSON.stringify({
         url: websiteUrl,
         limit: 20,  // Number of pages to crawl
-        format: 'markdown',
+        format: 'markdown'
         // Add any additional options needed
       })
     });
@@ -55,7 +53,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     const data = await response.json();
     console.log('Firecrawl API response data structure:', Object.keys(data));
     
-    // Extract content from Firecrawl response
+    // Validate Firecrawl response
     if (!data || !data.results || !Array.isArray(data.results)) {
       console.error('Invalid response from Firecrawl:', JSON.stringify(data).substring(0, 200));
       throw new Error('Invalid response from Firecrawl API');
