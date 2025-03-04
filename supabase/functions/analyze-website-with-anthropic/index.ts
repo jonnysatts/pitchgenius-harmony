@@ -1,6 +1,7 @@
 
 import { corsHeaders } from './utils/corsHandlers.ts';
 import { handleAnalysisRequest, handleDiagnosticRequest } from './services/requestHandler.ts';
+import { createErrorResponse } from './services/errorHandler.ts';
 
 // Enable detailed logging
 const DEBUG_MODE = true;
@@ -18,7 +19,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.split('/').pop();
   
-  if (DEBUG_MODE) console.log(`Request received for path: ${path || 'root'}`);
+  if (DEBUG_MODE) console.log(`Request received for path: ${path || 'root'}, method: ${req.method}`);
 
   try {
     // Add diagnostic endpoint
@@ -31,6 +32,7 @@ Deno.serve(async (req) => {
     let requestData;
     try {
       requestData = await req.json();
+      if (DEBUG_MODE) console.log('Request body parsed successfully');
     } catch (e) {
       console.error('Error parsing request body:', e);
       return new Response(
@@ -82,14 +84,19 @@ Deno.serve(async (req) => {
     // Regular website analysis path
     if (DEBUG_MODE) console.log('Processing website analysis request');
     
-    // Create a new request with the same body for handleAnalysisRequest
-    const newReq = new Request(req.url, {
-      method: req.method,
-      headers: req.headers,
-      body: JSON.stringify(requestData)
-    });
-    
-    return await handleAnalysisRequest(newReq);
+    try {
+      // Create a new request with the same body for handleAnalysisRequest
+      const newReq = new Request(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: JSON.stringify(requestData)
+      });
+      
+      return await handleAnalysisRequest(newReq);
+    } catch (analysisError) {
+      console.error('Error during analysis:', analysisError);
+      return createErrorResponse(analysisError, 500, requestData.client_industry || "technology");
+    }
   } catch (error) {
     console.error(`Error processing request:`, error);
     

@@ -53,6 +53,8 @@ export async function fetchFirecrawlContent(url: string): Promise<string> {
     
     clearTimeout(timeoutId);
     
+    console.log(`Firecrawl API response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Firecrawl API error: ${response.status} ${response.statusText} - ${errorText}`);
@@ -62,23 +64,55 @@ export async function fetchFirecrawlContent(url: string): Promise<string> {
     
     const data = await response.json();
     console.log(`Firecrawl API response status: ${data.success ? 'success' : 'failed'}`);
+    console.log('Response data structure:', Object.keys(data));
     
-    if (data.success && data.data && data.data.length > 0) {
-      // Combine all content from crawled pages
+    // Handle the API response format - the structure might vary between API versions
+    if (data.success) {
+      // Handle new API response format
+      if (data.data && data.data.length > 0) {
+        // Combine all content from crawled pages
+        let combinedContent = '';
+        
+        console.log(`Firecrawl returned ${data.data.length} pages of content`);
+        
+        for (const page of data.data) {
+          if (page.markdown) {
+            combinedContent += `\n\n## ${page.url}\n\n${page.markdown}`;
+          } else if (page.text) {
+            combinedContent += `\n\n## ${page.url}\n\n${page.text}`;
+          }
+        }
+        
+        const contentLength = combinedContent.length;
+        console.log(`Successfully fetched content with Firecrawl (${contentLength} chars)`);
+        
+        // Limit content length for Claude's context window
+        const maxContentLength = 25000;
+        const truncatedContent = combinedContent.length > maxContentLength 
+          ? combinedContent.substring(0, maxContentLength) + "\n\n[Content truncated due to size limits]" 
+          : combinedContent;
+        
+        if (truncatedContent.length < contentLength) {
+          console.log(`Content truncated from ${contentLength} to ${truncatedContent.length} chars for Claude's context window`);
+        }
+        
+        return truncatedContent;
+      }
+    } 
+    // Handle old API response format
+    else if (data.results && Array.isArray(data.results)) {
       let combinedContent = '';
       
-      console.log(`Firecrawl returned ${data.data.length} pages of content`);
+      console.log(`Firecrawl returned ${data.results.length} pages of content (old API format)`);
       
-      for (const page of data.data) {
-        if (page.markdown) {
-          combinedContent += `\n\n## ${page.url}\n\n${page.markdown}`;
-        } else if (page.text) {
-          combinedContent += `\n\n## ${page.url}\n\n${page.text}`;
+      for (const page of data.results) {
+        if (page && page.content) {
+          combinedContent += `\n\n## ${page.url || 'Unnamed Page'}\n\n${page.content}`;
         }
       }
       
       const contentLength = combinedContent.length;
-      console.log(`Successfully fetched content with Firecrawl (${contentLength} chars)`);
+      console.log(`Successfully fetched content with Firecrawl (${contentLength} chars) using old API format`);
       
       // Limit content length for Claude's context window
       const maxContentLength = 25000;
@@ -86,16 +120,13 @@ export async function fetchFirecrawlContent(url: string): Promise<string> {
         ? combinedContent.substring(0, maxContentLength) + "\n\n[Content truncated due to size limits]" 
         : combinedContent;
       
-      if (truncatedContent.length < contentLength) {
-        console.log(`Content truncated from ${contentLength} to ${truncatedContent.length} chars for Claude's context window`);
-      }
-      
       return truncatedContent;
-    } else {
-      console.error('No content returned from Firecrawl, response:', JSON.stringify(data).substring(0, 200));
-      console.log('Falling back to basic fetch');
-      return await fetchWebsiteContentBasic(url);
     }
+    
+    // If we reach here, no valid content was extracted
+    console.error('No content returned from Firecrawl, response:', JSON.stringify(data).substring(0, 200));
+    console.log('Falling back to basic fetch');
+    return await fetchWebsiteContentBasic(url);
   } catch (error) {
     console.error('Error using Firecrawl API, falling back to basic fetch:', error);
     return await fetchWebsiteContentBasic(url);

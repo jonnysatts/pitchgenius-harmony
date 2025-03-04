@@ -95,7 +95,8 @@ export class FirecrawlService {
           client_industry: clientIndustry,
           use_firecrawl: true,
           system_prompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
-          max_response_time: 90 // Set max response time to 90 seconds to avoid timeouts
+          max_response_time: 120, // Set max response time to 120 seconds to avoid timeouts
+          test_mode: false // Ensure this is false for real analysis
         }
       });
       
@@ -105,6 +106,13 @@ export class FirecrawlService {
       }
       
       console.log('Edge function response:', data);
+      
+      // Verify that insights were returned
+      if (!data || !data.insights || data.insights.length === 0) {
+        console.error('No insights returned from edge function');
+        throw new Error('No insights returned from website analysis. The API may have failed to extract meaningful content.');
+      }
+      
       return data;
     } catch (error) {
       console.error('Exception analyzing website via Supabase:', error);
@@ -125,6 +133,51 @@ export class FirecrawlService {
       }
       
       throw error;
+    }
+  }
+  
+  /**
+   * Run a test analysis with test_mode=true
+   * This tests the connection without running a full analysis
+   */
+  static async testWebsiteAnalysis(url: string = "https://example.com"): Promise<any> {
+    try {
+      console.log('Testing website analysis functionality with test_mode=true');
+      
+      // Import the supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Call edge function with test_mode
+      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+        body: {
+          website_url: url,
+          client_name: "Test Client",
+          client_industry: "technology",
+          test_mode: true // This will return mock data without actually calling Claude
+        }
+      });
+      
+      if (error) {
+        console.error('Error testing website analysis:', error);
+        return {
+          success: false,
+          error: error.message || 'Unknown error during website analysis test',
+          edgeFunctionWorking: false
+        };
+      }
+      
+      return {
+        success: true,
+        data,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Exception testing website analysis:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      };
     }
   }
   

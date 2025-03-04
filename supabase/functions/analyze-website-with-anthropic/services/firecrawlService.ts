@@ -19,6 +19,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
   
   try {
     console.log('Making request to Firecrawl API...');
+    console.log('Using API key prefix:', firecrawlApiKey.substring(0, 5) + '...');
     
     // Make a request to the Firecrawl API
     const response = await fetch('https://api.firecrawl.dev/crawl', {
@@ -35,6 +36,8 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
       })
     });
     
+    console.log(`Firecrawl API response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Firecrawl API error (${response.status}): ${errorText}`);
@@ -42,6 +45,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     }
     
     const data = await response.json();
+    console.log('Firecrawl API response data structure:', Object.keys(data));
     
     // Extract content from Firecrawl response
     if (!data || !data.results || !Array.isArray(data.results)) {
@@ -63,6 +67,8 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     return allContent.trim();
   } catch (error) {
     console.error(`Error in Firecrawl extraction: ${error instanceof Error ? error.message : String(error)}`);
+    console.error('Falling back to basic website extraction');
+    // Return a minimal error message that will be handled upstream
     throw new Error(`Firecrawl extraction failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
