@@ -1,10 +1,10 @@
 /**
  * Process raw insights from API responses
  */
-import { StrategicInsight, WebsiteInsightCategory, Project } from "@/lib/types";
+import { StrategicInsight, Project } from "@/lib/types";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
 import { normalizeWebsiteCategory, isValidWebsiteCategory } from "@/components/project/insights/utils/insightFormatters";
-import { getCategoryTitle, getCategoryRecommendation } from "./insightContentUtils";
+import { getCategoryTitle, getCategoryRecommendation, cleanTextContent } from "./insightContentUtils";
 
 /**
  * Process and normalize raw insights from the API
@@ -90,9 +90,10 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       title = getCategoryTitle(normalizedCategory);
     }
     
-    // Clean up the summary to remove duplicate website-derived markers and errors
+    // Clean up the summary to remove duplicate website-derived markers
     let summary = insight.content?.summary || '';
-    summary = summary.replace(/\[Website-derived\]\s*\[Website-derived\]/g, '[Website-derived]');
+    summary = summary.replace(/\[Website-derived\]/g, '').trim();
+    summary = summary.replace(/🌐\s*🌐/g, '🌐').trim();
     
     // Check for error patterns in summary
     if (summary.includes('-1685557426') || summary.includes('category') || summary === '.' || summary === '') {
@@ -114,12 +115,12 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
     // Fix the type by explicitly setting source to 'website'
     return {
       ...insight,
-      source: 'website' as 'website', // Use type assertion to match the expected literal type
+      source: 'website' as 'website',
       category: normalizedCategory,
       content: {
         ...insight.content,
         title,
-        summary: summary.includes('[Website-derived]') ? summary : `🌐 [Website-derived] ${summary}`,
+        summary: `🌐 ${summary}`, // Simplified marker without [Website-derived]
         details,
         recommendations,
         websiteUrl: project.clientWebsite,

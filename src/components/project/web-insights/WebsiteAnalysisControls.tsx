@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Project } from '@/lib/types';
 import { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
 import { ArrowRight, Globe, Server, RefreshCw } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
 
 interface WebsiteAnalysisControlsProps {
   project: Project;
@@ -19,13 +20,31 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
   hasInsights
 }) => {
   const hasWebsiteUrl = !!project.clientWebsite;
-
-  const handleAnalyzeWebsite = () => {
-    console.log("Analyze website button clicked, hasInsights:", hasInsights);
-    if (onAnalyzeWebsite) {
-      onAnalyzeWebsite();
+  const [progress, setProgress] = React.useState(0);
+  
+  // Simulate progress when analysis starts
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isAnalyzing) {
+      setProgress(0);
+      interval = setInterval(() => {
+        setProgress(prev => {
+          // Move slower through different phases
+          if (prev < 30) return prev + 2; // Initial phase
+          if (prev < 60) return prev + 0.5; // API processing phase
+          if (prev < 90) return prev + 1; // Final phase
+          return prev;
+        });
+      }, 300);
+    } else {
+      setProgress(0);
     }
-  };
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAnalyzing]);
 
   return (
     <div className="space-y-4">
@@ -44,8 +63,31 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
             </div>
           </div>
           
+          {isAnalyzing && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-slate-600">
+                <span>{progress < 30 ? 'Preparing analysis...' : 
+                       progress < 60 ? 'Processing website content...' :
+                       progress < 90 ? 'Generating insights...' :
+                       'Finalizing analysis...'}</span>
+                <span>{Math.min(Math.round(progress), 99)}%</span>
+              </div>
+              <Progress 
+                value={progress} 
+                className="w-full"
+                indicatorColor={progress >= 30 && progress < 60 ? "bg-blue-500" : undefined}
+                showAnimation={progress >= 30 && progress < 60}
+              />
+              <p className="text-xs text-slate-500 italic">
+                {progress >= 30 && progress < 60 ? 
+                  "Our AI is analyzing your website content. This may take up to 2 minutes..." :
+                  "Processing website content for strategic insights..."}
+              </p>
+            </div>
+          )}
+          
           <Button
-            onClick={handleAnalyzeWebsite}
+            onClick={onAnalyzeWebsite}
             disabled={isAnalyzing || !hasWebsiteUrl}
             className="w-full md:w-auto"
             size="lg"
