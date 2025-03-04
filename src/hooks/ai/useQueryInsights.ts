@@ -1,78 +1,246 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { StrategicInsight, Project } from '@/lib/types';
-import { apiClient } from '@/services/api/apiClient';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Project, StrategicInsight, StoredInsightData } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import { useErrorHandler } from "@/hooks/error/useErrorHandler";
 
 /**
- * React Query hook for insights management
+ * Provides query and mutation functions for managing insights
  */
-export const useQueryInsights = (projectId: string) => {
+export const useQueryInsights = (project: Project) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { handleError } = useErrorHandler();
   
-  // Query to fetch insights
-  const {
-    data: insights = [],
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['insights', projectId],
-    queryFn: () => apiClient.insights.getInsightsForProject(projectId),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!projectId,
-  });
-  
-  // Mutation to update an insight
-  const updateInsightMutation = useMutation({
-    mutationFn: ({ insightId, updatedContent }: { insightId: string, updatedContent: Record<string, any> }) => 
-      apiClient.insights.updateInsight(projectId, insightId, updatedContent),
-    onSuccess: () => {
-      // Invalidate the insights query to refetch
-      queryClient.invalidateQueries({ queryKey: ['insights', projectId] });
+  // Query key for this project's insights
+  const insightsQueryKey = ['project', project.id, 'insights'];
+
+  // Load insights from localStorage
+  const fetchInsights = async (): Promise<StrategicInsight[]> => {
+    if (!project?.id) return [];
+    
+    try {
+      const storedData = localStorage.getItem(`project_insights_${project.id}`);
+      if (storedData) {
+        const parsedData: StoredInsightData = JSON.parse(storedData);
+        console.log(`Loaded ${parsedData.insights.length} insights from storage for project ${project.id}`);
+        return parsedData.insights;
+      }
+      return [];
+    } catch (err) {
+      throw handleError(err, { context: 'loading-insights', projectId: project.id }).error;
+    }
+  };
+
+  // Save insights to localStorage
+  const persistInsights = async (insightData: {
+    insights: StrategicInsight[],
+    usingFallback?: boolean
+  }): Promise<void> => {
+    if (!project?.id || !insightData.insights.length) return;
+    
+    try {
+      const storageData: StoredInsightData = {
+        projectId: project.id,
+        insights: insightData.insights,
+        generationTimestamp: Date.now(),
+        usingFallbackData: !!insightData.usingFallback,
+        timestamp: new Date().toISOString(),
+        usingFallbackInsights: !!insightData.usingFallback
+      };
+      
+      localStorage.setItem(`project_insights_${project.id}`, JSON.stringify(storageData));
+      console.log(`Stored ${insightData.insights.length} insights for project ${project.id}`);
+    } catch (err) {
+      handleError(err, { context: 'persisting-insights', projectId: project.id });
+      console.error('Error storing insights:', err);
+      
       toast({
-        title: "Insight Updated",
-        description: "The insight has been successfully updated.",
+        title: "Failed to save insights",
+        description: "Your insights couldn't be saved to local storage",
+        variant: "destructive"
       });
+    }
+  };
+
+  // Query hook for insights
+  const insightsQuery = useQuery({
+    queryKey: insightsQueryKey,
+    queryFn: fetchInsights,
+    refetchOnMount: false,
+    refetchOnReconnect: false
+  });
+
+  // Mutation for adding new insights
+  const addInsightsMutation = useMutation({
+    mutationFn: async (newInsights: StrategicInsight[]) => {
+      if (!newInsights || newInsights.length === 0) {
+        console.warn('No new insights to add');
+        toast({
+          title: "No insights generated",
+          description: "The analysis completed but no insights were generated.",
+          variant: "destructive"
+        });
+        return insightsQuery.data || [];
+      }
+      
+      const currentInsights = insightsQuery.data || [];
+      let updatedInsights: StrategicInsight[] = [];
+      
+      // For website insights, remove existing website insights
+      if (newInsights.some(insight => insight.source === 'website')) {
+        console.log('Found website insights, replacing all existing website insights');
+        
+        // Filter out existing website insights
+        const nonWebsiteInsights = currentInsights.filter(
+          insight => insight.source !== 'website'
+        );
+        
+        // Combine with new website insights
+        updatedInsights = [...nonWebsiteInsights, ...newInsights];
+        
+        // Show toast
+        toast({
+          title: "Website insights added",
+          description: `${newInsights.length} website insights are now available.`,
+          variant: "default"
+        });
+      } else {
+        // For document insights, avoid duplicates based on content.title
+        const existingTitles = new Set(currentInsights.map(insight => 
+          insight.content && insight.content.title ? insight.content.title : ''
+        ));
+        
+        const filteredNewInsights = newInsights.filter(insight => 
+          insight.content && insight.content.title && !existingTitles.has(insight.content.title)
+        );
+        
+        if (filteredNewInsights.length === 0) {
+          console.warn('All new insights are duplicates of existing ones');
+          toast({
+            title: "No new insights",
+            description: "All insights were duplicates of existing ones.",
+            variant: "default"
+          });
+          return currentInsights;
+        }
+        
+        // Combine existing and new insights
+        updatedInsights = [...currentInsights, ...filteredNewInsights];
+        
+        // Show toast
+        toast({
+          title: "Document insights added",
+          description: `${filteredNewInsights.length} document insights added.`,
+          variant: "default"
+        });
+      }
+      
+      // Return the updated insights
+      return updatedInsights;
+    },
+    onSuccess: (updatedInsights) => {
+      // Persist to localStorage
+      persistInsights({ insights: updatedInsights });
+      
+      // Update the query cache
+      queryClient.setQueryData(insightsQueryKey, updatedInsights);
     },
     onError: (error) => {
+      handleError(error, { context: 'adding-insights', projectId: project.id });
       toast({
-        title: "Update Failed",
-        description: `Failed to update insight: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: "Failed to add insights",
+        description: "There was an error adding new insights",
         variant: "destructive"
       });
     }
   });
-  
-  // Filter insights by source
-  const documentInsights = insights.filter(insight => insight.source === 'document');
-  const websiteInsights = insights.filter(insight => insight.source === 'website');
-  
-  // Group insights by category
-  const groupInsightsByCategory = (insightsToGroup: StrategicInsight[]) => {
-    const grouped: Record<string, StrategicInsight[]> = {};
-    
-    insightsToGroup.forEach(insight => {
-      const category = insight.category || 'other';
-      if (!grouped[category]) {
-        grouped[category] = [];
+
+  // Mutation for setting entirely new insights
+  const setInsightsMutation = useMutation({
+    mutationFn: async ({ insights, usingFallback = false }: { 
+      insights: StrategicInsight[],
+      usingFallback?: boolean
+    }) => {
+      return insights;
+    },
+    onSuccess: (newInsights, { usingFallback }) => {
+      // Persist to localStorage
+      persistInsights({ insights: newInsights, usingFallback });
+      
+      // Update the query cache
+      queryClient.setQueryData(insightsQueryKey, newInsights);
+      
+      // Show a toast notification
+      if (newInsights.length > 0) {
+        toast({
+          title: `${usingFallback ? "Sample" : "New"} insights added`,
+          description: `${newInsights.length} insights are now available for review.`,
+          variant: "default"
+        });
       }
-      grouped[category].push(insight);
-    });
-    
-    return grouped;
-  };
+    },
+    onError: (error) => {
+      handleError(error, { context: 'setting-insights', projectId: project.id });
+      toast({
+        title: "Failed to update insights",
+        description: "There was an error updating insights",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation for updating a single insight
+  const updateInsightMutation = useMutation({
+    mutationFn: async ({ 
+      insightId, 
+      updates 
+    }: { 
+      insightId: string,
+      updates: Partial<StrategicInsight>
+    }) => {
+      const currentInsights = queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || [];
+      
+      return currentInsights.map(insight => 
+        insight.id === insightId 
+          ? { ...insight, ...updates } 
+          : insight
+      );
+    },
+    onSuccess: (updatedInsights) => {
+      // Persist to localStorage
+      persistInsights({ insights: updatedInsights });
+      
+      // Update the query cache
+      queryClient.setQueryData(insightsQueryKey, updatedInsights);
+    },
+    onError: (error) => {
+      handleError(error, { context: 'updating-insight', projectId: project.id });
+      toast({
+        title: "Failed to update insight",
+        description: "There was an error updating the insight",
+        variant: "destructive"
+      });
+    }
+  });
 
   return {
-    insights,
-    documentInsights,
-    websiteInsights,
-    isLoading,
-    error,
-    refetch,
-    updateInsight: updateInsightMutation.mutate,
-    isUpdating: updateInsightMutation.isPending,
-    groupInsightsByCategory
+    // Queries
+    insights: insightsQuery.data || [],
+    isLoading: insightsQuery.isLoading,
+    error: insightsQuery.error,
+    
+    // Mutations
+    addInsights: (newInsights: StrategicInsight[]) => 
+      addInsightsMutation.mutate(newInsights),
+    setInsights: (insights: StrategicInsight[], usingFallback = false) => 
+      setInsightsMutation.mutate({ insights, usingFallback }),
+    updateInsight: (insightId: string, updates: Partial<StrategicInsight>) => 
+      updateInsightMutation.mutate({ insightId, updates }),
+      
+    // Status
+    isAddingInsights: addInsightsMutation.isPending,
+    isSettingInsights: setInsightsMutation.isPending,
+    isUpdatingInsight: updateInsightMutation.isPending
   };
 };

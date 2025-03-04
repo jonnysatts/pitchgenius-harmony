@@ -1,41 +1,49 @@
 
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster as SonnerToaster } from "sonner";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/services/api/queryClient";
+
+// Pages
+import Index from "@/pages/Index";
+import Login from "@/pages/auth/Login";
+import Signup from "@/pages/auth/Signup";
+import Dashboard from "@/pages/Dashboard";
+import ProjectDetail from "@/pages/ProjectDetail";
+import NewProject from "@/pages/NewProject";
+import NotFound from "@/pages/NotFound";
+import Diagnostics from "@/pages/Diagnostics";
+
+// Providers
 import { AuthProvider } from "@/context/AuthContext";
 
-import Dashboard from "./pages/Dashboard";
-import ProjectDetail from "./pages/ProjectDetail";
-import NotFound from "./pages/NotFound";
-import NewProject from "./pages/NewProject";
-import Diagnostics from "./pages/Diagnostics";
+import "./App.css";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/projects/:projectId" element={<ProjectDetail />} />
-            <Route path="/projects/new" element={<NewProject />} />
-            <Route path="/diagnostics" element={<Diagnostics />} />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            {/* Add a specific route for NotFound */}
-            <Route path="/not-found" element={<NotFound />} />
-            {/* Catch all other routes */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/project/:id" element={<ProjectDetail />} />
+              <Route path="/new-project" element={<NewProject />} />
+              <Route path="/diagnostics" element={<Diagnostics />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+          <Toaster />
+          <SonnerToaster position="bottom-right" />
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
