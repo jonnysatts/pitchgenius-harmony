@@ -16,7 +16,19 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received test connection request')
+    console.log('Received test connection request', new Date().toISOString())
+    
+    // Parse the request body if present
+    let requestData = {};
+    try {
+      const requestText = await req.text();
+      if (requestText) {
+        requestData = JSON.parse(requestText);
+        console.log('Request data:', requestData);
+      }
+    } catch (parseError) {
+      console.log('No valid JSON in request body or empty body');
+    }
     
     // Check for environment variables
     const keys = [
@@ -24,11 +36,16 @@ serve(async (req) => {
       'OPEN_API_KEY',
       'SUPABASE_URL',
       'SUPABASE_ANON_KEY',
-      'SUPABASE_SERVICE_ROLE_KEY'
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'FIRECRAWL_API_KEY',
+      'FIRECRAWL_API_KPI'
     ]
     
     const results = {}
     let allKeysFound = true
+    let anthropicKeyFound = false
+    let keysFound = []
+    let keysMissing = []
     
     console.log('Checking for environment variables...')
     
@@ -37,32 +54,46 @@ serve(async (req) => {
       const exists = !!value
       console.log(`Checking ${key}: ${exists ? 'Found' : 'Not found'}`)
       
-      results[key] = {
-        exists,
+      if (exists) {
+        keysFound.push(key)
         // For security, only show first few chars of the actual key
-        preview: exists ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}` : null
-      }
-      
-      if (!exists) {
+        results[key] = {
+          exists,
+          preview: `${value.substring(0, 3)}...${value.substring(value.length - 3)}`
+        }
+        
+        // Check specifically for Anthropic API key
+        if (key === 'ANTHROPIC_API_KEY') {
+          anthropicKeyFound = true
+          console.log('ANTHROPIC_API_KEY found!')
+        }
+      } else {
+        keysMissing.push(key)
+        results[key] = { exists: false }
         allKeysFound = false
+        
+        // Log if we're missing critical keys
+        if (key === 'ANTHROPIC_API_KEY') {
+          console.log('CRITICAL: ANTHROPIC_API_KEY is missing!')
+        }
       }
     }
     
     console.log(`Keys check results: ${allKeysFound ? 'All keys found' : 'Some keys missing'}`)
+    console.log(`Found keys: ${keysFound.join(', ')}`)
+    console.log(`Missing keys: ${keysMissing.join(', ')}`)
     
     const responseData = {
       message: 'Connection test successful',
       timestamp: new Date().toISOString(),
       environmentChecks: results,
-      allKeysFound
+      allKeysFound,
+      anthropicKeyExists: anthropicKeyFound,
+      keysFound,
+      keysMissing
     }
     
-    console.log('Sending response:', JSON.stringify({
-      message: responseData.message,
-      allKeysFound: responseData.allKeysFound,
-      keysFound: Object.keys(results).filter(k => results[k].exists),
-      keysMissing: Object.keys(results).filter(k => !results[k].exists)
-    }))
+    console.log('Sending test-connection response')
     
     return new Response(
       JSON.stringify(responseData),
@@ -75,10 +106,12 @@ serve(async (req) => {
     )
   } catch (error) {
     console.error('Error in test connection function:', error.message)
+    console.error('Error stack:', error.stack)
     
     return new Response(
       JSON.stringify({
         error: error.message,
+        stack: error.stack,
         timestamp: new Date().toISOString()
       }),
       { 

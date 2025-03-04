@@ -28,8 +28,37 @@ export const analyzeClientWebsite = async (
     console.log(`Analyzing client website: ${project.clientWebsite}`);
     console.log(`Project ID: ${project.id}, Client Name: ${project.clientName || 'Unknown'}`);
     
-    // Check if we can use the real API
-    const useRealApi = await checkSupabaseConnection();
+    // Directly try to test Supabase connection 
+    let useRealApi = false;
+    try {
+      console.log('Testing Supabase connection directly through test-connection function...');
+      
+      const { data, error } = await supabase.functions.invoke('test-connection', {
+        body: { timestamp: new Date().toISOString() }
+      });
+      
+      if (error) {
+        console.error('Error during direct Supabase connection test:', error);
+        throw new Error(`Supabase test-connection error: ${error.message}`);
+      }
+      
+      console.log('Direct Supabase connection test result:', data);
+      
+      // Check if Anthropic API key exists
+      const anthropicKeyExists = data?.environmentChecks?.ANTHROPIC_API_KEY?.exists;
+      
+      if (!anthropicKeyExists) {
+        console.error('ANTHROPIC_API_KEY not found in Supabase secrets');
+        throw new Error('ANTHROPIC_API_KEY not found in Supabase secrets');
+      }
+      
+      useRealApi = true;
+      console.log('Supabase connection verified with ANTHROPIC_API_KEY present');
+    } catch (connectionError) {
+      console.error('Failed to verify Supabase connection:', connectionError);
+      useRealApi = false;
+    }
+    
     console.log('Supabase connection check result:', useRealApi);
     
     // Notify user of analysis start
@@ -41,6 +70,14 @@ export const analyzeClientWebsite = async (
     
     if (!useRealApi) {
       console.log('Supabase connection not available, using mock website insights');
+      
+      toast({
+        title: "Using Sample Analysis",
+        description: "Could not connect to AI service. Using sample insights instead.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      
       const websiteMockInsights = generateWebsiteMockInsights(project);
       return { 
         insights: websiteMockInsights,
@@ -169,3 +206,4 @@ export const analyzeClientWebsite = async (
     };
   }
 };
+
