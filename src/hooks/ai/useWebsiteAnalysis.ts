@@ -2,22 +2,20 @@
 import { useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { FirecrawlService } from '@/utils/FirecrawlService';
-import { useToast } from '@/hooks/use-toast';
-import { generateFallbackWebsiteInsights } from '@/utils/fallbackInsights';
 import { useWebsiteAnalysisState } from './website/useWebsiteAnalysisState';
 import { useWebsiteAnalysisProgress } from './website/useWebsiteAnalysisProgress';
 import { useWebsiteUrlValidation } from './website/useWebsiteUrlValidation';
 import { useProgressCheck } from './website/useProgressCheck';
+import { useWebsiteAnalysisLogic } from './website/useWebsiteAnalysisLogic';
+import { useWebsiteAnalysisNotifications } from './website/useWebsiteAnalysisNotifications';
+import { useWebsiteInsightsProcessor } from './website/useWebsiteInsightsProcessor';
 
 export const useWebsiteAnalysis = (
   project: Project,
   addInsights: (insights: StrategicInsight[]) => void,
   setError: (error: string | null) => void
 ) => {
-  const { toast } = useToast();
-  const { isValidWebsiteUrl } = useWebsiteUrlValidation(project);
-  const { checkAnalysisProgress } = useProgressCheck();
-  
+  // Get the state management hook
   const {
     isAnalyzing,
     setIsAnalyzing,
@@ -29,148 +27,105 @@ export const useWebsiteAnalysis = (
     setAnalysisStatus
   } = useWebsiteAnalysisState();
 
+  // Get the URL validation hook
+  const { isValidWebsiteUrl } = useWebsiteUrlValidation(project);
+
+  // Get the progress checking hook
+  const { checkAnalysisProgress } = useProgressCheck();
+
+  // Set up the progress updates
   useWebsiteAnalysisProgress(isAnalyzing, setAnalysisProgress, setAnalysisStatus);
+
+  // Get notifications helpers
+  const {
+    notifyAnalysisStart,
+    notifyInvalidUrl,
+    notifyMissingUrl,
+    notifyApiSetupIssue,
+    notifyAnalysisError
+  } = useWebsiteAnalysisNotifications(project);
+
+  // Get website processor helpers
+  const {
+    setupProgressChecking,
+    handleFallbackInsights,
+    testApiConnection
+  } = useWebsiteInsightsProcessor(project, setError, setWebsiteInsights, addInsights);
+
+  // Get the analysis logic helpers
+  const {
+    handleAnalysisTimeout,
+    processAnalysisResult
+  } = useWebsiteAnalysisLogic(
+    project,
+    setIsAnalyzing,
+    setAnalysisProgress,
+    setAnalysisStatus,
+    setWebsiteInsights,
+    addInsights,
+    setError,
+    checkAnalysisProgress
+  );
 
   const analyzeWebsite = useCallback(async () => {
     setAnalysisProgress(0);
     setAnalysisStatus('Preparing to analyze website...');
     
     if (!project.clientWebsite) {
-      toast({
-        title: "Missing Website URL",
-        description: "Please add a website URL to the project before analyzing.",
-        variant: "destructive"
-      });
+      notifyMissingUrl();
       return;
     }
 
     if (!isValidWebsiteUrl()) {
-      toast({
-        title: "Invalid Website URL",
-        description: `"${project.clientWebsite}" doesn't appear to be a valid URL.`,
-        variant: "destructive"
-      });
+      notifyInvalidUrl();
       return;
     }
 
     try {
       setIsAnalyzing(true);
       setError(null);
-      
-      toast({
-        title: "Starting Website Analysis",
-        description: "Beginning analysis of " + project.clientWebsite,
-      });
+      notifyAnalysisStart();
 
+      // Set up the analysis timeout
       const analysisTimeout = setTimeout(() => {
-        console.log("Website analysis timed out - using fallback insights");
-        const fallbackInsights = generateFallbackWebsiteInsights(project);
-        setError("Analysis timed out. Using sample insights instead of actual website analysis.");
-        setWebsiteInsights(fallbackInsights);
-        addInsights(fallbackInsights);
-        setAnalysisProgress(100);
-        setAnalysisStatus('Analysis complete (using sample data)');
-        setIsAnalyzing(false);
-        
-        toast({
-          title: "Analysis Timeout",
-          description: "Analysis took too long to complete. Try again or use a simpler website.",
-          variant: "destructive"
-        });
+        // The handleAnalysisTimeout function requires progressInterval and progressCheckInterval
+        // We'll pass null here and handle it inside the function
+        handleAnalysisTimeout(null, null);
       }, 120000);
 
-      const progressInterval = setInterval(() => {
-        setAnalysisProgress(prev => {
-          if (prev < 10) {
-            setAnalysisStatus('Connecting to analysis service...');
-            return prev + 5;
-          } else if (prev < 20) {
-            setAnalysisStatus('Fetching website content...');
-            return prev + 2;
-          } else if (prev < 30) {
-            return prev + 0.5;
-          }
-          return Math.min(prev + 0.1, 95);
-        });
-      }, 200);
+      // Set up progress tracking and monitoring
+      const { progressInterval, progressCheckInterval } = setupProgressChecking(
+        project.clientWebsite,
+        checkAnalysisProgress,
+        setAnalysisProgress,
+        setIsAnalyzing
+      );
 
-      const progressCheckInterval = setInterval(() => {
-        checkAnalysisProgress(
-          project.clientWebsite!,
-          progressInterval,
-          analysisTimeout,
-          setAnalysisProgress,
-          setIsAnalyzing
-        );
-      }, 5000);
-
-      const testResult = await FirecrawlService.testWebsiteAnalysis();
-      
-      if (!testResult.success) {
-        clearInterval(progressInterval);
-        clearInterval(progressCheckInterval);
+      // Test API connection
+      const apiConnectionSuccess = await testApiConnection(progressInterval, progressCheckInterval);
+      if (!apiConnectionSuccess) {
         clearTimeout(analysisTimeout);
         setIsAnalyzing(false);
-        setError(`API setup issue: ${testResult.error || 'Connection failed'}. Using sample insights instead.`);
-        
-        const fallbackInsights = generateFallbackWebsiteInsights(project);
-        setWebsiteInsights(fallbackInsights);
-        addInsights(fallbackInsights);
-        
-        toast({
-          title: "Analysis Setup Issue",
-          description: "API connection failed. Check logs for details.",
-          variant: "destructive"
-        });
+        notifyApiSetupIssue('API connection failed');
         return;
       }
       
       setAnalysisProgress(prev => Math.min(prev + 10, 40));
       
+      // Call the API to analyze the website
       const result = await FirecrawlService.analyzeWebsiteViaSupabase(
         project.clientWebsite,
         project.clientName || "",
         project.clientIndustry || "technology"
       );
 
+      // Clear all intervals and timeouts
       clearInterval(progressInterval);
       clearInterval(progressCheckInterval);
       clearTimeout(analysisTimeout);
       
-      setAnalysisProgress(100);
-      setAnalysisStatus('Analysis complete');
-      
-      console.log("Website analysis results:", result);
-
-      if (result && result.insights && result.insights.length > 0) {
-        const formattedInsights = result.insights.map((insight: any) => ({
-          ...insight,
-          source: 'website' as const
-        }));
-
-        setWebsiteInsights(formattedInsights);
-        addInsights(formattedInsights);
-
-        toast({
-          title: "Website Analysis Complete",
-          description: `Generated ${formattedInsights.length} insights from ${project.clientWebsite}`,
-        });
-      } else {
-        const errorMessage = result?.error || "No insights returned from website analysis. The API may have failed to extract meaningful content.";
-        setError(errorMessage);
-        
-        if (!result.insights || result.insights.length === 0) {
-          const fallbackInsights = generateFallbackWebsiteInsights(project);
-          setWebsiteInsights(fallbackInsights);
-          addInsights(fallbackInsights);
-        }
-        
-        toast({
-          title: "Analysis Note",
-          description: "Analysis completed with limited results. See details for more information.",
-          variant: "default"
-        });
-      }
+      // Process the results
+      await processAnalysisResult(result, progressInterval, progressCheckInterval);
     } catch (error) {
       console.error("Error analyzing website:", error);
       
@@ -179,21 +134,30 @@ export const useWebsiteAnalysis = (
         : "Unknown error during website analysis";
       
       setError(errorMessage);
-      
-      const fallbackInsights = generateFallbackWebsiteInsights(project);
-      setError(`Website analysis error: ${errorMessage}. Using sample insights instead.`);
-      setWebsiteInsights(fallbackInsights);
-      addInsights(fallbackInsights);
-      
-      toast({
-        title: "Website Analysis Error",
-        description: "An error occurred during analysis. See details for more information.",
-        variant: "destructive"
-      });
+      handleFallbackInsights(`Website analysis error: ${errorMessage}`);
+      notifyAnalysisError(errorMessage);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [project, addInsights, setError, toast, isValidWebsiteUrl, checkAnalysisProgress]);
+  }, [
+    project,
+    isValidWebsiteUrl,
+    setIsAnalyzing,
+    setAnalysisProgress,
+    setAnalysisStatus,
+    setError,
+    notifyAnalysisStart,
+    notifyInvalidUrl,
+    notifyMissingUrl,
+    notifyApiSetupIssue,
+    notifyAnalysisError,
+    handleAnalysisTimeout,
+    setupProgressChecking,
+    checkAnalysisProgress,
+    testApiConnection,
+    processAnalysisResult,
+    handleFallbackInsights
+  ]);
 
   return {
     isAnalyzing,

@@ -22,7 +22,8 @@ export const useProgressCheck = () => {
       }
       
       if (typeof result.progress === 'number') {
-        setAnalysisProgress(prev => Math.max(prev, result.progress || 0));
+        // Fix: Use the value from result.progress instead of passing a function
+        setAnalysisProgress(Math.max(result.progress || 0, 0));
         
         if ((result.progress || 0) >= 100) {
           clearInterval(progressInterval);

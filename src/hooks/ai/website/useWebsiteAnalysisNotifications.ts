@@ -1,61 +1,55 @@
 
-import { toast } from '@/hooks/use-toast';
-import { AIProcessingStatus } from '@/lib/types';
-import { monitorWebsiteAnalysisProgress } from '@/services/ai/statusTracking';
+import { useCallback } from 'react';
+import { Project } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
-/**
- * Hook to handle notifications and status updates for website analysis
- */
-export const useWebsiteAnalysisNotifications = () => {
-  // Basic toast notifications
-  const notifyAnalysisStarted = (url: string) => {
+export const useWebsiteAnalysisNotifications = (project: Project) => {
+  const { toast } = useToast();
+
+  const notifyAnalysisStart = useCallback(() => {
     toast({
-      title: 'Analyzing Website',
-      description: `Starting website analysis for ${url}`,
+      title: "Starting Website Analysis",
+      description: "Beginning analysis of " + project.clientWebsite,
     });
-  };
+  }, [project.clientWebsite, toast]);
 
-  const notifyAnalysisComplete = (url: string, insightsCount: number) => {
+  const notifyInvalidUrl = useCallback(() => {
     toast({
-      title: 'Website Analysis Complete',
-      description: `Generated ${insightsCount} insights from ${url}`,
+      title: "Invalid Website URL",
+      description: `"${project.clientWebsite}" doesn't appear to be a valid URL.`,
+      variant: "destructive"
     });
-  };
+  }, [project.clientWebsite, toast]);
 
-  const notifyAnalysisError = (error: string) => {
+  const notifyMissingUrl = useCallback(() => {
     toast({
-      title: 'Website Analysis Error',
-      description: error,
-      variant: 'destructive',
+      title: "Missing Website URL",
+      description: "Please add a website URL to the project before analyzing.",
+      variant: "destructive"
     });
-  };
+  }, [toast]);
 
-  const notifyMissingWebsite = () => {
+  const notifyApiSetupIssue = useCallback((error: string) => {
     toast({
-      title: 'Missing Website URL',
-      description: 'Please add a website URL to the project before analyzing',
-      variant: 'destructive',
+      title: "Analysis Setup Issue",
+      description: "API connection failed. Check logs for details.",
+      variant: "destructive"
     });
-  };
+  }, [toast]);
 
-  // Advanced progress monitoring
-  const startProgressMonitoring = (
-    projectId: string,
-    onStatusUpdate: (status: AIProcessingStatus) => void,
-    onCompletionCallback?: () => void
-  ): (() => void) => {
-    return monitorWebsiteAnalysisProgress(
-      projectId,
-      onStatusUpdate,
-      onCompletionCallback
-    );
-  };
+  const notifyAnalysisError = useCallback((error: string) => {
+    toast({
+      title: "Website Analysis Error",
+      description: "An error occurred during analysis. See details for more information.",
+      variant: "destructive"
+    });
+  }, [toast]);
 
   return {
-    notifyAnalysisStarted,
-    notifyAnalysisComplete,
-    notifyAnalysisError,
-    notifyMissingWebsite,
-    startProgressMonitoring
+    notifyAnalysisStart,
+    notifyInvalidUrl,
+    notifyMissingUrl,
+    notifyApiSetupIssue,
+    notifyAnalysisError
   };
 };
