@@ -1,5 +1,4 @@
-
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -16,9 +15,16 @@ export const useDocumentFetching = (
 ) => {
   const { toast } = useToast();
   const hasFetchedRef = useRef<boolean>(false);
+  const [lastProjectId, setLastProjectId] = useState<string>('');
   
   useEffect(() => {
     if (!projectId) return;
+    
+    // Reset fetched flag when project changes
+    if (lastProjectId !== projectId) {
+      hasFetchedRef.current = false;
+      setLastProjectId(projectId);
+    }
     
     // Only fetch if we haven't already fetched for this projectId
     if (hasFetchedRef.current) return;
@@ -31,7 +37,17 @@ export const useDocumentFetching = (
       try {
         const docs = await fetchProjectDocuments(projectId);
         console.log("Fetched documents:", docs);
-        setDocuments(docs);
+        
+        // Only set documents if we got any or if documents haven't been set yet
+        setDocuments(prevDocs => {
+          // If we already have documents and fetched none, keep what we have
+          if (prevDocs.length > 0 && docs.length === 0) {
+            console.log("Keeping existing documents instead of empty fetch result");
+            return prevDocs;
+          }
+          return docs;
+        });
+        
         hasFetchedRef.current = true;
       } catch (err) {
         console.error('Error fetching documents:', err);
@@ -43,7 +59,6 @@ export const useDocumentFetching = (
         } else if (err instanceof AuthenticationError) {
           // For mock environment, we'll suppress auth errors in fetching
           console.warn("Authentication error when fetching documents, but continuing with empty list");
-          setDocuments([]);
           setIsLoading(false);
           return;
         } else if (err instanceof Error) {
@@ -64,9 +79,10 @@ export const useDocumentFetching = (
 
     loadDocuments();
     
-    // Cleanup function to reset the fetch state when component unmounts
+    // Return cleanup function
     return () => {
-      hasFetchedRef.current = false;
+      // We don't reset the fetch flag on unmount anymore
+      // This ensures document persistence between tab switches
     };
-  }, [projectId, toast, setDocuments, setIsLoading, setError]);
+  }, [projectId, toast, setDocuments, setIsLoading, setError, lastProjectId]);
 };

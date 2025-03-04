@@ -26,12 +26,21 @@ Deno.serve(async (req) => {
     // Regular website analysis path
     return await handleAnalysisRequest(req);
   } catch (error) {
-    console.error(`Error processing request: ${error}`);
+    console.error(`Error processing request:`, error);
+    
+    // Create a detailed error response
+    const errorDetail = error instanceof Error ? {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    } : String(error);
     
     return new Response(
       JSON.stringify({
-        error: error.message || 'Unknown error',
-        path: path
+        error: error instanceof Error ? error.message : 'Unknown error',
+        path: path,
+        detail: errorDetail,
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,

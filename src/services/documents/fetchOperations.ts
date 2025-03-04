@@ -1,3 +1,4 @@
+
 import { Document } from "@/lib/types";
 import { getMockDocuments } from "./mockDocuments";
 
@@ -8,8 +9,8 @@ const convertApiDocumentToModel = (doc: any): Document => {
     size: doc.size,
     type: doc.type,
     url: doc.url,
-    projectId: doc.project_id || '',
-    createdAt: new Date(doc.created_at || doc.uploadedAt || Date.now()),
+    projectId: doc.project_id || doc.projectId || '',
+    createdAt: new Date(doc.created_at || doc.uploadedAt || doc.createdAt || Date.now()),
     uploadedBy: doc.user_id || doc.uploadedBy || 'anonymous',
     priority: doc.priority || 0,
     uploadedAt: doc.uploaded_at || doc.uploadedAt || new Date().toISOString()
@@ -19,12 +20,28 @@ const convertApiDocumentToModel = (doc: any): Document => {
 export const fetchProjectDocumentsFromApi = async (projectId: string): Promise<Document[]> => {
   try {
     console.log('Fetching documents for project:', projectId);
-    // In a real implementation, this would call an API endpoint
     
-    // Simulate API response
+    // First check if we have real documents in localStorage
+    const storageKey = `project_documents_${projectId}`;
+    const storedDocsJson = localStorage.getItem(storageKey);
+    
+    if (storedDocsJson) {
+      try {
+        const storedDocs = JSON.parse(storedDocsJson);
+        console.log('Found stored documents:', storedDocs.length);
+        
+        if (Array.isArray(storedDocs) && storedDocs.length > 0) {
+          // Return stored documents if they exist
+          return storedDocs.map(convertApiDocumentToModel);
+        }
+      } catch (parseError) {
+        console.error('Error parsing stored documents:', parseError);
+      }
+    }
+    
+    // Only use mock documents if no stored documents exist
+    console.log('No stored documents found, using mock documents');
     const mockDocuments = getMockDocuments(projectId);
-    
-    // Convert to Document model
     return mockDocuments.map(convertApiDocumentToModel);
   } catch (error) {
     console.error('Error fetching documents:', error);

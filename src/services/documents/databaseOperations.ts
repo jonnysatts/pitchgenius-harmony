@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Document } from "@/lib/types";
 import { DatabaseError, DocumentNotFoundError } from "./errors";
@@ -22,7 +23,7 @@ export const insertDocumentRecord = async (
   try {
     console.log(`Inserting document record for: ${fileName}`);
     
-    // For development/mock environment, store in localStorage
+    // Create new document object
     const newDoc: Document = {
       id: `local_${Math.random().toString(36).substr(2, 9)}`,
       name: fileName,
@@ -36,13 +37,30 @@ export const insertDocumentRecord = async (
       priority
     };
     
+    // Save to localStorage with consistent key format
     const storageKey = `project_documents_${projectId}`;
+    
+    // Get existing documents for this project
+    let documents: Document[] = [];
     const existingDocs = localStorage.getItem(storageKey);
-    const documents = existingDocs ? JSON.parse(existingDocs) : [];
+    
+    if (existingDocs) {
+      try {
+        const parsedDocs = JSON.parse(existingDocs);
+        if (Array.isArray(parsedDocs)) {
+          documents = parsedDocs;
+        }
+      } catch (parseError) {
+        console.error('Error parsing existing documents:', parseError);
+      }
+    }
+    
+    // Add new document and save back to localStorage
     documents.push(newDoc);
     localStorage.setItem(storageKey, JSON.stringify(documents));
     
     console.log('Document record stored in localStorage:', newDoc);
+    console.log('Total documents for project:', documents.length);
     
     // Try to also insert into Supabase if possible (will likely fail in mock env)
     try {
@@ -66,6 +84,12 @@ export const insertDocumentRecord = async (
       } else if (data) {
         console.log('Document also inserted into Supabase:', data.id);
         newDoc.id = data.id;
+        
+        // Update localStorage with the Supabase ID
+        const updatedDocuments = documents.map(doc => 
+          doc.id === newDoc.id ? {...doc, id: data.id} : doc
+        );
+        localStorage.setItem(storageKey, JSON.stringify(updatedDocuments));
       }
     } catch (supabaseError) {
       console.warn('Supabase insertion failed (expected in mock environment):', supabaseError);
@@ -94,15 +118,30 @@ export const removeDocument = async (documentId: string): Promise<void> => {
     
     // For development/mock environment, remove from localStorage
     const allStorageKeys = Object.keys(localStorage).filter(key => key.startsWith('project_documents_'));
+    let documentRemoved = false;
     
     for (const storageKey of allStorageKeys) {
-      const documents = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      const updatedDocuments = documents.filter((doc: Document) => doc.id !== documentId);
-      
-      if (documents.length !== updatedDocuments.length) {
-        localStorage.setItem(storageKey, JSON.stringify(updatedDocuments));
-        console.log(`Document ${documentId} removed from localStorage`);
+      try {
+        const documentsJson = localStorage.getItem(storageKey);
+        if (!documentsJson) continue;
+        
+        const documents = JSON.parse(documentsJson);
+        if (!Array.isArray(documents)) continue;
+        
+        const updatedDocuments = documents.filter((doc: Document) => doc.id !== documentId);
+        
+        if (documents.length !== updatedDocuments.length) {
+          localStorage.setItem(storageKey, JSON.stringify(updatedDocuments));
+          console.log(`Document ${documentId} removed from localStorage (${storageKey})`);
+          documentRemoved = true;
+        }
+      } catch (parseError) {
+        console.error(`Error parsing documents from ${storageKey}:`, parseError);
       }
+    }
+    
+    if (!documentRemoved) {
+      console.warn(`Document ${documentId} not found in any localStorage key`);
     }
     
     // Try to also remove from Supabase if possible

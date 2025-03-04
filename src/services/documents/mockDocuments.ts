@@ -2,9 +2,28 @@
 import { Document } from "@/lib/types";
 
 /**
- * Returns mock documents for a given project
+ * Returns mock documents for a given project only if no real documents exist
  */
 export const getMockDocuments = (projectId: string): Document[] => {
+  // Check if we already have real documents in localStorage
+  const storageKey = `project_documents_${projectId}`;
+  const existingDocs = localStorage.getItem(storageKey);
+  
+  // If we have stored documents, return an empty array to prevent mock documents from showing
+  if (existingDocs) {
+    try {
+      const parsedDocs = JSON.parse(existingDocs);
+      if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
+        console.log("Using real documents instead of mocks");
+        return [];
+      }
+    } catch (e) {
+      console.error("Error parsing stored documents:", e);
+    }
+  }
+  
+  // Only return mock documents if we don't have real ones
+  console.log("Providing mock documents for new project");
   return [
     {
       id: 'doc_1',
