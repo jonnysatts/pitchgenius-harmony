@@ -1,126 +1,166 @@
 
 /**
- * Utility for generating fallback insights when Claude API fails
+ * Generates fallback insights when Claude API fails
  */
-import { v4 as uuidv4 } from 'https://esm.sh/uuid@9.0.0';
 
-/**
- * Generate fallback insights with proper data structure
- */
-export function generateFallbackInsights(industry: string, numDocuments: number) {
-  const insights = [];
+export function generateFallbackInsights(
+  clientIndustry: string = 'technology',
+  documentCount: number = 3
+): any[] {
+  console.log(`Generating fallback insights for ${clientIndustry} industry with ${documentCount} documents`);
   
-  // Categories to generate insights for
-  const categories = [
-    'business_challenges',
-    'audience_gaps',
-    'competitive_threats',
-    'gaming_opportunities',
-    'strategic_recommendations'
-  ];
+  // Get industry-specific fallback insights
+  const insights = getIndustrySpecificInsights(clientIndustry, documentCount);
   
-  // Generate insights for each category
-  categories.forEach(category => {
-    // Generate 1-3 insights per category
-    const count = Math.min(Math.floor(Math.random() * 3) + 1, numDocuments);
-    
-    for (let i = 0; i < count; i++) {
-      insights.push({
-        id: uuidv4(),
-        category,
-        content: getContentForCategory(category, industry),
-        confidence: Math.floor(Math.random() * 30) + 60, // 60-90% confidence
-        needsReview: true,
-        source: 'document' as const
-      });
-    }
-  });
-  
-  return insights;
+  // Add metadata to clearly mark these as fallbacks
+  return insights.map(insight => ({
+    ...insight,
+    isFallback: true,
+    generatedAt: new Date().toISOString()
+  }));
 }
 
 /**
- * Generate content for a specific insight category
+ * Get industry-specific insights based on client industry
  */
-function getContentForCategory(category: string, industry: string) {
-  const templates = {
-    business_challenges: [
-      {
-        title: "Limited engagement with gaming audiences",
-        summary: `${industry} companies are struggling to authentically connect with gaming communities.`,
-        details: `Many ${industry} organizations use traditional marketing approaches that don't resonate with gaming audiences. This creates a disconnect between brands and potential customers within the gaming community.`,
-        recommendations: "Develop gaming-specific engagement strategies with authentic community participation."
+function getIndustrySpecificInsights(industry: string, documentCount: number): any[] {
+  // Define different insight types
+  const categories = [
+    'business_challenges', 
+    'audience_gaps', 
+    'competitive_threats', 
+    'gaming_opportunities', 
+    'strategic_recommendations', 
+    'key_narratives'
+  ];
+  
+  // Create one insight per category
+  return categories.map(category => {
+    const insightContent = getInsightContent(category, industry);
+    
+    return {
+      id: `fallback_${category}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      category,
+      content: {
+        title: insightContent.title,
+        summary: insightContent.summary,
+        details: `This is a sample insight for demonstration purposes. When Claude AI is properly connected, you'll receive detailed analysis here. ${insightContent.details}`,
+        evidence: "Note: This is an automatically generated example. For actual insights, please check your Claude API configuration.",
+        impact: insightContent.impact,
+        recommendations: insightContent.recommendations,
+        dataPoints: [
+          "This is a fallback insight generated because Claude AI analysis was unavailable",
+          "Contact your administrator to verify Claude API configuration",
+          "Check Supabase Edge Function logs for more details"
+        ]
       },
-      {
-        title: "Underutilized gaming platform opportunities",
-        summary: `${industry} brands are missing engagement opportunities on gaming platforms.`,
-        details: "Gaming platforms represent massive potential for brand engagement, but many companies lack the expertise to effectively participate in these spaces.",
-        recommendations: "Partner with gaming experts to identify platform-specific opportunities aligned with brand goals."
-      }
-    ],
-    audience_gaps: [
-      {
-        title: "Gen Z engagement deficit",
-        summary: `${industry} brands are struggling to meaningfully connect with Gen Z audiences who are deeply involved in gaming.`,
-        details: "Gen Z represents significant purchasing power, but traditional marketing techniques are increasingly ineffective with this demographic who spend considerable time in gaming environments.",
-        recommendations: "Develop gaming-native marketing strategies that provide value to the gaming experience rather than interrupting it."
+      confidence: Math.floor(Math.random() * 15) + 85, // Random confidence between 85-99
+      needsReview: true,
+      source: 'fallback'
+    };
+  });
+}
+
+/**
+ * Get content for a specific insight type and industry
+ */
+function getInsightContent(category: string, industry: string): Record<string, string> {
+  // Industry-specific content templates
+  const contentTemplates: Record<string, Record<string, Record<string, string>>> = {
+    technology: {
+      business_challenges: {
+        title: "Tech adoption barriers in gaming integration",
+        summary: "Many technology companies struggle to authentically connect with gaming audiences.",
+        details: "Sample challenge: Integrating gaming experiences with existing technology platforms while maintaining brand authenticity.",
+        impact: "Missed opportunities to connect with Gen Z and millennial audiences who prioritize authentic gaming experiences.",
+        recommendations: "Consider collaborative product development with gaming studios or creators to build credibility."
       },
-      {
-        title: "Missing gaming creator relationships",
-        summary: `${industry} companies lack relationships with gaming content creators and influencers.`,
-        details: "Gaming creators represent trusted voices within their communities. Without these relationships, brands miss opportunities for authentic endorsement and community integration.",
-        recommendations: "Build genuine relationships with gaming creators whose audiences align with target demographics."
-      }
-    ],
-    competitive_threats: [
-      {
-        title: "Competitors gaining gaming audience share",
-        summary: `Some ${industry} competitors are establishing early positions in gaming spaces.`,
-        details: "Forward-thinking competitors are already establishing gaming partnerships and initiatives, potentially capturing market share and building brand affinity with gaming audiences.",
-        recommendations: "Analyze competitor gaming strategies and develop differentiated approaches based on brand strengths."
+      audience_gaps: {
+        title: "Underserved technical gaming audiences",
+        summary: "Many technical professionals who game are not targeted effectively.",
+        details: "Sample gap: Technical professionals who are also hardcore gamers represent an underserved market segment with high disposable income.",
+        impact: "Potential for highly profitable audience segment that appreciates both technical excellence and gaming innovation.",
+        recommendations: "Develop targeted messaging that respects both the technical expertise and gaming enthusiasm of this audience."
       },
-      {
-        title: "Disruptive gaming-native startups",
-        summary: `New ${industry} startups built with gaming at their core pose competitive threats.`,
-        details: "Gaming-native companies understand the cultural nuances and preferences of gaming audiences. Their authentic positioning gives them advantages in capturing gaming consumer attention.",
-        recommendations: "Consider strategic partnerships or acquisitions of gaming-native businesses to accelerate capabilities."
-      }
-    ],
-    gaming_opportunities: [
-      {
-        title: "Creator partnership program",
-        summary: `Develop a structured program for ${industry} brands to partner with gaming creators.`,
-        details: "A formalized approach to creator partnerships could help brands develop authentic relationships with gaming audiences through trusted voices.",
-        recommendations: "Create a tiered partnership program with clear value exchange for both creators and brands."
+      // Additional categories...
+      competitive_threats: {
+        title: "Emerging tech competitors with gaming focus",
+        summary: "New technology players are entering with gaming-first strategies.",
+        details: "Sample threat: Startups developing technology products specifically for gaming audiences, gaining rapid market share.",
+        impact: "Risk of being perceived as out-of-touch with gaming culture compared to newer, more agile competitors.",
+        recommendations: "Evaluate partnership opportunities with established gaming brands to accelerate credibility."
       },
-      {
-        title: "In-game integration opportunities",
-        summary: `Explore native ${industry} brand integrations within game environments.`,
-        details: "Rather than traditional advertising, brands can create value through in-game items, experiences, or utilities that enhance rather than interrupt gameplay.",
-        recommendations: "Identify games with audience alignment and develop integration concepts that add player value."
-      }
-    ],
-    strategic_recommendations: [
-      {
-        title: "Gaming audience research initiative",
-        summary: `Conduct detailed research on gaming audience segments relevant to ${industry}.`,
-        details: "Understanding the specific interests, behaviors, and preferences of gaming audiences will inform more effective engagement strategies.",
-        recommendations: "Combine quantitative research with qualitative community listening to build detailed audience personas."
+      gaming_opportunities: {
+        title: "Technical product showcases through gaming",
+        summary: "Gaming provides an ideal platform to demonstrate technical capabilities.",
+        details: "Sample opportunity: Using gaming environments to showcase technical innovations in graphics, AI, or cloud computing.",
+        impact: "Potential to reach technical decision-makers through their recreational interests.",
+        recommendations: "Create gaming-based demonstrations of core technology capabilities."
       },
-      {
-        title: "Gaming pilot program",
-        summary: `Launch a controlled ${industry} gaming initiative to test approaches.`,
-        details: "A small-scale pilot allows for testing gaming strategies with controlled investment before scaling successful approaches.",
-        recommendations: "Select 2-3 gaming initiatives to test, establish clear KPIs, and plan for rapid iteration based on results."
+      strategic_recommendations: {
+        title: "Technology-gaming integration roadmap",
+        summary: "Strategic approaches to authentically enter gaming markets.",
+        details: "Sample recommendation: Develop an API specifically for gaming developers to encourage integration with your platform.",
+        impact: "Creation of two-way value exchange between your technology and the gaming ecosystem.",
+        recommendations: "Establish a dedicated gaming integration team with both technical and gaming expertise."
+      },
+      key_narratives: {
+        title: "Technology enhancing gaming experiences",
+        summary: "Position technology as an enabler of better gaming experiences.",
+        details: "Sample narrative: Your technology makes gaming more accessible, immersive, or social.",
+        impact: "Alignment with positive gaming culture values while highlighting technical strengths.",
+        recommendations: "Develop case studies showing how your technology specifically improves gaming experiences."
       }
-    ]
+    },
+    retail: {
+      // Retail-specific content templates...
+      business_challenges: {
+        title: "Physical retail engagement in digital gaming era",
+        summary: "Brick-and-mortar retail struggling to connect with gaming audiences.",
+        details: "Sample challenge: Creating compelling in-store experiences that appeal to digitally-native gaming audiences.",
+        impact: "Declining foot traffic as gaming consumers shift to digital purchasing channels.",
+        recommendations: "Develop in-store gaming activations that cannot be replicated online."
+      },
+      // Additional categories for retail...
+      audience_gaps: {
+        title: "Untapped gaming consumer segments in retail",
+        summary: "Various gaming audience segments underserved by traditional retail.",
+        details: "Sample gap: Female gamers often find retail gaming sections unwelcoming or not designed with their preferences in mind.",
+        impact: "Missing significant revenue from growing demographic segments in gaming.",
+        recommendations: "Redesign retail spaces with inclusive gaming community needs in mind."
+      }
+    },
+    finance: {
+      // Finance-specific content templates...
+      business_challenges: {
+        title: "Financial literacy gaps in gaming audiences",
+        summary: "Young gamers lack engagement with traditional financial products.",
+        details: "Sample challenge: Traditional financial education fails to engage gaming-oriented younger demographics.",
+        impact: "Growing generation gap in financial product adoption and loyalty.",
+        recommendations: "Develop gamified financial education initiatives that leverage familiar gaming mechanics."
+      }
+    },
+    entertainment: {
+      // Entertainment-specific content templates...
+      business_challenges: {
+        title: "IP integration challenges in gaming spaces",
+        summary: "Entertainment brands struggle with authentic gaming presence.",
+        details: "Sample challenge: Translating linear entertainment experiences into interactive gaming formats without losing brand essence.",
+        impact: "Missed opportunities to extend IP lifecycle and reach through gaming channels.",
+        recommendations: "Partner with established game developers for authentic adaptations rather than simple licensing."
+      }
+    }
   };
   
-  // Get templates for the category
-  const categoryTemplates = templates[category as keyof typeof templates] || templates.business_challenges;
+  // Default content if specific industry/category combination not found
+  const defaultContent = {
+    title: `${category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} for ${industry} industry`,
+    summary: `Key ${category.replace('_', ' ')} identified through strategic analysis.`,
+    details: `Sample ${category.replace('_', ' ')}: This is a placeholder for real Claude AI analysis results.`,
+    impact: "When properly configured, Claude AI will provide detailed impact analysis here.",
+    recommendations: "Configure your Claude API integration properly to receive specific recommendations."
+  };
   
-  // Select a random template
-  const template = categoryTemplates[Math.floor(Math.random() * categoryTemplates.length)];
-  
-  return template;
+  // Return specific content if available, otherwise default
+  return contentTemplates[industry]?.[category] || defaultContent;
 }

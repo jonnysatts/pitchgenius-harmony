@@ -2,7 +2,7 @@
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw, LoaderCircle, ServerCrash, XCircle } from "lucide-react";
+import { AlertTriangle, RefreshCw, LoaderCircle, ServerCrash, XCircle, Info } from "lucide-react";
 
 interface InsightsErrorAlertProps {
   error?: string | null;
@@ -46,6 +46,42 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
     );
   }
   
+  // Add specific alert for fallback insights
+  if (usingFallbackInsights && !error) {
+    return (
+      <Alert variant="default" className="mb-4 border-amber-300 bg-amber-50">
+        <Info className="h-4 w-4 text-amber-500" />
+        <AlertTitle className="text-amber-700">Using Sample Insights</AlertTitle>
+        <AlertDescription className="flex justify-between items-center text-amber-800">
+          <div>
+            You're currently viewing sample insights because Claude AI analysis is not available. These are examples to demonstrate the format of insights, but do not represent actual analysis of your documents.
+            
+            <div className="mt-2 text-sm">
+              <p>To get real AI analysis:</p>
+              <ul className="list-disc pl-5 mt-1">
+                <li>Ensure the ANTHROPIC_API_KEY is set in your Supabase secrets</li>
+                <li>Check that your documents contain sufficient content for analysis</li>
+                <li>Verify your Supabase Edge Function is deployed correctly</li>
+              </ul>
+            </div>
+          </div>
+          
+          {onRetryAnalysis && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="flex items-center gap-1 ml-4 border-amber-500 text-amber-700 hover:bg-amber-100"
+              onClick={onRetryAnalysis}
+            >
+              <RefreshCw size={14} />
+              Retry with Claude AI
+            </Button>
+          )}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  
   return (
     <Alert 
       variant={isEdgeFunctionError || isClaudeApiError ? "destructive" : "default"} 
@@ -65,7 +101,9 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
         {isApiKeyMissing && <AlertTitle className="text-red-700">Anthropic API Key Missing</AlertTitle>}
         {isClaudeApiError && <AlertTitle className="text-red-700">Claude AI API Error</AlertTitle>}
         {isContentError && <AlertTitle className="text-amber-700">Website Content Issue</AlertTitle>}
-        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && 
+        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && usingFallbackInsights && 
+          <AlertTitle className="text-amber-700">Using Sample Insights</AlertTitle>}
+        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && !usingFallbackInsights &&
           <AlertTitle className="text-amber-700">Analysis Issue</AlertTitle>}
         
         <AlertDescription 
@@ -75,6 +113,14 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
         >
           <div>
             {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
+            
+            {/* Adding explanation for fallback insights */}
+            {usingFallbackInsights && (
+              <div className="mt-2 text-sm">
+                <p>The sample insights you're seeing are placeholders and don't reflect actual analysis of your documents.</p>
+                <p>When Claude AI is properly configured, you'll receive detailed, specific insights based on your documents.</p>
+              </div>
+            )}
             
             {/* Specific additional content based on error type */}
             {isApiKeyMissing && (
@@ -114,12 +160,11 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
             
             {isContentError && (
               <div className="mt-2 text-sm">
-                <p>There was an issue with the website content:</p>
+                <p>There was an issue with the content:</p>
                 <ul className="list-disc pl-5 mt-1">
-                  <li>The website might block automated scraping</li>
-                  <li>The content might be loaded dynamically via JavaScript</li>
-                  <li>The website might be temporarily down or have minimal content</li>
-                  <li>Try analyzing a different website with more accessible content</li>
+                  <li>The documents might not contain enough meaningful text for analysis</li>
+                  <li>The content might be in a format Claude cannot process effectively</li>
+                  <li>Try uploading documents with more detailed information</li>
                 </ul>
               </div>
             )}
