@@ -48,8 +48,9 @@ serve(async (req) => {
     }
     
     // Process document contents into a combined text for analysis
+    // Now documentContents is an array of objects, so we format them accordingly
     const documentSummaries = documentContents.map((doc: any) => 
-      `Document: ${doc.name}\nType: ${doc.type}\nPriority: ${doc.priority || 'normal'}\nContent: ${doc.content.substring(0, 2000)}${doc.content.length > 2000 ? '...(truncated)' : ''}`
+      `Document ${doc.index}: ${doc.name}\nType: ${doc.type}\nPriority: ${doc.priority || 'normal'}\nContent: ${doc.content.substring(0, 2000)}${doc.content.length > 2000 ? '...(truncated)' : ''}`
     ).join("\n\n");
     
     console.log("Prepared document summaries for Claude");

@@ -1,3 +1,4 @@
+
 import { Document } from "@/lib/types";
 
 /**
@@ -18,12 +19,19 @@ export const formatFileSize = (bytes: number): string => {
 
 /**
  * Prepare document contents for AI prompt
+ * Returns an array of document content objects instead of a string
  */
-export const prepareDocumentContents = (documents: Document[]): string => {
+export const prepareDocumentContents = (documents: Document[]): any[] => {
   return documents
     .sort((a, b) => (b.priority || 0) - (a.priority || 0))
     .map((doc, index) => {
-      return `Document ${index + 1}: ${doc.name}\nType: ${doc.type}\nSize: ${formatFileSize(doc.size)}\n`;
-    })
-    .join("\n");
+      return {
+        name: doc.name,
+        type: doc.type,
+        size: formatFileSize(doc.size),
+        priority: doc.priority || 0,
+        content: doc.content || '',
+        index: index + 1
+      };
+    });
 };

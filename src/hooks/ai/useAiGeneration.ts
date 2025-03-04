@@ -33,7 +33,7 @@ export const useAiGeneration = (
           return false;
         }
         
-        // Prepare document contents for analysis
+        // Prepare document contents for analysis - now returns an array of objects
         const documentContents = prepareDocumentContents(documents);
         console.log(`Prepared ${documentContents.length} document contents for analysis`);
         
