@@ -2,8 +2,9 @@
 import React, { useEffect } from 'react';
 import { Project, AIProcessingStatus } from '@/lib/types';
 import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Globe, RefreshCw, ArrowRight } from 'lucide-react';
 import {
-  AnalysisButton,
   AnalysisProgressIndicator,
   AnalysisStatusAlert,
   AnalysisPhaseTimeline
@@ -103,7 +104,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
     <div className="space-y-4">
       {hasWebsiteUrl && (
         <div className="flex flex-col space-y-4">
-          {isAnalyzing && (
+          {isAnalyzing ? (
             <div className="space-y-3">
               {/* Analysis status alert */}
               <AnalysisStatusAlert 
@@ -125,14 +126,27 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
               {/* Timeline indicators */}
               <AnalysisPhaseTimeline progress={progress} />
             </div>
+          ) : (
+            <Button
+              onClick={onAnalyzeWebsite}
+              disabled={isAnalyzing || !hasWebsiteUrl}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6"
+              size="lg"
+            >
+              {hasInsights ? (
+                <>
+                  <RefreshCw className="mr-2 h-5 w-5" />
+                  Refresh Website Analysis
+                </>
+              ) : (
+                <>
+                  <Globe className="mr-2 h-5 w-5" />
+                  Start Website Analysis
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
           )}
-          
-          <AnalysisButton 
-            isAnalyzing={isAnalyzing}
-            hasWebsiteUrl={hasWebsiteUrl}
-            hasInsights={hasInsights}
-            onAnalyzeWebsite={onAnalyzeWebsite}
-          />
         </div>
       )}
     </div>

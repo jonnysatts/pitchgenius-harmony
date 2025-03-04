@@ -20,24 +20,24 @@ export const AnalysisButton: React.FC<AnalysisButtonProps> = ({
     <Button
       onClick={onAnalyzeWebsite}
       disabled={isAnalyzing || !hasWebsiteUrl}
-      className="w-full md:w-auto"
+      className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6"
       size="lg"
     >
       {isAnalyzing ? (
         <>
-          <Globe className="mr-2 h-4 w-4 animate-spin" />
+          <Globe className="mr-2 h-5 w-5 animate-spin" />
           Analyzing Website...
         </>
       ) : hasInsights ? (
         <>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 h-5 w-5" />
           Refresh Website Analysis
         </>
       ) : (
         <>
-          <Globe className="mr-2 h-4 w-4" />
+          <Globe className="mr-2 h-5 w-5" />
           Start Website Analysis
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <ArrowRight className="ml-2 h-5 w-5" />
         </>
       )}
     </Button>

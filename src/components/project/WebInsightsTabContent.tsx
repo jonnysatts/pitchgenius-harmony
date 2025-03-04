@@ -86,29 +86,56 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
         <>
           <WebsiteUrlCard websiteUrl={websiteUrl} />
           
-          <WebsiteAnalysisControls 
-            project={{
-              id: '1',
-              clientWebsite: websiteUrl,
-              title: '',
-              clientName: '',
-              clientIndustry: '',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              ownerId: '',
-              description: ''
-            } as Project}
-            isAnalyzing={isAnalyzingWebsite}
-            onAnalyzeWebsite={handleAnalyzeWebsite}
-            hasInsights={hasInsights}
-            aiStatus={aiStatus}
-          />
+          {/* Only show controls if not currently analyzing */}
+          {!isAnalyzingWebsite && !hasInsights && (
+            <div className="mt-6">
+              <WebsiteAnalysisControls 
+                project={{
+                  id: '1',
+                  clientWebsite: websiteUrl,
+                  title: '',
+                  clientName: '',
+                  clientIndustry: '',
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  ownerId: '',
+                  description: ''
+                } as Project}
+                isAnalyzing={isAnalyzingWebsite}
+                onAnalyzeWebsite={handleAnalyzeWebsite}
+                hasInsights={hasInsights}
+                aiStatus={aiStatus}
+              />
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
               <p>
                 <strong>Analysis Error:</strong> {error}
               </p>
+            </div>
+          )}
+
+          {isAnalyzingWebsite && (
+            <div className="mt-6">
+              <WebsiteAnalysisControls 
+                project={{
+                  id: '1',
+                  clientWebsite: websiteUrl,
+                  title: '',
+                  clientName: '',
+                  clientIndustry: '',
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  ownerId: '',
+                  description: ''
+                } as Project}
+                isAnalyzing={isAnalyzingWebsite}
+                onAnalyzeWebsite={handleAnalyzeWebsite}
+                hasInsights={hasInsights}
+                aiStatus={aiStatus}
+              />
             </div>
           )}
 
