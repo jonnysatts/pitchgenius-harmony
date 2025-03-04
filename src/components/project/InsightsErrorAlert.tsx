@@ -19,6 +19,10 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
 }) => {
   if (!error && !usingFallbackInsights && !isClaudeProcessing) return null;
   
+  // Determine if this is an API key missing error
+  const isApiKeyMissing = error?.includes('ANTHROPIC_API_KEY not found') || 
+                         error?.includes('Missing Anthropic API key');
+  
   // Determine if this is an Edge Function error
   const isEdgeFunctionError = error?.includes('Edge Function') || error?.includes('non-2xx status code');
   
@@ -44,11 +48,24 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
       }
       <div className="w-full">
         {isEdgeFunctionError && <AlertTitle className="text-red-700">Supabase Edge Function Error</AlertTitle>}
+        {isApiKeyMissing && <AlertTitle className="text-red-700">Anthropic API Key Missing</AlertTitle>}
         <AlertDescription className={`flex justify-between items-center ${isEdgeFunctionError ? 'text-red-700' : 'text-amber-800'}`}>
           <div>
             {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
             
-            {isEdgeFunctionError && (
+            {isApiKeyMissing && (
+              <div className="mt-2 text-sm">
+                <p>The ANTHROPIC_API_KEY is missing from your Supabase secrets.</p>
+                <p>To fix this:</p>
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Go to the Supabase dashboard</li>
+                  <li>Navigate to Project Settings → Edge Functions → Secrets</li>
+                  <li>Add a secret with name ANTHROPIC_API_KEY and your Claude API key as the value</li>
+                </ul>
+              </div>
+            )}
+            
+            {isEdgeFunctionError && !isApiKeyMissing && (
               <div className="mt-2 text-sm">
                 <p>There was a problem connecting to the Supabase Edge Function for Claude AI.</p>
                 <p>This could be due to:</p>

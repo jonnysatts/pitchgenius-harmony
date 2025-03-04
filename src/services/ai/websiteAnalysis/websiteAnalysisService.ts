@@ -3,7 +3,7 @@
  * Service for analyzing client websites and generating insights
  */
 import { Project, StrategicInsight } from "@/lib/types";
-import { checkSupabaseConnection } from "../config";
+import { checkSupabaseConnection, verifyAnthropicApiKey } from "../config";
 import { createTimeoutPromise } from "../apiClient";
 import { callWebsiteAnalysisApi } from "./claudeApiService";
 import { generateWebsiteMockInsights } from "./mockGenerator";
@@ -28,38 +28,27 @@ export const analyzeClientWebsite = async (
     console.log(`Analyzing client website: ${project.clientWebsite}`);
     console.log(`Project ID: ${project.id}, Client Name: ${project.clientName || 'Unknown'}`);
     
-    // Directly try to test Supabase connection 
-    let useRealApi = false;
-    try {
-      console.log('Testing Supabase connection directly through test-connection function...');
-      
-      const { data, error } = await supabase.functions.invoke('test-connection', {
-        body: { timestamp: new Date().toISOString() }
+    // First check if Anthropic API key exists
+    const hasAnthropicKey = await verifyAnthropicApiKey();
+    if (!hasAnthropicKey) {
+      console.error('ANTHROPIC_API_KEY missing in Supabase secrets');
+      toast({
+        title: "Missing API Key",
+        description: "ANTHROPIC_API_KEY not found. Using sample insights instead.",
+        variant: "destructive",
+        duration: 5000,
       });
       
-      if (error) {
-        console.error('Error during direct Supabase connection test:', error);
-        throw new Error(`Supabase test-connection error: ${error.message}`);
-      }
-      
-      console.log('Direct Supabase connection test result:', data);
-      
-      // Check if Anthropic API key exists
-      const anthropicKeyExists = data?.environmentChecks?.ANTHROPIC_API_KEY?.exists;
-      
-      if (!anthropicKeyExists) {
-        console.error('ANTHROPIC_API_KEY not found in Supabase secrets');
-        throw new Error('ANTHROPIC_API_KEY not found in Supabase secrets');
-      }
-      
-      useRealApi = true;
-      console.log('Supabase connection verified with ANTHROPIC_API_KEY present');
-    } catch (connectionError) {
-      console.error('Failed to verify Supabase connection:', connectionError);
-      useRealApi = false;
+      const mockInsights = generateWebsiteMockInsights(project);
+      return { 
+        insights: mockInsights,
+        error: "ANTHROPIC_API_KEY not found in Supabase secrets. Please add it to use Claude AI features."
+      };
     }
     
-    console.log('Supabase connection check result:', useRealApi);
+    // Directly try to test Supabase connection 
+    let connectionOk = await checkSupabaseConnection();
+    console.log('Supabase connection check result:', connectionOk);
     
     // Notify user of analysis start
     toast({
@@ -68,7 +57,7 @@ export const analyzeClientWebsite = async (
       duration: 5000,
     });
     
-    if (!useRealApi) {
+    if (!connectionOk) {
       console.log('Supabase connection not available, using mock website insights');
       
       toast({
@@ -118,7 +107,15 @@ export const analyzeClientWebsite = async (
             if (error) {
               console.error('Error from Edge Function:', error);
               console.error('Error details:', JSON.stringify(error));
-              throw new Error(`Edge function error: ${error.message || 'Unknown error'}`);
+              
+              toast({
+                title: "Supabase Edge Function Error",
+                description: error.message || "Unknown edge function error",
+                variant: "destructive",
+                duration: 7000,
+              });
+              
+              throw new Error(`Edge Function error: ${error.message || 'Unknown error'}`);
             }
             
             console.log('Edge function response received');
@@ -143,10 +140,16 @@ export const analyzeClientWebsite = async (
             console.log(`Received ${data.insights.length} insights from Edge Function`);
             console.log('First insight sample:', JSON.stringify(data.insights[0]));
             
+            toast({
+              title: "Analysis Complete",
+              description: `Generated ${data.insights.length} insights from website analysis`,
+              duration: 5000,
+            });
+            
             return { insights: data.insights };
           } catch (error) {
             console.error('Error in website analysis:', error);
-            console.error('Stack trace if available:', error.stack);
+            console.error('Stack trace if available:', error instanceof Error ? error.stack : 'No stack available');
             throw error;
           }
         })(),
@@ -184,13 +187,13 @@ export const analyzeClientWebsite = async (
         const mockInsights = generateWebsiteMockInsights(project);
         return { 
           insights: mockInsights,
-          error: "API errors during website analysis - using generated sample insights instead. Error: " + (claudeError.message || String(claudeError))
+          error: "API errors during website analysis - using generated sample insights instead. Error: " + (claudeError instanceof Error ? claudeError.message : String(claudeError))
         };
       }
     }
   } catch (err) {
     console.error('Error analyzing website:', err);
-    const errorMessage = err.message || 'An unexpected error occurred while analyzing the website';
+    const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred while analyzing the website';
     
     toast({
       title: "Analysis Error",
@@ -206,4 +209,3 @@ export const analyzeClientWebsite = async (
     };
   }
 };
-

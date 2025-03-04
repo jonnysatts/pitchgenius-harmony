@@ -30,6 +30,9 @@ serve(async (req) => {
       console.log('No valid JSON in request body or empty body');
     }
     
+    // Check if this is a specific test for the Anthropic API key
+    const isAnthropicKeyCheck = requestData?.testType === 'anthropic-key-check';
+    
     // Check for environment variables
     const keys = [
       'ANTHROPIC_API_KEY',
@@ -65,7 +68,7 @@ serve(async (req) => {
         // Check specifically for Anthropic API key
         if (key === 'ANTHROPIC_API_KEY') {
           anthropicKeyFound = true
-          console.log('ANTHROPIC_API_KEY found!')
+          console.log('ANTHROPIC_API_KEY found!', value.substring(0, 3) + '...')
         }
       } else {
         keysMissing.push(key)
@@ -82,6 +85,19 @@ serve(async (req) => {
     console.log(`Keys check results: ${allKeysFound ? 'All keys found' : 'Some keys missing'}`)
     console.log(`Found keys: ${keysFound.join(', ')}`)
     console.log(`Missing keys: ${keysMissing.join(', ')}`)
+    
+    // For Anthropic specific checks, validate that we got a valid key format 
+    if (isAnthropicKeyCheck && anthropicKeyFound) {
+      const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY') || '';
+      const isValidFormat = anthropicKey.startsWith('sk-ant-') && anthropicKey.length > 20;
+      
+      if (!isValidFormat) {
+        console.log('ANTHROPIC_API_KEY is present but format looks invalid!');
+        anthropicKeyFound = false;
+      } else {
+        console.log('ANTHROPIC_API_KEY has valid format');
+      }
+    }
     
     const responseData = {
       message: 'Connection test successful',
