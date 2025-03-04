@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Document } from "@/lib/types";
 import { fetchProjectDocuments } from "@/services/documents";
@@ -47,11 +46,12 @@ export const useQueryDocuments = (projectId: string) => {
         name: file.name,
         size: file.size,
         type: file.type,
-        uploadDate: new Date().toISOString(),
         url: URL.createObjectURL(file),
         projectId,
-        status: 'uploaded',
-        content: null // Would be populated after processing
+        createdAt: new Date(),
+        uploadedBy: 'anonymous',
+        uploadedAt: new Date().toISOString(),
+        priority: 0
       }));
       
       // Get current documents

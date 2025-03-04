@@ -97,7 +97,7 @@ const ProjectDetail = () => {
         reviewedInsights={reviewedInsights}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        error={aiError}
+        error={aiError ? aiError.toString() : null}
         aiStatus={aiStatus}
         overallConfidence={confidenceToUse}
         needsReviewCount={needsReviewCount}

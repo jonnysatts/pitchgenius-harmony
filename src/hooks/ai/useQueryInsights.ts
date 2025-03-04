@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Project, StrategicInsight, StoredInsightData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +27,8 @@ export const useQueryInsights = (project: Project) => {
       }
       return [];
     } catch (err) {
-      throw handleError(err, { context: 'loading-insights', projectId: project.id }).error;
+      const errorDetails = handleError(err, { context: 'loading-insights', projectId: project.id });
+      throw new Error(errorDetails.message);
     }
   };
 
