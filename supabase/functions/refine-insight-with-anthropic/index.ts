@@ -1,8 +1,5 @@
 
-/**
- * Edge Function for refining insights using Anthropic's Claude API
- */
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { callAnthropicAPI } from '../generate-insights-with-anthropic/services/anthropicService.ts';
 
 // Define CORS headers
@@ -19,9 +16,11 @@ serve(async (req) => {
   
   try {
     // Parse the request body
-    const { prompt, insightTitle, insightContent, conversationContext } = await req.json();
+    const requestData = await req.json();
+    const { insightTitle, insightContent, messages } = requestData;
     
     console.log(`Refining insight: "${insightTitle}"`);
+    console.log(`Messages count: ${messages?.length || 0}`);
     
     // Generate a system prompt specifically for insight refinement
     const systemPrompt = `You are an expert strategic consultant from Games Age, a gaming consultancy that helps businesses integrate gaming into their strategy. 
@@ -39,12 +38,17 @@ Your analysis should be structured and maintain the original insight format. Whe
 
 You're an expert in gaming industry trends, audience analysis, competitive positioning, and gaming opportunities for businesses.`;
 
-    // Build the user prompt with instructions to maintain structure
+    // Build the user prompt with context
     let userPrompt = "";
     
-    if (conversationContext) {
+    if (messages && messages.length > 0) {
+      // Format the conversation history
+      const conversationHistory = messages.map(msg => 
+        `${msg.role.toUpperCase()}: ${msg.content}`
+      ).join('\n\n');
+      
       userPrompt = `Here's our conversation so far about refining this insight:
-${conversationContext}
+${conversationHistory}
 
 CURRENT INSIGHT CONTENT:
 Title: ${insightContent.title || ""}
@@ -54,10 +58,7 @@ Evidence: ${insightContent.evidence || ""}
 Impact: ${insightContent.impact || ""}
 Recommendations: ${insightContent.recommendations || ""}
 
-USER'S LATEST QUESTION/REQUEST:
-${prompt}
-
-Please respond to the request and if appropriate, suggest an updated version with all sections preserved.`;
+Please respond to the latest request and if appropriate, suggest an updated version with all sections preserved.`;
     } else {
       userPrompt = `I need to refine the following insight about "${insightTitle}":
 
@@ -68,9 +69,6 @@ Details: ${insightContent.details || ""}
 Evidence: ${insightContent.evidence || ""}
 Impact: ${insightContent.impact || ""}
 Recommendations: ${insightContent.recommendations || ""}
-
-USER REQUEST:
-${prompt}
 
 Please help me improve this insight. First, respond to my request with helpful advice.
 Then, provide a complete refined version with all sections (title, summary, details, evidence, impact, and recommendations) preserved.`;
@@ -93,7 +91,8 @@ Then, provide a complete refined version with all sections (title, summary, deta
     return new Response(
       JSON.stringify({ 
         response: response,
-        refinedContent: refinedContent || insightContent
+        refinedContent: refinedContent || insightContent,
+        aiResponse: response
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

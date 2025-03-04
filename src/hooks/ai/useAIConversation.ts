@@ -1,5 +1,6 @@
 
 import { useState, useCallback } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
 // Define message types
 export interface Message {
@@ -47,30 +48,26 @@ export const useAIConversation = ({ insightTitle, insightContent }: UseAIConvers
         content: messageContent
       });
       
-      // Use the fetch API to call our edge function
-      const response = await fetch('/api/refine-insight-with-anthropic', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call the Supabase Edge Function instead of using fetch with a relative URL
+      const response = await supabase.functions.invoke('refine-insight-with-anthropic', {
+        body: {
           insightTitle,
           insightContent,
           messages: conversationContext
-        }),
+        },
       });
       
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+      if (response.error) {
+        throw new Error(`API error: ${response.error.message}`);
       }
       
-      const data = await response.json();
+      const data = response.data;
       console.log('AI response:', data);
       
       // Add AI response to messages
       setMessages(prev => [...prev, {
         role: 'ai',
-        content: data.aiResponse || 'Sorry, I could not generate a response.'
+        content: data.response || data.aiResponse || 'Sorry, I could not generate a response.'
       }]);
       
     } catch (error) {
