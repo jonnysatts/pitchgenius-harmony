@@ -46,6 +46,9 @@ const InsightCardActions: React.FC<InsightCardActionsProps> = ({
       
       // Call the onUpdate function with the updated content
       onUpdate(updatedContent);
+      
+      // Close the dialog after applying changes
+      setIsRefineDialogOpen(false);
     }
   };
 

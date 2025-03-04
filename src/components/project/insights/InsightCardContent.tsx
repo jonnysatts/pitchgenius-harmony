@@ -17,6 +17,11 @@ const InsightCardContent: React.FC<InsightCardContentProps> = ({ content }) => {
         <p className="text-slate-700 font-medium">{content.summary}</p>
       )}
       
+      {/* Always show details in a condensed form if available */}
+      {content.details && !expanded && (
+        <p className="text-slate-600 line-clamp-3">{content.details}</p>
+      )}
+      
       {expanded && (
         <>
           {content.details && (
