@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { StrategicInsight } from "@/lib/types";
 import { formatCategoryTitle } from "@/utils/insightUtils";
@@ -7,7 +8,7 @@ interface StrategicAnalysisViewProps {
   insights: StrategicInsight[];
 }
 
-export const StrategicAnalysisView: React.FC<StrategicAnalysisViewProps> = ({ insights }) => {
+const StrategicAnalysisView: React.FC<StrategicAnalysisViewProps> = ({ insights }) => {
   // Group insights by category
   const groupedInsights = groupInsightsByCategory(insights);
 
@@ -42,3 +43,5 @@ export const StrategicAnalysisView: React.FC<StrategicAnalysisViewProps> = ({ in
     </div>
   );
 };
+
+export default StrategicAnalysisView;
