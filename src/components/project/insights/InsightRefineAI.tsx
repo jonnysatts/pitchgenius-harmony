@@ -25,24 +25,11 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
   const {
     messages,
     isLoadingAI,
-    sendMessage,
-    structuredContent
+    sendMessage
   } = useAIConversation({
     insightTitle,
-    insightContent: initialContent,
-    refinedContent,
-    setRefinedContent
+    insightContent: initialContent
   });
-  
-  // Update refinedContent whenever structuredContent changes
-  useEffect(() => {
-    if (structuredContent && Object.keys(structuredContent).length > 0) {
-      setRefinedContent(prev => ({
-        ...prev,
-        ...structuredContent
-      }));
-    }
-  }, [structuredContent, setRefinedContent]);
   
   // Auto-scroll when new messages are added
   useEffect(() => {
@@ -50,6 +37,34 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Check for AI responses that might contain updated content
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Only process AI messages
+      if (lastMessage.role === 'ai') {
+        try {
+          // Look for JSON content in the AI message
+          const jsonMatch = lastMessage.content.match(/```json\n([\s\S]*?)\n```/);
+          
+          if (jsonMatch && jsonMatch[1]) {
+            const parsedContent = JSON.parse(jsonMatch[1]);
+            if (parsedContent && typeof parsedContent === 'object') {
+              console.log('Found structured content in AI response:', parsedContent);
+              setRefinedContent(prev => ({
+                ...prev,
+                ...parsedContent
+              }));
+            }
+          }
+        } catch (err) {
+          console.error('Error parsing structured content from AI response:', err);
+        }
+      }
+    }
+  }, [messages, setRefinedContent]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
