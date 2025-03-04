@@ -1,212 +1,153 @@
 
-// Main entry point for website analysis using Claude/Anthropic
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from './utils/corsHandlers.ts';
-import { fetchWebsiteContentBasic } from './utils/websiteFetcher.ts';
-import { fetchWebsiteContentWithFirecrawl } from './utils/firecrawlFetcher.ts';
-import { analyzeWebsiteWithAnthropic, verifyAnthropicApiKey } from './services/anthropicService.ts';
-import { parseClaudeResponse, generateFallbackInsights } from './utils/insightProcessor.ts';
+import { fetchWebsiteContentWithFirecrawl } from "./utils/firecrawlFetcher.ts";
+import { analyzeWebsiteWithAnthropic, verifyAnthropicApiKey } from "./services/anthropicService.ts";
+import { parseClaudeResponse, processInsights, generateFallbackInsights } from "./utils/insightProcessor.ts";
+import { corsHeaders } from "./utils/corsHandlers.ts";
 
-// Handle CORS for preflight requests
+// Execute the API call
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
-  
+
   try {
-    console.log('Website analysis Edge Function starting...');
-    
-    // First, verify the Anthropic API key before processing anything else
+    // Verify the Anthropic API key is present before proceeding
     if (!verifyAnthropicApiKey()) {
-      console.error('Anthropic API key validation failed');
+      console.error("Missing or invalid ANTHROPIC_API_KEY");
       return new Response(
-        JSON.stringify({ 
-          error: 'Anthropic API key validation failed',
-          details: 'Please check your ANTHROPIC_API_KEY in Supabase secrets - it should start with sk-ant-',
-          insights: generateFallbackInsights("unknown", "the client", "general")
+        JSON.stringify({
+          error: "Claude API key not found or invalid. Please add it to your Supabase secrets.",
+          insights: generateFallbackMockResponse("example.com", "Example Company", "Technology")
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const startTime = Date.now();
+    console.log(`Website analysis started at ${new Date().toISOString()}`);
     
     // Parse the request body
-    let requestData;
-    try {
-      requestData = await req.json();
-      console.log('Request data received:', {
-        projectId: requestData.projectId,
-        clientIndustry: requestData.clientIndustry,
-        clientWebsite: requestData.clientWebsite,
-        hasWebsiteContent: !!requestData.websiteContent,
-        timestamp: requestData.timestamp
-      });
-    } catch (parseError) {
-      console.error('Error parsing request JSON:', parseError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid JSON in request body', 
-          details: parseError.message,
-          insights: generateFallbackInsights("unknown", "the client", "general")
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const requestData = await req.json();
     
-    const { 
-      projectId, 
-      clientIndustry, 
-      clientWebsite, 
-      websiteContent,
-      systemPrompt,
-      clientName
+    // Extract and validate fields
+    const {
+      clientWebsite,
+      clientName = "Client",
+      clientIndustry = "Technology",
+      projectId,
+      debugInfo = false
     } = requestData;
     
-    // Check we have the minimum required data
-    if (!projectId || !clientWebsite) {
-      console.error('Missing required fields in request:', JSON.stringify(requestData));
+    // Validate input
+    if (!clientWebsite) {
+      console.error("Missing website URL in request");
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing required fields', 
-          required: ['projectId', 'clientWebsite'],
-          received: Object.keys(requestData),
-          insights: generateFallbackInsights("unknown", "the client", "general")
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Missing website URL in request" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    console.log(`Analyzing website for project ${projectId}: ${clientWebsite}`);
+    console.log(`Analyzing website for ${clientName} (${clientIndustry}): ${clientWebsite}`);
+    console.log(`Project ID: ${projectId}, Debug mode: ${debugInfo}`);
     
-    // Print current environment variables (securely)
-    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+    // Start fetching the website content
+    console.log(`Fetching content for ${clientWebsite}`);
+    let websiteContent;
     
-    console.log(`Environment check: Firecrawl API Key exists: ${!!firecrawlKey} (${firecrawlKey ? firecrawlKey.substring(0, 3) + '...' : 'missing'})`);
-    console.log(`Environment check: Anthropic API Key exists: ${!!anthropicKey} (${anthropicKey ? anthropicKey.substring(0, 3) + '...' : 'missing'})`);
-    
-    // Try to use provided content first, otherwise fetch it
-    let contentToAnalyze = websiteContent;
-    
-    if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
-      console.log("No valid content provided, attempting to fetch website content");
-      
-      try {
-        // First try using Firecrawl for enhanced scraping if available
-        if (firecrawlKey) {
-          try {
-            console.log(`Attempting to fetch content with Firecrawl for ${clientWebsite}...`);
-            contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
-            console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
-          } catch (fetchError) {
-            console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
-            contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
-            console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
-          }
-        } else {
-          console.log("No Firecrawl API key found, using basic fetch");
-          contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
-          console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
-        }
-      } catch (fetchError) {
-        console.error("Error fetching website content:", fetchError);
-        
-        // Generate fallback content description 
-        contentToAnalyze = `The website at ${clientWebsite} could not be accessed or scraped properly. 
-This could be due to the site using techniques that prevent scraping, being temporarily unavailable, 
-or using technologies our scraper cannot interpret. Based on the URL, this appears to be 
-${clientWebsite.includes('.com') ? 'a commercial website' : clientWebsite.includes('.org') ? 'an organization website' : 'a website'} 
-likely in the ${clientIndustry || 'general'} industry.`;
-        
-        console.log("Using generated fallback content description");
-      }
-    }
-    
-    if (!contentToAnalyze || contentToAnalyze.length < 100) {
-      console.error("Failed to fetch sufficient website content, using fallback insights");
-      
-      // Generate fallback insights instead of failing
-      const fallbackInsights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
-      
-      return new Response(
-        JSON.stringify({ 
-          insights: fallbackInsights,
-          message: 'Using fallback insights due to insufficient website content',
-          warning: 'Website content could not be scraped successfully'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Call Claude to analyze the content
-    console.log("Calling Claude API to analyze content...");
     try {
-      const claudeResponse = await analyzeWebsiteWithAnthropic(
-        contentToAnalyze,
-        systemPrompt || "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
-        clientName || "the client",
-        clientIndustry || "general"
+      // Try to fetch website content with Firecrawl first
+      websiteContent = await fetchWebsiteContentWithFirecrawl(clientWebsite);
+      console.log(`Fetched ${websiteContent.length} characters of content`);
+      
+      // If content is too short, return an error
+      if (websiteContent.length < 200) {
+        console.error("Website content too short for meaningful analysis");
+        throw new Error("Could not fetch sufficient website content for analysis");
+      }
+    } catch (fetchError) {
+      console.error("Error fetching website content:", fetchError);
+      
+      // Return fallback insights with the error
+      return new Response(
+        JSON.stringify({
+          error: `Failed to fetch website content: ${fetchError.message}`,
+          insights: generateFallbackMockResponse(clientWebsite, clientName, clientIndustry)
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Prepare the system prompt
+    const systemPrompt = `You are a strategic analyst for a gaming agency, helping to identify opportunities for gaming partnerships and integrations. Your task is to analyze website content and identify strategic insights that would be valuable for a gaming company considering a potential partnership.`;
+    
+    // Call the Claude API to analyze the website content
+    try {
+      console.log("Calling Claude API to analyze website content");
+      const analysisResult = await analyzeWebsiteWithAnthropic(
+        websiteContent,
+        systemPrompt,
+        clientName,
+        clientIndustry
       );
       
-      console.log(`Claude API response received (${claudeResponse.length} chars)`);
+      console.log(`Claude API returned ${analysisResult.length} characters of analysis`);
       
-      // Process the response to extract insights
-      let insights;
-      try {
-        console.log("Parsing Claude response into insights...");
-        insights = parseClaudeResponse(claudeResponse);
-        console.log(`Parsed ${insights.length} insights from Claude response`);
-      } catch (parseError) {
-        console.error('Failed to parse Claude response:', parseError);
-        
-        // Generate fallback insights instead of failing
-        console.log("Using fallback insights due to parsing error");
-        insights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
-      }
+      // Parse the Claude response to extract insights
+      const rawInsights = parseClaudeResponse(analysisResult);
+      console.log(`Parsed ${rawInsights.length} insights from Claude's response`);
       
-      // Check if we got valid insights
-      if (!insights || !Array.isArray(insights) || insights.length === 0) {
-        console.error('No valid insights generated from Claude response');
-        
-        // Generate fallback insights
-        console.log("Using fallback insights due to no valid insights from Claude");
-        insights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
-      }
+      // Process the insights to ensure they are properly formatted
+      const processedInsights = processInsights(rawInsights, clientWebsite, clientName);
+      
+      // Log completion time
+      const endTime = Date.now();
+      const processingTime = (endTime - startTime) / 1000;
+      console.log(`Website analysis completed in ${processingTime.toFixed(2)} seconds`);
       
       // Return the insights
       return new Response(
-        JSON.stringify({ 
-          insights,
-          message: 'Successfully analyzed website and generated insights'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ insights: processedInsights }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    } catch (claudeError) {
-      console.error('Error calling Claude API:', claudeError);
+    } catch (analysisError) {
+      console.error("Error analyzing website content:", analysisError);
       
-      // Generate fallback insights instead of failing
-      console.log("Using fallback insights due to Claude API error");
-      const fallbackInsights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
+      // Generate fallback insights
+      const fallbackInsights = generateFallbackInsights(clientWebsite, clientName, clientIndustry);
       
+      // Return the fallback insights with the error
       return new Response(
-        JSON.stringify({ 
-          insights: fallbackInsights,
-          message: 'Using fallback insights due to API error',
-          error: `Error calling Claude API: ${claudeError.message || 'Unknown Claude API error'}`
+        JSON.stringify({
+          error: `Error calling Claude API: ${analysisError.message}`,
+          insights: fallbackInsights
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (error) {
-    console.error('Error in analyze-website-with-anthropic:', error);
+    console.error("Unhandled error in website analysis:", error);
     
+    // Return a generic error response
     return new Response(
-      JSON.stringify({ 
-        error: `Server error: ${error.message || 'Unknown error'}`,
-        fallback: true,
-        insights: generateFallbackInsights("unknown", "the client", "general")
+      JSON.stringify({
+        error: `Unhandled error in website analysis: ${error.message}`,
+        insights: []
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
+
+/**
+ * Generate mock insights when all else fails
+ */
+function generateFallbackMockResponse(websiteUrl: string, clientName: string, clientIndustry: string) {
+  console.log(`Generating emergency fallback mock insights for ${websiteUrl}`);
+  
+  return generateFallbackInsights(websiteUrl, clientName, clientIndustry);
+}

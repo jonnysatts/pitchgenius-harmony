@@ -20,36 +20,85 @@ interface Insight {
 
 /**
  * Parse Claude's JSON response into structured insights
+ * Updated to handle the response format from Messages API
  */
 export function parseClaudeResponse(response: string): Insight[] {
   console.log('Starting to parse Claude response');
   
   try {
-    // First, try to find and extract any JSON array from the text
-    const jsonMatch = response.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    // Attempt multiple JSON extraction strategies
+    // First try to find JSON in code blocks
+    let jsonStr = '';
+    const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1];
+      console.log(`Found JSON in code block: ${jsonStr.substring(0, 100)}...`);
+    } else {
+      // Try to find a JSON array directly
+      const jsonArrayMatch = response.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (jsonArrayMatch) {
+        jsonStr = jsonArrayMatch[0];
+        console.log(`Found JSON array in response: ${jsonStr.substring(0, 100)}...`);
+      } else {
+        // Look for JSON object with insights array
+        const jsonObjMatch = response.match(/\{\s*"insights"\s*:\s*(\[[\s\S]*\])\s*\}/);
+        if (jsonObjMatch) {
+          jsonStr = jsonObjMatch[1];
+          console.log(`Found insights array in JSON object: ${jsonStr.substring(0, 100)}...`);
+        } else {
+          console.log('No JSON format found, trying to extract individual insights');
+          return extractInsightsFromText(response);
+        }
+      }
+    }
     
-    if (jsonMatch) {
-      const jsonStr = jsonMatch[0];
-      console.log(`Found JSON array in response: ${jsonStr.substring(0, 100)}...`);
+    // Parse the JSON
+    try {
+      const parsed = JSON.parse(jsonStr);
       
-      // Parse the JSON
-      try {
-        const insights: Insight[] = JSON.parse(jsonStr);
-        console.log(`Successfully parsed ${insights.length} insights from JSON`);
-        return insights;
-      } catch (jsonError) {
-        console.error('Error parsing extracted JSON:', jsonError);
-        // Try a more lenient approach - extract individual JSON objects
+      // Handle both array of insights and object with insights array
+      let insights: Insight[];
+      if (Array.isArray(parsed)) {
+        insights = parsed;
+      } else if (parsed.insights && Array.isArray(parsed.insights)) {
+        insights = parsed.insights;
+      } else {
+        console.error('Parsed JSON is not an array or object with insights array');
         return extractInsightsFromText(response);
       }
-    } else {
-      console.log('No JSON array found in response, trying to extract individual insights');
+      
+      console.log(`Successfully parsed ${insights.length} insights from JSON`);
+      
+      // Validate and fix the insights
+      return insights.map(insight => validateAndFixInsight(insight));
+    } catch (jsonError) {
+      console.error('Error parsing JSON:', jsonError);
+      // Try a more lenient approach - extract individual JSON objects
       return extractInsightsFromText(response);
     }
   } catch (error) {
     console.error('Error parsing Claude response:', error);
-    throw new Error(`Failed to parse insights from Claude response: ${error.message}`);
+    return extractInsightsFromText(response);
   }
+}
+
+/**
+ * Validate and fix an insight to ensure it has all required fields
+ */
+function validateAndFixInsight(insight: any): Insight {
+  const now = Date.now();
+  return {
+    id: insight.id || `website-${insight.category || 'unknown'}-${now}`,
+    category: insight.category || 'company_positioning',
+    confidence: typeof insight.confidence === 'number' ? insight.confidence : 75,
+    needsReview: typeof insight.needsReview === 'boolean' ? insight.needsReview : true,
+    content: {
+      title: insight.content?.title || 'Website Insight',
+      summary: insight.content?.summary || 'Analysis from website content',
+      details: insight.content?.details || 'No details provided',
+      recommendations: insight.content?.recommendations || 'No specific recommendations'
+    }
+  };
 }
 
 /**
