@@ -1,4 +1,3 @@
-
 import { corsHeaders } from '../utils/corsHandlers.ts';
 import { analyzeWebsiteWithAnthropic } from './anthropicService.ts';
 import { extractWebsiteContent } from './websiteContentService.ts';
