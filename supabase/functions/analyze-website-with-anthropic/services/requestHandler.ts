@@ -1,156 +1,131 @@
 
-/**
- * Request handling service for website analysis
- */
-import { WebsiteAnalysisParams } from '../types/websiteAnalysisTypes.ts';
 import { corsHeaders } from '../utils/corsHandlers.ts';
-import { fetchWebsiteContent } from '../services/websiteContentService.ts';
-import { analyzeWebsiteWithAnthropic } from '../services/anthropicService.ts';
-import { parseClaudeResponse, processInsights } from '../utils/insightParser.ts';
-import { createErrorResponse } from '../services/errorHandler.ts';
-import { generateFallbackInsights } from '../utils/defaultContentGenerators.ts';
+import { analyzeWebsiteWithAnthropic } from './anthropicService.ts';
+import { extractWebsiteContent } from './websiteContentService.ts';
+import { verifyAnthropicApiKey } from './keyValidation.ts';
+import { testClaudeAPIConfiguration } from './apiClient.ts';
+import { createErrorResponse } from './errorHandler.ts';
 
 /**
- * Handle the main website analysis request
+ * Main handler for website analysis requests
  */
-export async function handleWebsiteAnalysisRequest(req: Request): Promise<Response> {
+export async function handleAnalysisRequest(req: Request): Promise<Response> {
   try {
-    // Parse request parameters from body
-    const requestParams: WebsiteAnalysisParams = await req.json();
+    // Parse the request body
+    const requestData = await req.json();
     const {
-      website_url: websiteUrl,
-      client_name: clientName = '',
-      client_industry: clientIndustry = 'technology',
-      use_firecrawl: useFirecrawl = false,
-      system_prompt: customSystemPrompt
-    } = requestParams;
+      website_url,
+      client_name = "",
+      client_industry = "technology",
+      system_prompt = "",
+      use_firecrawl = true
+    } = requestData;
 
-    console.log(`Analyzing website: ${websiteUrl}`);
-    console.log(`Client: ${clientName}, Industry: ${clientIndustry}, Using Firecrawl: ${useFirecrawl}`);
-
-    // Validate request parameters
-    if (!websiteUrl) {
-      console.error('Missing website_url parameter');
-      
-      // Return a proper error response with fallback insights
-      const fallbackInsights = generateFallbackInsights(
-        "unknown", 
-        clientName, 
-        clientIndustry
-      );
-      
-      return new Response(JSON.stringify({ 
-        error: 'Missing website_url parameter',
-        data: fallbackInsights
-      }), {
-        status: 200, // Return 200 with fallback data
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Fetch website content
-    let websiteContent = '';
-    let fetchError = null;
+    console.log(`Processing analysis request for website: ${website_url}`);
     
-    try {
-      websiteContent = await fetchWebsiteContent(websiteUrl, useFirecrawl);
-    } catch (error) {
-      fetchError = error;
-      console.error('Error fetching website content:', error);
-    }
-
-    if (!websiteContent) {
-      console.error('Failed to fetch website content');
+    // Verify the API key before proceeding
+    const keyVerification = await verifyAnthropicApiKey();
+    if (!keyVerification.valid) {
+      console.error(`API key verification failed: ${keyVerification.message}`);
       
-      // Generate fallback insights when fetching fails
-      const fallbackInsights = generateFallbackInsights(
-        websiteUrl, 
-        clientName, 
-        clientIndustry
-      );
+      const errorDetails = {
+        apiKeyStatus: {
+          checked: true,
+          exists: keyVerification.keyExists,
+          validFormat: keyVerification.formatValid,
+          keyPrefix: keyVerification.keyPrefix
+        },
+        error: keyVerification.message
+      };
       
-      return new Response(JSON.stringify({ 
-        error: fetchError ? `Failed to fetch website content: ${fetchError.message}` : 'Failed to fetch website content',
-        data: fallbackInsights
-      }), {
-        status: 200, // Return 200 with fallback data
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(errorDetails, 400, client_industry);
     }
-
-    // Default system prompt if none provided
-    const systemPrompt = customSystemPrompt || 
-      "You are a strategic gaming audience specialist analyzing websites for Games Age, a gaming activation company that helps brands connect with gaming audiences through events, content, partnerships, and Fortress venues.";
-
-    // Analyze website content with Anthropic
-    let claudeResponse = '';
-    let claudeError = null;
     
-    try {
-      claudeResponse = await analyzeWebsiteWithAnthropic(
-        websiteContent, 
-        systemPrompt,
-        clientName,
-        clientIndustry
-      );
-    } catch (error) {
-      claudeError = error;
-      console.error('Claude analysis error:', error);
+    // Validate the website URL
+    if (!website_url) {
+      return createErrorResponse("No website URL provided", 400, client_industry);
     }
-
-    if (!claudeResponse) {
-      console.error('Failed to analyze website content with Anthropic');
-      
-      // Generate fallback insights when Claude analysis fails
-      const fallbackInsights = generateFallbackInsights(
-        websiteUrl, 
-        clientName, 
-        clientIndustry
-      );
-      
-      return new Response(JSON.stringify({ 
-        error: claudeError ? `Claude analysis failed: ${claudeError.message}` : 'Failed to analyze website content with Anthropic',
-        data: fallbackInsights
-      }), {
-        status: 200, // Return 200 with fallback data
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Parse Claude's response into structured insights
-    let insights = parseClaudeResponse(claudeResponse);
-
-    // If parsing returned no insights, generate fallbacks
-    if (!insights || insights.length === 0) {
-      console.warn('No insights parsed from Claude response, using fallbacks');
-      insights = generateFallbackInsights(
-        websiteUrl, 
-        clientName, 
-        clientIndustry
+    
+    // Extract website content using the appropriate service
+    const websiteContent = await extractWebsiteContent(website_url, use_firecrawl);
+    
+    if (!websiteContent || websiteContent.length < 100) {
+      return createErrorResponse(
+        `Failed to extract sufficient content from website: ${website_url}`, 
+        400, 
+        client_industry
       );
     }
-
-    // Process insights to ensure they have all required fields
-    insights = processInsights(insights, websiteUrl, clientName);
-
-    // Return the insights as JSON
-    return new Response(JSON.stringify({ data: insights }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    
+    // Analyze the website with Claude
+    const result = await analyzeWebsiteWithAnthropic(
+      websiteContent,
+      system_prompt, 
+      client_name,
+      client_industry
+    );
+    
+    return new Response(result, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
-
   } catch (error) {
-    console.error('Error during website analysis:', error);
+    console.error('Error in request handler:', error);
+    return createErrorResponse(error, 500, "technology");
+  }
+}
+
+/**
+ * Handler for diagnostic/test requests to check API key and configuration
+ */
+export async function handleDiagnosticRequest(): Promise<Response> {
+  try {
+    console.log('Processing diagnostic request to check Claude API configuration');
     
-    // Generate fallback insights for any unhandled errors
-    const fallbackInsights = generateFallbackInsights("unknown", "", "technology");
+    // Check API key access and format
+    const keyVerification = await verifyAnthropicApiKey();
     
-    return new Response(JSON.stringify({ 
-      error: error.message, 
-      data: fallbackInsights 
+    // Test the API configuration
+    const apiConfig = await testClaudeAPIConfiguration();
+    
+    const diagnosticResult = {
+      timestamp: new Date().toISOString(),
+      edgeFunctionWorking: true,
+      apiKeyVerification: {
+        keyExists: keyVerification.keyExists,
+        keyValid: keyVerification.valid,
+        keyPrefix: keyVerification.keyPrefix,
+        message: keyVerification.message
+      },
+      apiConfiguration: apiConfig,
+      environmentInfo: {
+        denoVersion: Deno.version.deno,
+        v8Version: Deno.version.v8,
+        typescriptVersion: Deno.version.typescript
+      }
+    };
+    
+    return new Response(JSON.stringify(diagnosticResult), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (error) {
+    console.error('Error in diagnostic handler:', error);
+    
+    return new Response(JSON.stringify({
+      error: `Diagnostic check failed: ${error instanceof Error ? error.message : String(error)}`,
+      timestamp: new Date().toISOString(),
+      edgeFunctionWorking: true,
+      errorDetails: String(error)
     }), {
-      status: 200, // Return 200 with fallback data
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
   }
 }

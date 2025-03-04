@@ -21,22 +21,31 @@ export async function callClaudeAPI(
   maxTokens: number = 4000
 ): Promise<string> {
   // First verify the API key before making any call
-  if (!verifyAnthropicApiKey()) {
-    throw new Error('Invalid or missing Anthropic API key. Please check your ANTHROPIC_API_KEY in Supabase secrets.');
+  const keyVerification = await verifyAnthropicApiKey();
+  if (!keyVerification.valid) {
+    console.error(`API key verification failed: ${keyVerification.message}`);
+    throw new Error(`Invalid or missing Anthropic API key: ${keyVerification.message}`);
   }
   
   console.log('Making API call to Claude with model:', model);
   
   try {
-    // Log the request parameters for debugging
+    // Get the API key for logging (first few chars only)
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || '';
+    const apiKeyPrefix = apiKey.substring(0, 8) + '...';
+    const apiKeyLooksValid = apiKey.startsWith('sk-ant-');
+    
+    // Log more request details for debugging
     console.log('Claude API request parameters:', {
       model: model,
       maxTokens: maxTokens,
       hasSystemPrompt: !!systemPrompt,
       systemPromptLength: systemPrompt.length,
       userPromptLength: userPrompt.length,
-      apiKeyExists: !!Deno.env.get('ANTHROPIC_API_KEY'),
-      apiKeyPrefix: Deno.env.get('ANTHROPIC_API_KEY')?.substring(0, 8) + '...'
+      apiKeyExists: !!apiKey,
+      apiKeyPrefix: apiKeyPrefix,
+      apiKeyLooksValid: apiKeyLooksValid,
+      contentLength: websiteContent.length
     });
     
     // Create AbortController for timeout
@@ -46,12 +55,14 @@ export async function callClaudeAPI(
     }, DEFAULT_TIMEOUT_MS);
     
     try {
+      console.log('Preparing to send request to Claude API...');
+      
       // Use fetch directly instead of the SDK
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || '',
+          'x-api-key': apiKey,
           'anthropic-version': CLAUDE_API_VERSION
         },
         body: JSON.stringify({
@@ -72,19 +83,43 @@ export async function callClaudeAPI(
       // Clear the timeout
       clearTimeout(timeoutId);
       
+      console.log(`Claude API response status: ${response.status}`);
+      
       // Enhanced error handling
       if (!response.ok) {
         let errorText = '';
+        let errorJson = null;
+        
         try {
-          errorText = await response.text();
-          console.error('Claude API error:', errorText);
-        } catch (textError) {
-          console.error('Could not extract error text from response:', textError);
-          errorText = 'Unknown error';
+          // Try to parse error as JSON first
+          errorJson = await response.json();
+          errorText = JSON.stringify(errorJson);
+          console.error('Claude API error:', errorJson);
+        } catch (jsonError) {
+          // If not JSON, get as text
+          try {
+            errorText = await response.text();
+            console.error('Claude API error text:', errorText);
+          } catch (textError) {
+            console.error('Could not extract error from response:', textError);
+            errorText = 'Unknown error';
+          }
         }
         
         // Create a detailed error message with status code
-        throw new Error(`Claude API HTTP error: ${response.status} - ${errorText}`);
+        const errorMessage = `Claude API HTTP error: ${response.status}`;
+        console.error(errorMessage, errorJson || errorText);
+        
+        // Add specific handling for different status codes
+        if (response.status === 401) {
+          throw new Error(`${errorMessage} - Authentication failed. Check your API key.`);
+        } else if (response.status === 429) {
+          throw new Error(`${errorMessage} - Rate limit exceeded. Try again later.`);
+        } else if (response.status === 400) {
+          throw new Error(`${errorMessage} - Bad request: ${errorText}`);
+        } else {
+          throw new Error(`${errorMessage} - ${errorText}`);
+        }
       }
       
       const data = await response.json();
@@ -129,5 +164,51 @@ export async function callClaudeAPI(
     }
     
     throw new Error(`Claude API error: ${errorMessage}`);
+  }
+}
+
+/**
+ * Test API configuration without making a full request
+ * This function tests if we can access the API key and if it's in the expected format
+ */
+export async function testClaudeAPIConfiguration(): Promise<{
+  success: boolean;
+  message: string;
+  apiKeyExists: boolean;
+  apiKeyFormat: boolean;
+  apiKeyPrefix?: string;
+}> {
+  try {
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    
+    if (!apiKey) {
+      return {
+        success: false,
+        message: 'ANTHROPIC_API_KEY not found in environment variables',
+        apiKeyExists: false,
+        apiKeyFormat: false
+      };
+    }
+    
+    // Check if the API key is in the expected format (Claude API keys start with sk-ant-)
+    const hasValidPrefix = apiKey.startsWith('sk-ant-');
+    const keyPrefix = apiKey.substring(0, 8) + '...';
+    
+    return {
+      success: true,
+      message: hasValidPrefix 
+        ? 'API key found and has the expected format' 
+        : 'API key found but does not have the expected format (should start with sk-ant-)',
+      apiKeyExists: true,
+      apiKeyFormat: hasValidPrefix,
+      apiKeyPrefix: keyPrefix
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error accessing API key configuration: ${error instanceof Error ? error.message : String(error)}`,
+      apiKeyExists: false,
+      apiKeyFormat: false
+    };
   }
 }

@@ -129,6 +129,46 @@ export class FirecrawlService {
   }
   
   /**
+   * Test the Claude API configuration via the Edge Function's diagnostic endpoint
+   * This helps identify issues with the Claude API integration
+   */
+  static async testClaudeAPIConfiguration(): Promise<any> {
+    try {
+      console.log('Testing Claude API configuration via Edge Function...');
+      
+      // Import the supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Call the diagnostic endpoint
+      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic/diagnose', {
+        body: { test: true, timestamp: new Date().toISOString() }
+      });
+      
+      if (error) {
+        console.error('Error testing Claude API configuration:', error);
+        return {
+          success: false,
+          error: error.message || 'Unknown error testing API configuration',
+          edgeFunctionWorking: false
+        };
+      }
+      
+      console.log('Claude API configuration test result:', data);
+      return {
+        success: true,
+        ...data
+      };
+    } catch (error) {
+      console.error('Exception testing Claude API configuration:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        edgeFunctionWorking: false
+      };
+    }
+  }
+  
+  /**
    * Fallback method for direct API access (not recommended)
    */
   static async analyzeWebsiteDirectly(url: string): Promise<any> {

@@ -2,20 +2,27 @@
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw, LoaderCircle, ServerCrash, XCircle, Info } from "lucide-react";
+import { AlertTriangle, RefreshCw, LoaderCircle, ServerCrash, XCircle, Info, TerminalSquare, Key } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface InsightsErrorAlertProps {
   error?: string | null;
   usingFallbackInsights?: boolean;
   onRetryAnalysis?: () => void;
   isClaudeProcessing?: boolean;
+  apiKeyStatus?: {
+    checked?: boolean;
+    exists?: boolean;
+    validFormat?: boolean;
+  };
 }
 
 const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({ 
   error, 
   usingFallbackInsights, 
   onRetryAnalysis,
-  isClaudeProcessing = false
+  isClaudeProcessing = false,
+  apiKeyStatus
 }) => {
   if (!error && !usingFallbackInsights && !isClaudeProcessing) return null;
   
@@ -91,6 +98,8 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
         <ServerCrash className="h-4 w-4 text-red-500" />
       ) : isClaudeApiError ? (
         <XCircle className="h-4 w-4 text-red-500" /> 
+      ) : isApiKeyMissing ? (
+        <Key className="h-4 w-4 text-red-500" />
       ) : (
         <AlertTriangle className="h-4 w-4 text-amber-500" />
       )}
@@ -114,6 +123,22 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
           <div>
             {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
             
+            {/* Add API key status information */}
+            {apiKeyStatus && (
+              <div className="mt-2 text-sm p-2 bg-gray-50 rounded-md border border-gray-200">
+                <p className="font-semibold flex items-center">
+                  <Key className="h-3.5 w-3.5 mr-1" /> Anthropic API Key Status:
+                </p>
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Checked: {apiKeyStatus.checked ? 'Yes' : 'No'}</li>
+                  <li>Found: {apiKeyStatus.exists ? 'Yes' : 'No'}</li>
+                  {apiKeyStatus.validFormat !== undefined && (
+                    <li>Valid Format: {apiKeyStatus.validFormat ? 'Yes' : 'No'}</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            
             {/* Adding explanation for fallback insights */}
             {usingFallbackInsights && (
               <div className="mt-2 text-sm">
@@ -125,12 +150,13 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
             {/* Specific additional content based on error type */}
             {isApiKeyMissing && (
               <div className="mt-2 text-sm">
-                <p>The ANTHROPIC_API_KEY is missing from your Supabase secrets.</p>
+                <p>The ANTHROPIC_API_KEY is missing from your Supabase secrets or can't be accessed by the Edge Function.</p>
                 <p>To fix this:</p>
                 <ul className="list-disc pl-5 mt-1">
                   <li>Go to the Supabase dashboard</li>
                   <li>Navigate to Project Settings → Edge Functions → Secrets</li>
                   <li>Add a secret with name ANTHROPIC_API_KEY and your Claude API key as the value</li>
+                  <li>Restart your Edge Function after adding the secret</li>
                 </ul>
               </div>
             )}
@@ -143,7 +169,19 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
                   <li>The Edge Function not being deployed properly</li>
                   <li>Missing Anthropic API key in Supabase secrets</li>
                   <li>Temporary Supabase service disruption</li>
+                  <li>Check the Edge Function logs for detailed error information</li>
                 </ul>
+                <div className="mt-2 flex items-center">
+                  <TerminalSquare className="h-3.5 w-3.5 mr-1 text-red-700" />
+                  <a 
+                    href="https://supabase.com/dashboard/project/nryafptwknnftdjugoyn/functions/generate-insights-with-anthropic/logs" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-red-700 underline"
+                  >
+                    View Edge Function Logs
+                  </a>
+                </div>
               </div>
             )}
             

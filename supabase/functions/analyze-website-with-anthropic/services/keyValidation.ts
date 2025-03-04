@@ -1,50 +1,134 @@
 
 /**
- * Utilities for API key validation
+ * Utilities for validating the Anthropic API key
  */
 
 /**
- * Verify the Anthropic API key is valid and well-formed
+ * Verify that the Anthropic API key is available and valid
+ * @returns Object with validation result and message
  */
-export function verifyAnthropicApiKey(): boolean {
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  
-  // Check if key exists
-  if (!apiKey) {
-    console.error('ANTHROPIC_API_KEY environment variable is not set');
-    return false;
+export async function verifyAnthropicApiKey(): Promise<{
+  valid: boolean;
+  message: string;
+  keyExists: boolean;
+  keyPrefix?: string;
+  formatValid?: boolean;
+}> {
+  try {
+    console.log('Verifying Anthropic API key...');
+    
+    // Check if the API key exists
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    
+    if (!apiKey) {
+      console.error('ANTHROPIC_API_KEY not found in environment variables');
+      
+      // Check other possible key names (helpful for debugging)
+      const potentialKeys = [
+        'CLAUDE_API_KEY',
+        'CLAUDE_KEY',
+        'ANTHROPIC_KEY'
+      ];
+      
+      let alternateKeyFound = false;
+      for (const keyName of potentialKeys) {
+        if (Deno.env.get(keyName)) {
+          alternateKeyFound = true;
+          console.log(`Note: Found key with alternate name: ${keyName}`);
+          break;
+        }
+      }
+      
+      return {
+        valid: false,
+        message: alternateKeyFound
+          ? 'ANTHROPIC_API_KEY not found, but found key with alternate name. Please rename to ANTHROPIC_API_KEY.'
+          : 'ANTHROPIC_API_KEY not found in environment variables',
+        keyExists: false
+      };
+    }
+    
+    // Validate key format (Claude API keys typically start with sk-ant-)
+    const hasValidPrefix = apiKey.startsWith('sk-ant-');
+    const keyPrefix = apiKey.substring(0, 8) + '...';
+    
+    if (!hasValidPrefix) {
+      console.warn('API key does not have the expected format (should start with sk-ant-)');
+      return {
+        valid: false,
+        message: 'API key found but does not have the expected format (should start with sk-ant-)',
+        keyExists: true,
+        keyPrefix,
+        formatValid: false
+      };
+    }
+    
+    // For development, we'll accept the key if it exists and has valid format
+    // In production, we could make a test request to the API to further validate
+    console.log('API key validation successful');
+    return {
+      valid: true,
+      message: 'API key validation successful',
+      keyExists: true,
+      keyPrefix,
+      formatValid: true
+    };
+  } catch (error) {
+    console.error('Error during API key validation:', error);
+    return {
+      valid: false,
+      message: `Error accessing API key: ${error instanceof Error ? error.message : String(error)}`,
+      keyExists: false
+    };
   }
-  
-  // Check if key has the expected format (Claude API keys start with 'sk-ant-')
-  if (!apiKey.startsWith('sk-ant-')) {
-    console.error('ANTHROPIC_API_KEY does not have the expected format (should start with sk-ant-)');
-    return false;
-  }
-  
-  // Check minimum length requirement
-  if (apiKey.length < 25) {
-    console.error('ANTHROPIC_API_KEY appears to be too short to be valid');
-    return false;
-  }
-  
-  console.log('API key verification passed');
-  return true;
 }
 
 /**
- * Log detailed information about API key status
+ * Test function that returns detailed diagnostics about the Anthropic API key
+ * This is useful for debugging API key issues
  */
-export function logApiKeyStatus(): void {
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  
-  if (!apiKey) {
-    console.error('ANTHROPIC_API_KEY is not set in environment variables');
-  } else {
-    const masked = `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`;
-    console.log(`ANTHROPIC_API_KEY is set (${masked})`);
+export async function diagnoseApiKeyIssues(): Promise<{
+  keyExists: boolean;
+  keyValue?: string;
+  keyPrefix?: string;
+  formatValid?: boolean;
+  allEnvVars?: string[];
+  error?: string;
+}> {
+  try {
+    // Get all environment variable names for debugging
+    const envVars = Object.keys(Deno.env.toObject());
     
-    if (!apiKey.startsWith('sk-ant-')) {
-      console.error('WARNING: ANTHROPIC_API_KEY does not start with "sk-ant-" which is the expected prefix');
+    // Check if the API key exists
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    
+    if (!apiKey) {
+      return {
+        keyExists: false,
+        allEnvVars: envVars,
+        error: 'ANTHROPIC_API_KEY not found in environment variables'
+      };
     }
+    
+    // Return a safe version of the key for verification
+    const safeKeyValue = apiKey.substring(0, 12) + '...' + apiKey.substring(apiKey.length - 4);
+    const keyPrefix = apiKey.substring(0, 8) + '...';
+    
+    // Validate key format
+    const formatValid = apiKey.startsWith('sk-ant-');
+    
+    return {
+      keyExists: true,
+      keyValue: safeKeyValue,
+      keyPrefix,
+      formatValid,
+      allEnvVars: envVars
+    };
+  } catch (error) {
+    return {
+      keyExists: false,
+      error: `Error diagnosing API key: ${error instanceof Error ? error.message : String(error)}`,
+      allEnvVars: []
+    };
   }
 }
