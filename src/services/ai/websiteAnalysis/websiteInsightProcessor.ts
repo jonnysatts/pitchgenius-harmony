@@ -1,7 +1,8 @@
+
 /**
  * Process raw insights from API responses
  */
-import { StrategicInsight, Project } from "@/lib/types";
+import { StrategicInsight, Project, WebsiteInsightCategory } from "@/lib/types";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
 import { normalizeWebsiteCategory, isValidWebsiteCategory } from "@/components/project/insights/utils/insightFormatters";
 import { getCategoryTitle, getCategoryRecommendation, cleanTextContent } from "./insightContentUtils";
