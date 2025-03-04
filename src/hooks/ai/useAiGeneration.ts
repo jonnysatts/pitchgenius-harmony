@@ -36,44 +36,56 @@ export const useAiGeneration = (
         // Prepare document contents for analysis - now returns an array of objects
         const documentContents = prepareDocumentContents(documents);
         console.log(`Prepared ${documentContents.length} document contents for analysis`);
+        console.log("Total content size:", documentContents.reduce((acc, doc) => acc + (doc.content?.length || 0), 0), "characters");
         
-        // Create a promise that will resolve with fallback insights after timeout
-        const timeoutPromise = createTimeoutPromise(project, documents);
-        
-        // Create the actual API call promise
-        const apiPromise = callClaudeApi(project, documents, documentContents);
-        
-        // Race the promises - whichever resolves first will be used
-        const result = await Promise.race([apiPromise, timeoutPromise]);
-        
-        // Check if there was insufficient content
-        if (result.insufficientContent) {
-          setInsufficientContent(true);
-          setError(result.error || "Insufficient document content for meaningful insights");
-          completeProcessing("Analysis complete - insufficient content");
-          return false;
-        }
-        
-        if (result.insights && result.insights.length > 0) {
-          // Determine if we are using fallback insights from the error
-          const usingFallback = !!result.error && result.error.includes("using generated sample insights");
+        // Add more detailed error handling for API call
+        try {
+          // Create the actual API call promise
+          const result = await callClaudeApi(project, documents, documentContents);
           
-          // Set insights with appropriate fallback flag
-          setInsights(result.insights, usingFallback);
+          // Log detailed info about results
+          console.log("API call result:", {
+            hasInsights: result.insights && result.insights.length > 0,
+            insightCount: result.insights?.length || 0,
+            hasError: !!result.error,
+            error: result.error,
+            insufficientContent: result.insufficientContent
+          });
           
-          // If there's an error but we still got insights, it's likely fallback
-          if (result.error) {
-            setError(result.error);
-            setUsingFallbackInsights(usingFallback);
-          } else {
-            setError(null);
-            setUsingFallbackInsights(false);
+          // Check if there was insufficient content
+          if (result.insufficientContent) {
+            setInsufficientContent(true);
+            setError(result.error || "Insufficient document content for meaningful insights");
+            completeProcessing("Analysis complete - insufficient content");
+            return false;
           }
           
-          completeProcessing("Analysis complete");
-          return !usingFallback; // Return true only if we used real AI
-        } else {
-          setError("No insights were generated. Try uploading more detailed documents or using website analysis.");
+          if (result.insights && result.insights.length > 0) {
+            // Determine if we are using fallback insights from the error
+            const usingFallback = !!result.error && result.error.includes("using generated sample insights");
+            
+            // Set insights with appropriate fallback flag
+            setInsights(result.insights, usingFallback);
+            
+            // If there's an error but we still got insights, it's likely fallback
+            if (result.error) {
+              setError(result.error);
+              setUsingFallbackInsights(usingFallback);
+            } else {
+              setError(null);
+              setUsingFallbackInsights(false);
+            }
+            
+            completeProcessing("Analysis complete");
+            return !usingFallback; // Return true only if we used real AI
+          } else {
+            setError("No insights were generated. Try uploading more detailed documents or using website analysis.");
+            return false;
+          }
+        } catch (apiError) {
+          console.error("API call error:", apiError);
+          setError(`API call failed: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+          completeProcessing("Analysis failed - API error");
           return false;
         }
       } catch (err) {
