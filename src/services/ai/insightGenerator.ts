@@ -23,6 +23,10 @@ export const analyzeDocuments = async (
       };
     }
     
+    // Log the total content size to help with debugging
+    const totalContentSize = documentsContent.reduce((total, doc) => total + (doc.content?.length || 0), 0);
+    console.log(`Prepared ${documentsContent.length} documents with total content size: ${totalContentSize} characters`);
+    
     // In a real implementation, here we would call the API with documentsContent
     // We'll mark it as successful for now since the actual API call happens elsewhere
     return {

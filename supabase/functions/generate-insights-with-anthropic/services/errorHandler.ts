@@ -1,161 +1,115 @@
 
 /**
- * Error handling services for Claude API
+ * Error handling utilities for Edge Functions
  */
 import { corsHeaders } from '../utils/corsUtils.ts';
 
 /**
- * Validate document content before processing
+ * Creates a standardized error response
  */
-export function validateDocumentContent(documentContents: any[]): {
-  valid: boolean;
-  message: string;
-  contentLength?: number;
-} {
-  // Check if we have any documents
-  if (!documentContents || !Array.isArray(documentContents) || documentContents.length === 0) {
-    return {
-      valid: false,
-      message: "No document contents provided for analysis"
-    };
-  }
+export function createErrorResponse(error: unknown, status = 500): Response {
+  console.error('❌ Error in Edge Function:', error);
   
-  // Calculate total content length
-  let totalContentLength = 0;
-  let nonEmptyDocuments = 0;
-  
-  for (const doc of documentContents) {
-    if (doc.content && typeof doc.content === 'string') {
-      totalContentLength += doc.content.length;
-      if (doc.content.length > 100) {
-        nonEmptyDocuments++;
-      }
-    }
-  }
-  
-  // Check if we have enough content to analyze
-  if (totalContentLength < 500) {
-    return {
-      valid: false,
-      message: "Insufficient document content for meaningful analysis",
-      contentLength: totalContentLength
-    };
-  }
-  
-  // Check if we have at least one non-empty document
-  if (nonEmptyDocuments === 0) {
-    return {
-      valid: false,
-      message: "No documents with sufficient content found",
-      contentLength: totalContentLength
-    };
-  }
-  
-  return {
-    valid: true,
-    message: "Document content validation successful",
-    contentLength: totalContentLength
-  };
-}
-
-/**
- * Create a standardized error response
- */
-export function createErrorResponse(error: unknown, statusCode: number = 500): Response {
-  console.error('Creating error response:', error);
-  
-  let errorMessage: string;
-  let errorDetail: any = {};
+  let errorMessage = 'Unknown error processing insights';
   
   if (error instanceof Error) {
     errorMessage = error.message;
-    errorDetail = {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    };
-  } else if (typeof error === 'object' && error !== null) {
-    errorMessage = JSON.stringify(error);
-    errorDetail = error;
-  } else {
-    errorMessage = String(error);
+  } else if (typeof error === 'string') {
+    errorMessage = error;
   }
   
-  const responseData = {
-    error: errorMessage,
-    insights: [],
-    errorDetail,
-    timestamp: new Date().toISOString()
-  };
-  
   return new Response(
-    JSON.stringify(responseData),
-    {
-      status: statusCode,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
+    JSON.stringify({ 
+      error: errorMessage,
+      insights: [] 
+    }),
+    { 
+      status, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     }
   );
 }
 
 /**
- * Handle API response errors
+ * Validates document content to ensure it's sufficient for analysis
  */
-export async function handleApiResponseError(response: Response): Promise<never> {
-  const statusCode = response.status;
+export function validateDocumentContent(documentContents: any[]): { 
+  valid: boolean; 
+  message?: string;
+  contentLength?: number;
+} {
+  // Check if documentContents is defined and not empty
+  if (!documentContents || documentContents.length === 0) {
+    return { 
+      valid: false, 
+      message: 'No documents provided for analysis' 
+    };
+  }
   
-  let errorBody = '';
-  let errorJson = null;
+  // Calculate total content length across all documents
+  let totalContentLength = 0;
+  let invalidContentCount = 0;
   
-  try {
-    // Try to parse as JSON first
-    const bodyText = await response.text();
-    errorBody = bodyText;
-    
-    try {
-      errorJson = JSON.parse(bodyText);
-      console.error('API error response JSON:', errorJson);
-    } catch {
-      // Not JSON, just use as text
-      console.error('API error response text:', bodyText);
+  for (const doc of documentContents) {
+    // Check if content exists and is not a blob URL or placeholder
+    if (!doc.content) {
+      invalidContentCount++;
+      continue;
     }
-  } catch (e) {
-    errorBody = 'Could not read error response body';
-    console.error('Could not read error response body:', e);
-  }
-  
-  // Log detailed information about the error
-  console.error('API error details:', {
-    status: statusCode,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-    body: errorBody.substring(0, 1000), // Log first 1000 chars
-    isJson: !!errorJson
-  });
-  
-  // Create more specific error messages based on status code
-  let errorMessage = `API request failed with status ${statusCode}`;
-  
-  if (statusCode === 401) {
-    errorMessage = 'Authentication failed - check your API key';
-  } else if (statusCode === 403) {
-    errorMessage = 'Authorization failed - your API key does not have permission';
-  } else if (statusCode === 429) {
-    errorMessage = 'Rate limit exceeded - please try again later';
-  } else if (statusCode >= 500) {
-    errorMessage = 'Server error - please try again later';
-  }
-  
-  // Add JSON error details if available
-  if (errorJson && errorJson.error) {
-    const jsonErrorDetail = typeof errorJson.error === 'object' 
-      ? errorJson.error.message || JSON.stringify(errorJson.error)
-      : errorJson.error;
     
-    errorMessage += `. Details: ${jsonErrorDetail}`;
+    // Check if content is a blob URL or just a reference
+    if (doc.content.startsWith('blob:') || 
+        doc.content.startsWith('Content from URL:') ||
+        doc.content.length < 20) {
+      invalidContentCount++;
+      continue;
+    }
+    
+    totalContentLength += doc.content.length;
   }
   
-  throw new Error(errorMessage);
+  // If all documents have invalid content
+  if (invalidContentCount === documentContents.length) {
+    return {
+      valid: false,
+      message: 'All documents contain invalid or inaccessible content. Please check document extraction process.',
+      contentLength: totalContentLength
+    };
+  }
+  
+  // Check if total content is below the minimum threshold
+  if (totalContentLength < 200) {
+    return {
+      valid: false,
+      message: 'Insufficient document content for meaningful analysis. Total content too short.',
+      contentLength: totalContentLength
+    };
+  }
+  
+  return { 
+    valid: true,
+    contentLength: totalContentLength
+  };
+}
+
+/**
+ * Handles API response errors
+ */
+export function handleApiResponseError(response: Response): Promise<never> {
+  return response.text().then(text => {
+    let message = `API returned status ${response.status}`;
+    try {
+      // Try to parse the error as JSON
+      const data = JSON.parse(text);
+      if (data.error) {
+        message += `: ${data.error}`;
+      }
+    } catch {
+      // If not JSON, use the raw text
+      if (text) {
+        message += `: ${text}`;
+      }
+    }
+    throw new Error(message);
+  });
 }

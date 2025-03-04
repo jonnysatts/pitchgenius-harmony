@@ -1,255 +1,199 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { GAMING_SPECIALIST_PROMPT } from "./config";
-
-// Enable debug mode for detailed logging
-const DEBUG_MODE = true;
-
-/**
- * Generate a context string from the client website
- */
-export const generateWebsiteContext = (website: string): string => {
-  if (!website) return '';
-  return `The client's website is ${website}. Please consider this when generating insights.`;
-};
+import { supabase } from "@/integrations/supabase/client";
+import { prepareDocumentContents } from './promptUtils';
+import { mockApiResponse } from './mockData';
 
 /**
- * Creates a timeout promise that resolves with fallback insights after the specified timeout
+ * Create a Promise that rejects after a specified timeout
  */
-export const createTimeoutPromise = async (
-  project: Project, 
-  documents: Document[]
-): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
-  // Import the fallback insights generator
-  const { generateFallbackInsights } = await import('./mockGenerators/insightGenerator');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("⏱️ API call timed out, using fallback insights");
-      const fallbackInsights = generateFallbackInsights(project.clientIndustry || 'technology', documents.length);
-      resolve({
-        insights: fallbackInsights,
-        error: "API call timed out - using generated sample insights as fallback",
-        insufficientContent: false // Explicitly set to false for fallback data
-      });
-    }, 110000); // 110 seconds timeout
+export const createTimeoutPromise = (timeoutMs: number): Promise<never> => {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs);
   });
 };
 
 /**
- * Check if Supabase connection is working and if Anthropic API key exists
- */
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    if (DEBUG_MODE) console.log("🔄 Checking Supabase Edge Function connection...");
-    
-    const { data, error } = await supabase.functions.invoke('test-connection', {
-      method: 'POST',
-      body: { 
-        testType: 'anthropic-key-check', 
-        timestamp: new Date().toISOString(),
-        debugMode: DEBUG_MODE
-      }
-    });
-    
-    if (error) {
-      console.error("❌ Connection test failed:", error);
-      console.error("❌ Error details:", JSON.stringify(error));
-      return false;
-    }
-    
-    if (DEBUG_MODE) console.log('✅ Supabase connection test result:', data);
-    
-    // Check specifically for ANTHROPIC_API_KEY
-    const anthropicKeyExists = data?.anthropicKeyExists === true;
-    
-    return anthropicKeyExists;
-  } catch (err) {
-    console.error("❌ Error checking Supabase connection:", err);
-    return false;
-  }
-};
-
-/**
- * Call the Supabase Edge Function that uses Anthropic API
+ * Call Claude API via Supabase Edge Function with timeout
  */
 export const callClaudeApi = async (
   project: Project,
   documents: Document[],
   documentContents: any[]
-): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
-  if (DEBUG_MODE) console.log('🔄 Making API call to Supabase Edge Function for Claude analysis...');
-  
-  // First, verify Edge Function connectivity and API key
+): Promise<{ 
+  insights: StrategicInsight[];
+  error?: string;
+  insufficientContent?: boolean;
+}> => {
   try {
-    if (DEBUG_MODE) console.log("🔍 Testing Edge Function connectivity and API key...");
-    const { data: testData, error: testError } = await supabase.functions.invoke('test-connection', {
-      method: 'POST',
-      body: { 
-        testType: 'anthropic-key-check', 
-        timestamp: new Date().toISOString(),
-        debugMode: DEBUG_MODE
-      }
-    });
+    console.log(`🔄 Making API call to Supabase Edge Function for Claude analysis...`);
     
-    // Handle test error
-    if (testError) {
-      console.error("❌ Edge Function test failed:", testError);
-      return {
-        insights: [],
-        error: `Edge Function connectivity error: ${testError.message || JSON.stringify(testError)}`,
-        insufficientContent: false
-      };
-    }
+    // Calculate total content size
+    const contentSize = documentContents.reduce((sum, doc) => sum + (doc.content?.length || 0), 0);
     
-    // Check if API key exists
-    if (!testData || !testData.anthropicKeyExists) {
-      console.error("❌ Anthropic API key not found in Edge Function environment");
-      return {
-        insights: [],
-        error: "Anthropic API key not configured in Supabase. Please add ANTHROPIC_API_KEY to Supabase secrets.",
-        insufficientContent: false
-      };
-    }
-    
-    if (DEBUG_MODE) console.log("✅ Edge Function connectivity and API key validation completed:", testData);
-  } catch (testErr) {
-    console.error("❌ Error testing Edge Function:", testErr);
-    return {
-      insights: [],
-      error: `Failed to connect to Edge Function: ${testErr instanceof Error ? testErr.message : String(testErr)}`,
-      insufficientContent: false
+    // Prepare the request payload
+    const payload = {
+      projectId: project.id,
+      documentIds: documents.map(doc => doc.id),
+      documentContents: documentContents,
+      clientIndustry: project.clientIndustry || 'technology',
+      clientWebsite: project.clientWebsite || '',
+      projectTitle: project.title || '',
+      processingMode: 'comprehensive',
+      includeComprehensiveDetails: true,
+      maximumResponseTime: 110, // Maximum seconds to wait for Claude
+      systemPrompt: `
+You are an expert consultant specializing in gaming industry strategy and audience analysis. 
+Your task is to analyze the provided documents and extract strategic insights that will help 
+gaming companies better understand their audience, identify market opportunities, and develop 
+effective engagement strategies. Focus on identifying actionable insights related to:
+
+1. Business challenges and market trends
+2. Audience gaps and behavior patterns
+3. Competitive threats and positioning
+4. Gaming industry-specific opportunities 
+5. Strategic recommendations for growth
+6. Key narratives that resonate with gaming audiences
+
+Provide detailed, evidence-based insights with high confidence where possible.
+The client's website is ${project.clientWebsite || ''}. Please consider this when generating insights.`,
+      debugMode: true
     };
-  }
-  
-  // Prepare document IDs and website context
-  const documentIds = documents.map(doc => doc.id);
-  const websiteContext = project.clientWebsite ? generateWebsiteContext(project.clientWebsite) : '';
-  
-  try {
-    // Create a timeout promise to handle edge function timeouts
-    const timeoutPromise = createTimeoutPromise(project, documents);
     
-    // Call the proper edge function
-    if (DEBUG_MODE) console.log("🔄 Calling generate-insights-with-anthropic with project:", project.id);
-    
-    // Add some diagnostic info to help debug
-    if (DEBUG_MODE) {
-      console.log("📡 Edge function request payload:", {
-        projectId: project.id,
-        documentCount: documentContents.length,
-        contentSize: documentContents.reduce((acc, doc) => acc + (doc.content?.length || 0), 0),
-        clientIndustry: project.clientIndustry || 'technology',
-        clientWebsite: project.clientWebsite,
-        projectTitle: project.title,
-        debugMode: DEBUG_MODE
-      });
-    }
-    
-    // Make the actual request to the edge function with error handling
-    const responsePromise = supabase.functions.invoke('generate-insights-with-anthropic', {
-      body: { 
-        projectId: project.id, 
-        documentIds,
-        clientIndustry: project.clientIndustry || 'technology',
-        clientWebsite: project.clientWebsite,
-        projectTitle: project.title,
-        documentContents,
-        processingMode: 'comprehensive',
-        includeComprehensiveDetails: true,
-        maximumResponseTime: 110,
-        systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext,
-        debugMode: DEBUG_MODE
-      }
+    console.log(`🔄 Calling generate-insights-with-anthropic with project: ${project.id}`);
+    console.log(`📡 Edge function request payload:`, {
+      projectId: payload.projectId,
+      documentCount: documents.length,
+      contentSize,
+      clientIndustry: payload.clientIndustry,
+      clientWebsite: payload.clientWebsite,
+      projectTitle: payload.projectTitle,
+      debugMode: payload.debugMode
     });
     
-    // Race between the API call and the timeout
-    const { data, error } = await Promise.race([
-      responsePromise,
-      // Wait 110 seconds then resolve with null to indicate timeout
-      new Promise<{data: null, error: {message: string}}>((resolve) => 
-        setTimeout(() => {
-          if (DEBUG_MODE) console.log("⏱️ Edge Function timed out after 110 seconds");
-          resolve({
-            data: null,
-            error: {message: "Edge Function timed out after 110 seconds"}
-          });
-        }, 110000)
-      )
+    // Set timeout
+    const timeout = 90000; // 90 seconds
+    
+    // Call the Edge Function with timeout
+    const [response] = await Promise.race([
+      supabase.functions.invoke('generate-insights-with-anthropic', {
+        body: payload,
+      }),
+      createTimeoutPromise(timeout)
     ]);
     
-    if (DEBUG_MODE) {
-      console.log("📡 Edge Function response received:", 
-        data ? "data present" : "no data", 
-        error ? `error: ${error.message}` : "no error"
-      );
-    }
-    
-    // If there was an error or timeout, use the fallback data
-    if (error || !data) {
-      console.error('❌ Error from Edge Function:', error);
-      return await timeoutPromise;
-    }
-    
-    // Check for insufficient content flag
-    if (data && data.insufficientContent === true) {
-      if (DEBUG_MODE) console.log('⚠️ Claude AI reported insufficient document content for meaningful insights');
-      return {
-        insights: [],
-        insufficientContent: true,
-        error: "Not enough information in documents to generate meaningful insights. Consider uploading more detailed documents or try website analysis."
-      };
-    }
-    
-    // Validate insights from API
-    if (!data || !data.insights || data.insights.length === 0) {
-      console.error('❌ No insights returned from Claude AI, using fallback');
-      return await timeoutPromise;
-    }
-    
-    // Add source marker to insights
-    const markedInsights = data.insights.map((insight: StrategicInsight) => {
-      return {
-        ...insight,
-        source: 'document' as 'document'
-      };
+    console.log(`📡 Edge Function response received:`, {
+      data: response?.data ? 'data present' : 'no data',
+      error: response?.error || 'none'
     });
     
-    if (DEBUG_MODE) console.log('✅ Successfully received insights from Anthropic:', markedInsights.length);
-    
-    return { 
-      insights: markedInsights,
-      error: undefined,
-      insufficientContent: false
-    };
-  } catch (apiError: any) {
-    console.error('❌ Error calling Anthropic API:', apiError);
-    
-    // Return a more helpful error message based on the type of error
-    let errorMessage = "Claude AI error";
-    
-    if (apiError.message && apiError.message.includes('Failed to fetch')) {
-      errorMessage = "Network error connecting to Edge Function. Please check your internet connection.";
-    } else if (apiError.message && apiError.message.includes('timeout')) {
-      errorMessage = "The analysis took too long to complete. Try with fewer documents or check the Edge Function logs.";
-    } else if (apiError.message && apiError.message.includes('401')) {
-      errorMessage = "Authentication error with Anthropic API. Please check your API key.";
-    } else if (apiError.message && apiError.message.includes('429')) {
-      errorMessage = "Anthropic API rate limit exceeded. Please try again later.";
-    } else if (apiError.message && apiError.message.includes('500')) {
-      errorMessage = "Anthropic API server error. Please try again later.";
-    } else if (apiError.message && apiError.message.includes('non-2xx status code')) {
-      errorMessage = "Edge Function returned an error. Please check the Edge Function logs.";
-    } else {
-      errorMessage = `Claude AI error: ${apiError instanceof Error ? apiError.message : String(apiError)}`;
+    if (response.error) {
+      console.error('❌ Error from Edge Function:', response.error);
+      
+      // Check for insufficient content error
+      if (response.error.message?.includes('insufficient') || 
+          response.error.message?.includes('content too short') ||
+          response.error.message?.includes('No documents provided')) {
+        return {
+          insights: [],
+          error: 'Insufficient document content for analysis. Please upload more detailed documents.',
+          insufficientContent: true
+        };
+      }
+      
+      // If error contains "Invalid URL" or "blob", it's likely a document extraction issue
+      if (response.error.message?.includes('Invalid URL') || 
+          response.error.message?.includes('blob') ||
+          response.error.message?.includes('inaccessible')) {
+        return {
+          insights: mockApiResponse.insights.map(insight => ({
+            ...insight,
+            source: 'document'
+          })),
+          error: 'Document content extraction failed. Using generated sample insights instead. In production, please upload actual text content.',
+          insufficientContent: false
+        };
+      }
+      
+      // Fall back to mock insights for any other errors
+      return {
+        insights: mockApiResponse.insights.map(insight => ({
+          ...insight,
+          source: 'document'
+        })),
+        error: `API Error: ${response.error.message || 'Unknown error'}. Using generated sample insights instead.`,
+        insufficientContent: false
+      };
     }
     
-    // Fall back to timeout promise for error case
-    const fallbackResponse = await createTimeoutPromise(project, documents);
-    return { 
-      ...fallbackResponse,
-      error: errorMessage
+    // Check if we got valid insights
+    if (response.data?.insights && response.data.insights.length > 0) {
+      console.log(`✅ Received ${response.data.insights.length} insights from Claude`);
+      
+      return {
+        insights: response.data.insights.map((insight: any) => ({
+          ...insight,
+          source: 'document'
+        }))
+      };
+    } else if (response.data?.error || response.data?.rawResponse) {
+      console.error('❌ Claude failed to generate insights:', 
+                  response.data?.error || response.data?.rawResponse?.substring(0, 100));
+      
+      // Check if it's an insufficient content error from Claude
+      if (response.data?.rawResponse?.toLowerCase().includes('insufficient') ||
+          response.data?.rawResponse?.toLowerCase().includes('too short') ||
+          response.data?.rawResponse?.toLowerCase().includes('not enough information')) {
+        return {
+          insights: [],
+          error: 'Insufficient document content for meaningful analysis. Please upload more detailed documents.',
+          insufficientContent: true
+        };
+      }
+      
+      // If Claude couldn't access the content, use mocks
+      return {
+        insights: mockApiResponse.insights.map(insight => ({
+          ...insight,
+          source: 'document'
+        })),
+        error: 'Claude could not process document content. Using generated sample insights instead. In production, please upload actual text content.',
+        insufficientContent: false
+      };
+    }
+    
+    // If we got here, there's some unexpected issue
+    return {
+      insights: mockApiResponse.insights.map(insight => ({
+        ...insight,
+        source: 'document'
+      })),
+      error: 'Unexpected API response format. Using generated sample insights instead.',
+      insufficientContent: false
+    };
+  } catch (error) {
+    console.error('❌ Error calling Claude API:', error);
+    
+    // Handle timeout errors specifically
+    if (error.message?.includes('timed out')) {
+      return {
+        insights: mockApiResponse.insights.map(insight => ({
+          ...insight,
+          source: 'document'
+        })),
+        error: 'API request timed out. Using generated sample insights as fallback.',
+        insufficientContent: false
+      };
+    }
+    
+    // For any other error, return mock data with error info
+    return {
+      insights: mockApiResponse.insights.map(insight => ({
+        ...insight,
+        source: 'document'
+      })),
+      error: `Error calling API: ${error.message}. Using generated sample insights instead.`,
+      insufficientContent: false
     };
   }
 };
