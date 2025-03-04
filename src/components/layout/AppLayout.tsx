@@ -1,10 +1,25 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import Logo from "@/components/Logo";
-import { Laptop, Home, Settings, PanelRight, Bug } from "lucide-react";
+import { 
+  Laptop, 
+  Home, 
+  Settings, 
+  PanelRight, 
+  Bug, 
+  ChevronLeft, 
+  ChevronRight, 
+  Menu 
+} from "lucide-react";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,9 +27,14 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
+  const [isExpanded, setIsExpanded] = useState(true);
   
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
+  };
+
+  const toggleSidebar = () => {
+    setIsExpanded(!isExpanded);
   };
 
   return (
@@ -41,51 +61,81 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       </header>
       
       <div className="flex flex-1">
-        <aside className="w-14 md:w-64 bg-white border-r shrink-0">
-          <div className="flex flex-col h-full py-4">
+        <aside className={`bg-white border-r shrink-0 transition-all duration-300 ${
+          isExpanded ? "w-64" : "w-16"
+        }`}>
+          <div className="flex flex-col h-full py-4 relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="absolute -right-3 top-3 h-6 w-6 bg-white border shadow-sm rounded-full z-10"
+            >
+              {isExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+            </Button>
+            
             <div className="px-3 py-2">
-              <nav className="flex flex-col gap-1">
-                <Link to="/dashboard">
-                  <Button
-                    variant={isActive("/dashboard") ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    <Home className="h-4 w-4 mr-2" />
-                    <span className="hidden md:inline">Dashboard</span>
-                  </Button>
-                </Link>
-                
-                <Link to="/diagnostics">
-                  <Button
-                    variant={isActive("/diagnostics") ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    <Bug className="h-4 w-4 mr-2" />
-                    <span className="hidden md:inline">Diagnostics</span>
-                  </Button>
-                </Link>
-                
-                <Link to="/settings">
-                  <Button
-                    variant={isActive("/settings") ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    <span className="hidden md:inline">Settings</span>
-                  </Button>
-                </Link>
-              </nav>
+              <TooltipProvider>
+                <nav className="flex flex-col gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to="/dashboard">
+                        <Button
+                          variant={isActive("/dashboard") ? "secondary" : "ghost"}
+                          className="w-full justify-start"
+                          size="sm"
+                        >
+                          <Home className="h-4 w-4 mr-2" />
+                          <span className={isExpanded ? "inline" : "hidden"}>Dashboard</span>
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    {!isExpanded && <TooltipContent side="right">Dashboard</TooltipContent>}
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to="/diagnostics">
+                        <Button
+                          variant={isActive("/diagnostics") ? "secondary" : "ghost"}
+                          className="w-full justify-start"
+                          size="sm"
+                        >
+                          <Bug className="h-4 w-4 mr-2" />
+                          <span className={isExpanded ? "inline" : "hidden"}>Diagnostics</span>
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    {!isExpanded && <TooltipContent side="right">Diagnostics</TooltipContent>}
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to="/settings">
+                        <Button
+                          variant={isActive("/settings") ? "secondary" : "ghost"}
+                          className="w-full justify-start"
+                          size="sm"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          <span className={isExpanded ? "inline" : "hidden"}>Settings</span>
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    {!isExpanded && <TooltipContent side="right">Settings</TooltipContent>}
+                  </Tooltip>
+                </nav>
+              </TooltipProvider>
             </div>
             
             <Separator className="my-4" />
             
             <div className="px-3 py-2">
-              <h3 className="mb-2 px-4 text-xs font-semibold text-gray-500 hidden md:block">
-                Recent Projects
-              </h3>
+              {isExpanded && (
+                <h3 className="mb-2 px-4 text-xs font-semibold text-gray-500">
+                  Recent Projects
+                </h3>
+              )}
               <nav className="flex flex-col gap-1">
                 {/* Recent projects would go here */}
               </nav>
