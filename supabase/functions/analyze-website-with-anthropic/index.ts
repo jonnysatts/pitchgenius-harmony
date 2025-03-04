@@ -2,6 +2,7 @@
 import { corsHeaders } from './utils/corsHandlers.ts';
 import { handleAnalysisRequest, handleDiagnosticRequest } from './services/requestHandler.ts';
 import { createErrorResponse } from './services/errorHandler.ts';
+import { handleTestModeRequest } from './services/testModeHandler.ts';
 
 // Enable detailed logging
 const DEBUG_MODE = true;
@@ -52,40 +53,8 @@ Deno.serve(async (req) => {
     
     // Handle test mode
     if (requestData.test_mode === true) {
-      if (DEBUG_MODE) console.log('Test mode detected, returning mock response');
-      
-      // Return a successful test response without actually calling Claude
-      return new Response(
-        JSON.stringify({
-          success: true,
-          test_mode: true,
-          message: "Website analysis test connection successful",
-          insights: [
-            {
-              id: "test-1",
-              title: "Test Insight 1",
-              description: "This is a test insight for diagnostic purposes",
-              category: "user-experience",
-              confidence: 0.95
-            },
-            {
-              id: "test-2",
-              title: "Test Insight 2",
-              description: "Another test insight to verify connectivity",
-              category: "market-opportunity",
-              confidence: 0.88
-            }
-          ],
-          website_url: requestData.website_url || "test.com",
-          timestamp: new Date().toISOString()
-        }),
-        {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      if (DEBUG_MODE) console.log('Test mode detected in index.ts, handling test request');
+      return await handleTestModeRequest(requestData);
     }
     
     // Regular website analysis path
