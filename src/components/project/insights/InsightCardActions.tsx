@@ -1,6 +1,7 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import InsightRefineDialog from "@/components/project/insights/InsightRefineDialog";
 
 interface InsightCardActionsProps {
   showControls: boolean;
@@ -19,41 +20,76 @@ const InsightCardActions: React.FC<InsightCardActionsProps> = ({
   onUpdate,
   content
 }) => {
+  const [isRefineDialogOpen, setIsRefineDialogOpen] = useState(false);
+  
   if (!showControls || !onAccept || !onReject) {
     return null;
   }
 
+  const handleOpenRefineDialog = () => {
+    setIsRefineDialogOpen(true);
+  };
+
+  const handleCloseRefineDialog = () => {
+    setIsRefineDialogOpen(false);
+  };
+
+  const handleRefineInsight = (refinedContent: string) => {
+    if (onUpdate && content) {
+      // Create updated content object
+      const updatedContent = {
+        ...content,
+        description: refinedContent
+      };
+      
+      // Call the onUpdate function with the updated content
+      onUpdate(updatedContent);
+    }
+  };
+
   return (
-    <div className="flex justify-end mt-4 space-x-2">
-      {onUpdate && content && (
+    <>
+      <div className="flex justify-end mt-4 space-x-2">
+        {onUpdate && content && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenRefineDialog}
+            className="text-purple-600 border-purple-200 hover:bg-purple-50"
+          >
+            Refine
+          </Button>
+        )}
+        
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onUpdate(content)}
-          className="text-purple-600 border-purple-200 hover:bg-purple-50"
+          onClick={onReject}
+          className="text-red-600 border-red-200 hover:bg-red-50"
         >
-          Refine
+          Reject
         </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onAccept}
+          className="text-green-600 border-green-200 hover:bg-green-50"
+        >
+          Accept
+        </Button>
+      </div>
+
+      {isRefineDialogOpen && content && (
+        <InsightRefineDialog
+          isOpen={isRefineDialogOpen}
+          onClose={handleCloseRefineDialog}
+          insightTitle={content.title || ""}
+          insightContent={content.description || ""}
+          onRefine={handleRefineInsight}
+        />
       )}
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onReject}
-        className="text-red-600 border-red-200 hover:bg-red-50"
-      >
-        Reject
-      </Button>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onAccept}
-        className="text-green-600 border-green-200 hover:bg-green-50"
-      >
-        Accept
-      </Button>
-    </div>
+    </>
   );
 };
 

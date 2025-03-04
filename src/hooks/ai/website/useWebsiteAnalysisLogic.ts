@@ -26,6 +26,8 @@ export const useWebsiteAnalysisLogic = (
     setError("Analysis timed out. Using sample insights instead of actual website analysis.");
     setWebsiteInsights(fallbackInsights);
     addInsights(fallbackInsights);
+    
+    // Use a direct value for setAnalysisProgress instead of a function
     setAnalysisProgress(100);
     setAnalysisStatus('Analysis complete (using sample data)');
     setIsAnalyzing(false);
@@ -45,6 +47,7 @@ export const useWebsiteAnalysisLogic = (
     progressInterval: NodeJS.Timeout,
     progressCheckInterval: NodeJS.Timeout
   ) => {
+    // Use a direct value for setAnalysisProgress instead of a function
     setAnalysisProgress(100);
     setAnalysisStatus('Analysis complete');
     

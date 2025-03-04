@@ -96,6 +96,8 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
       return;
     }
     
+    console.log("Updating insight:", insightId, "with content:", updatedContent);
+    
     // Create the updated insight
     const updatedInsight: StrategicInsight = {
       ...originalInsight,
@@ -113,7 +115,7 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     
     toast({
       title: "Insight Updated",
-      description: "The insight has been refined based on your conversation"
+      description: "The insight has been refined based on your edits"
     });
   }, [insights, toast]);
   
