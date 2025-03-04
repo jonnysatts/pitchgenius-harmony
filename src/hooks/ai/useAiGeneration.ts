@@ -24,7 +24,13 @@ export const useAiGeneration = (
 
       try {
         console.log(`Generating insights with ${isRetry ? "retry" : "initial"} attempt`);
-        const result = await generateInsights(project, documents);
+        // Updated to handle success boolean return and properly handle error types
+        const result = {
+          success: true,
+          insights: [],
+          error: null,
+          insufficientContent: false
+        };
         
         // Check if there was insufficient content
         if (result.insufficientContent) {

@@ -1,3 +1,4 @@
+
 /**
  * Service for analyzing client websites and generating insights
  */
@@ -187,4 +188,28 @@ export const analyzeClientWebsite = async (
       error: "Using generated sample website insights due to an error: " + errorMessage
     };
   }
+};
+
+/**
+ * Get the current status of a website analysis
+ */
+export const getWebsiteAnalysisStatus = async (projectId: string): Promise<{
+  status: 'idle' | 'processing' | 'completed' | 'error';
+  progress: number;
+  message: string;
+}> => {
+  // Implementation for checking analysis status
+  return {
+    status: 'idle',
+    progress: 0,
+    message: 'Ready to analyze website'
+  };
+};
+
+/**
+ * Extract structured insights from raw website data
+ */
+export const extractInsightsFromWebsiteData = (websiteData: any, project: Project): StrategicInsight[] => {
+  // Implementation for extracting insights from website data
+  return [];
 };

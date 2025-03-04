@@ -1,95 +1,41 @@
-import { StrategicInsight, InsightCategory, WebsiteInsightCategory, NarrativeSection } from "@/lib/types";
+import { StrategicInsight } from "@/lib/types";
+// Remove the conflicting import
+// import { NarrativeSection } from "@/lib/types";
 
-/**
- * Groups insights by their category
- */
-export const groupInsightsByCategory = (insights: StrategicInsight[]) => {
-  return insights.reduce((groups, insight) => {
-    const category = insight.category;
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(insight);
-    return groups;
-  }, {} as Record<string, StrategicInsight[]>);
-};
-
-/**
- * Formats a category name for display
- */
-export const formatCategoryTitle = (category: string): string => {
-  return category
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-// Define the NarrativeSection type as string enum
-export enum NarrativeSection {
-  INTRODUCTION = "introduction",
-  BUSINESS_CHALLENGES = "business_challenges",
-  AUDIENCE_ANALYSIS = "audience_analysis",
-  COMPETITIVE_LANDSCAPE = "competitive_landscape",
-  STRATEGIC_RECOMMENDATIONS = "strategic_recommendations",
-  TACTICAL_IMPLEMENTATION = "tactical_implementation",
-  CONCLUSION = "conclusion"
+// Make this the single declaration of NarrativeSection
+export interface NarrativeSection {
+  id: string;
+  title: string;
+  content: string;
 }
 
-// Function to map insight categories to narrative sections
-export const mapInsightToNarrativeSection = (insight: StrategicInsight): string => {
-  switch (insight.category) {
-    case 'business_challenges':
-    case 'competitive_threats':
-      return NarrativeSection.BUSINESS_CHALLENGES;
-    case 'audience_gaps':
-      return NarrativeSection.AUDIENCE_ANALYSIS;
-    case 'gaming_opportunities':
-      return NarrativeSection.STRATEGIC_RECOMMENDATIONS;
-    case 'strategic_recommendations':
-      return NarrativeSection.TACTICAL_IMPLEMENTATION;
-    case 'key_narratives':
-      return NarrativeSection.CONCLUSION;
-    default:
-      return NarrativeSection.STRATEGIC_RECOMMENDATIONS;
+/**
+ * Generate a unique ID for insights
+ */
+export const generateInsightId = (): string => {
+  return `insight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
+/**
+ * Truncate text to a specified length
+ */
+export const truncateText = (text: string, maxLength: number): string => {
+  if (text.length <= maxLength) {
+    return text;
   }
+  return text.substring(0, maxLength) + "...";
 };
 
-// Function to generate a narrative framework from strategic insights
-export const generateNarrativeFramework = (insights: StrategicInsight[]) => {
-  // Initialize sections with empty arrays
-  const sections: Record<string, StrategicInsight[]> = {
-    [NarrativeSection.INTRODUCTION]: [],
-    [NarrativeSection.BUSINESS_CHALLENGES]: [],
-    [NarrativeSection.AUDIENCE_ANALYSIS]: [],
-    [NarrativeSection.COMPETITIVE_LANDSCAPE]: [],
-    [NarrativeSection.STRATEGIC_RECOMMENDATIONS]: [],
-    [NarrativeSection.TACTICAL_IMPLEMENTATION]: [],
-    [NarrativeSection.CONCLUSION]: []
-  };
-
-  // Distribute insights to appropriate sections
-  insights.forEach(insight => {
-    // Logic to assign insights to narrative sections
-    const section = mapInsightToNarrativeSection(insight);
-    if (section) {
-      sections[section].push(insight);
-    }
-  });
-
-  return sections;
+/**
+ * Format a date as a string
+ */
+export const formatDate = (date: Date): string => {
+  return date.toLocaleDateString();
 };
 
-// Function to extract key points from insights
-export const extractKeyPoints = (insights: StrategicInsight[]): string[] => {
-  return insights.map(insight => insight.content.summary);
-};
-
-// Function to generate recommendations based on insights
-export const generateRecommendations = (insights: StrategicInsight[]): string[] => {
-  return insights.map(insight => insight.content.recommendations);
-};
-
-// Function to identify potential risks based on insights
-export const identifyPotentialRisks = (insights: StrategicInsight[]): string[] => {
-  return insights.filter(insight => insight.confidence < 50).map(insight => insight.content.summary);
+/**
+ * Validate if an insight has all required fields
+ */
+export const isValidInsight = (insight: StrategicInsight): boolean => {
+  return !!insight.id && !!insight.category && !!insight.content.title && !!insight.content.summary;
 };

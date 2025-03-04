@@ -1,11 +1,11 @@
 
 // Export web insights components
-export { WebInsightsHeader } from './WebInsightsHeader';
-export { WebInsightsTabs } from './WebInsightsTabs';
-export { WebsiteUrlCard } from './WebsiteUrlCard';
-export { NoWebsiteCard } from './NoWebsiteCard';
-export { NoInsightsEmptyState } from './NoInsightsEmptyState';
+export { default as WebInsightsHeader } from './WebInsightsHeader';
+export { default as WebInsightsTabs } from './WebInsightsTabs';
+export { default as WebsiteUrlCard } from './WebsiteUrlCard';
+export { default as NoWebsiteCard } from './NoWebsiteCard';
+export { default as NoInsightsEmptyState } from './NoInsightsEmptyState';
 export { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
 export { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
-export { AllInsightsTab } from './AllInsightsTab';
-export { InsightCategoryTab } from './InsightCategoryTab';
+export { default as AllInsightsTab } from './AllInsightsTab';
+export { default as InsightCategoryTab } from './InsightCategoryTab';

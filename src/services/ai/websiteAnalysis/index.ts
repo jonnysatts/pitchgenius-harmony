@@ -3,22 +3,23 @@
  * Export all website analysis services
  */
 
-// Re-export the service methods
+// Re-export the service methods with correct names
 export { 
-  analyzeWebsite, 
-  getWebsiteAnalysisStatus, 
-  extractInsightsFromWebsiteData 
+  analyzeClientWebsite as analyzeWebsite, 
+  analyzeClientWebsite, 
+  // Add missing exports
+  getWebsiteAnalysisStatus,
+  extractInsightsFromWebsiteData
 } from './websiteAnalysisService';
 
 // Export mock generators for testing
 export { generateMockWebsiteInsights } from './mockGenerator';
 
 // Export API service
-export { callClaudeForWebsiteAnalysis } from './claudeApiService';
+export { callClaudeForWebsiteAnalysis, callWebsiteAnalysisApi } from './claudeApiService';
 
 // Export fallback insight generation
 export { generateFallbackWebsiteInsights } from './fallbackInsightGenerator';
 
 // Export the processor
 export { processWebsiteInsights } from './websiteInsightProcessor';
-

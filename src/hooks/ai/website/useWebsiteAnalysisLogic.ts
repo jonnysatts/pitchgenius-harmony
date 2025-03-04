@@ -1,9 +1,8 @@
-
 import { useState, useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { useWebsiteAnalysisNotifications } from './useWebsiteAnalysisNotifications';
 import { useWebsiteInsightsProcessor } from './useWebsiteInsightsProcessor';
-import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
+import { analyzeWebsite } from '@/services/ai/websiteAnalysis';
 import { useAiStatus } from '@/hooks/ai/useAiStatus';
 
 /**
@@ -54,7 +53,7 @@ export const useWebsiteAnalysisLogic = (
       });
       
       // Perform the actual website analysis
-      const result = await analyzeClientWebsite(project);
+      const result = await analyzeWebsite(project);
       
       // Handle potential errors in the result
       if (result.error) {
