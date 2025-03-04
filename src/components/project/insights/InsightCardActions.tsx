@@ -39,8 +39,10 @@ const InsightCardActions: React.FC<InsightCardActionsProps> = ({
       // Create updated content object
       const updatedContent = {
         ...content,
-        description: refinedContent
+        details: refinedContent // Update the details field with the refined content
       };
+      
+      console.log("Updating insight with refined content:", updatedContent);
       
       // Call the onUpdate function with the updated content
       onUpdate(updatedContent);
@@ -85,7 +87,7 @@ const InsightCardActions: React.FC<InsightCardActionsProps> = ({
           isOpen={isRefineDialogOpen}
           onClose={handleCloseRefineDialog}
           insightTitle={content.title || ""}
-          insightContent={content.description || ""}
+          insightContent={content.details || content.description || ""}
           onRefine={handleRefineInsight}
         />
       )}

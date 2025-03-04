@@ -48,14 +48,26 @@ ${insightContent}
 USER'S LATEST QUESTION/REQUEST:
 ${prompt}`;
     } else {
-      userPrompt = prompt;
+      userPrompt = `I need to refine the following insight about "${insightTitle}":
+
+CURRENT INSIGHT CONTENT:
+${insightContent}
+
+USER REQUEST:
+${prompt}
+
+Please help me improve this insight. If you have specific suggestions for improvement, present them clearly.`;
     }
+    
+    console.log("Sending prompt to Claude API");
     
     // Call the Anthropic API (using the shared service from generate-insights-with-anthropic)
     const response = await callAnthropicAPI(userPrompt, systemPrompt, {
       temperature: 0.7,
       maxTokens: 1000
     });
+    
+    console.log("Received response from Claude API");
     
     // Process the insight content to extract refinement suggestions
     const refinedContent = extractRefinedContent(response, insightContent);
@@ -94,7 +106,9 @@ function extractRefinedContent(response: string, originalContent: string): strin
     "Here's my suggestion:",
     "Refined version:",
     "Here's a revised version:",
-    "Updated insight:"
+    "Updated insight:",
+    "I suggest this revision:",
+    "Here's how I would rewrite it:"
   ];
   
   // Try to find any of the markers in the response
@@ -106,7 +120,16 @@ function extractRefinedContent(response: string, originalContent: string): strin
         let extracted = parts[1].trim();
         
         // If there's another section after, trim to that
-        const endMarkers = ["Is this helpful?", "Does this work for you?", "What do you think?"];
+        const endMarkers = [
+          "Is this helpful?", 
+          "Does this work for you?", 
+          "What do you think?",
+          "Would you like me to",
+          "Let me know if",
+          "I hope this helps",
+          "Would you prefer"
+        ];
+        
         for (const endMarker of endMarkers) {
           if (extracted.includes(endMarker)) {
             extracted = extracted.split(endMarker)[0].trim();
@@ -123,6 +146,12 @@ function extractRefinedContent(response: string, originalContent: string): strin
   const quotedMatch = response.match(quotedBlockRegex);
   if (quotedMatch && quotedMatch[1]) {
     return quotedMatch[1].trim();
+  }
+  
+  // If there are no explicit markers but the response is long enough,
+  // it might contain a refined version directly
+  if (response.length > 100 && response.length < 2000) {
+    return response;
   }
   
   // If all else fails, return null to keep the original content

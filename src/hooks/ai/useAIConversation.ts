@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
@@ -24,9 +24,9 @@ export const useAIConversation = ({
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   
   // Initialize the AI conversation with a welcome message
-  useState(() => {
+  useEffect(() => {
     startConversation();
-  });
+  }, []); // Empty dependency array to run only once
   
   const startConversation = async () => {
     setIsLoadingAI(true);

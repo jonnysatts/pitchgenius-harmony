@@ -46,6 +46,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
   };
 
   const startAIConversation = () => {
+    console.log("Starting AI conversation mode");
     setAIConversationMode(true);
   };
 
