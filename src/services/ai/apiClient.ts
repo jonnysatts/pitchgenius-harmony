@@ -74,6 +74,44 @@ export const callClaudeApi = async (
 ): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
   console.log('Making API call to Supabase Edge Function for Claude analysis...');
   
+  // First, verify Edge Function connectivity and API key
+  try {
+    console.log("Testing Edge Function connectivity and API key...");
+    const { data: testData, error: testError } = await supabase.functions.invoke('test-connection', {
+      method: 'POST',
+      body: { testType: 'anthropic-key-check', timestamp: new Date().toISOString() }
+    });
+    
+    // Handle test error
+    if (testError) {
+      console.error("Edge Function test failed:", testError);
+      return {
+        insights: [],
+        error: `Edge Function connectivity error: ${testError.message || JSON.stringify(testError)}`,
+        insufficientContent: false
+      };
+    }
+    
+    // Check if API key exists
+    if (!testData || !testData.anthropicKeyExists) {
+      console.error("Anthropic API key not found in Edge Function environment");
+      return {
+        insights: [],
+        error: "Anthropic API key not configured in Supabase. Please add ANTHROPIC_API_KEY to Supabase secrets.",
+        insufficientContent: false
+      };
+    }
+    
+    console.log("Edge Function connectivity and API key validation completed:", testData);
+  } catch (testErr) {
+    console.error("Error testing Edge Function:", testErr);
+    return {
+      insights: [],
+      error: `Failed to connect to Edge Function: ${testErr instanceof Error ? testErr.message : String(testErr)}`,
+      insufficientContent: false
+    };
+  }
+  
   // Prepare document IDs and website context
   const documentIds = documents.map(doc => doc.id);
   const websiteContext = project.clientWebsite ? generateWebsiteContext(project.clientWebsite) : '';
