@@ -1,4 +1,61 @@
 
+import { supabase } from "@/integrations/supabase/client";
+import { Project, Document, StrategicInsight } from "@/lib/types";
+import { GAMING_SPECIALIST_PROMPT } from "./config";
+
+/**
+ * Generate a context string from the client website
+ */
+export const generateWebsiteContext = (website: string): string => {
+  if (!website) return '';
+  return `The client's website is ${website}. Please consider this when generating insights.`;
+};
+
+/**
+ * Creates a timeout promise that resolves with fallback insights after the specified timeout
+ */
+export const createTimeoutPromise = async (
+  project: Project, 
+  documents: Document[]
+): Promise<{ insights: StrategicInsight[], error?: string }> => {
+  // Import the fallback insights generator
+  const { generateFallbackInsights } = await import('./mockGenerators/insightGenerator');
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log("API call timed out, using fallback insights");
+      const fallbackInsights = generateFallbackInsights(project.clientIndustry || 'technology', documents.length);
+      resolve({
+        insights: fallbackInsights,
+        error: "API call timed out - using generated sample insights as fallback"
+      });
+    }, 110000); // 110 seconds timeout
+  });
+};
+
+/**
+ * Check if Supabase connection is working and if Anthropic API key exists
+ */
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    console.log("Checking Supabase Edge Function connection...");
+    
+    const { data, error } = await supabase.functions.invoke('test-connection', {
+      body: { test: true }
+    });
+    
+    if (error) {
+      console.error("Connection test failed:", error);
+      return false;
+    }
+    
+    return data?.anthropicKeyExists === true;
+  } catch (err) {
+    console.error("Error checking Supabase connection:", err);
+    return false;
+  }
+};
+
 /**
  * Call the Supabase Edge Function that uses Anthropic API
  */

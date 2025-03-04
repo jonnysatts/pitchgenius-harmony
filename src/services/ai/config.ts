@@ -1,116 +1,41 @@
 
 /**
- * Configuration and environment checks for AI services
+ * Configuration constants for AI services
  */
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 
-/**
- * Check if we have a connection to Supabase with necessary API keys
- */
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    console.log('Checking Supabase connection and API keys');
-    
-    // Add more detailed logging of the request
-    console.log('Invoking test-connection function with timestamp:', new Date().toISOString());
-    
-    const { data, error } = await supabase.functions.invoke('test-connection', {
-      body: { 
-        timestamp: new Date().toISOString(),
-        testType: 'api-key-check'
-      }
-    });
-    
-    if (error) {
-      console.error('Error checking connection:', error);
-      console.error('Error details:', JSON.stringify(error));
-      toast({
-        title: "Connection Error",
-        description: `Could not reach Supabase: ${error.message}`,
-        variant: "destructive",
-        duration: 5000,
-      });
-      return false;
-    }
-    
-    // Log the complete response for debugging
-    console.log('Connection test full response:', JSON.stringify(data));
-    
-    // Check specifically for the Anthropic API key
-    const anthropicKeyExists = data?.environmentChecks?.ANTHROPIC_API_KEY?.exists;
-    
-    if (!anthropicKeyExists) {
-      console.error('ANTHROPIC_API_KEY not found in Supabase secrets');
-      toast({
-        title: "Missing API Key",
-        description: "ANTHROPIC_API_KEY not found in Supabase secrets. Please add it to use Claude AI features.",
-        variant: "destructive",
-        duration: 7000,
-      });
-      return false;
-    }
-    
-    // Show success message
-    toast({
-      title: "Connection Verified",
-      description: "Successfully connected to Supabase and verified Anthropic API key",
-      duration: 3000,
-    });
-    
-    return true;
-  } catch (err) {
-    console.error('Error calling test-connection function:', err);
-    console.error('Error stack:', err instanceof Error ? err.stack : 'No stack available');
-    toast({
-      title: "Connection Error",
-      description: `Failed to check Supabase connection: ${err instanceof Error ? err.message : String(err)}`,
-      variant: "destructive",
-      duration: 5000,
-    });
-    return false;
-  }
-};
+// Gaming specialist system prompt
+export const GAMING_SPECIALIST_PROMPT = `
+You are an expert consultant specializing in gaming industry strategy and audience analysis. 
+Your task is to analyze the provided documents and extract strategic insights that will help 
+gaming companies better understand their audience, identify market opportunities, and develop 
+effective engagement strategies. Focus on identifying actionable insights related to:
 
-/**
- * Verify Anthropic API key exists and shows appropriate notifications
- */
-export const verifyAnthropicApiKey = async (): Promise<boolean> => {
-  try {
-    // Direct check for the ANTHROPIC_API_KEY
-    const { data, error } = await supabase.functions.invoke('test-connection', {
-      body: { 
-        timestamp: new Date().toISOString(),
-        testType: 'anthropic-key-check'
-      }
-    });
-    
-    if (error) {
-      console.error('Error verifying Anthropic API key:', error);
-      toast({
-        title: "Connection Error",
-        description: `Could not verify Anthropic API key: ${error.message}`,
-        variant: "destructive",
-        duration: 5000,
-      });
-      return false;
-    }
-    
-    const anthropicKeyExists = data?.anthropicKeyExists === true;
-    
-    if (!anthropicKeyExists) {
-      toast({
-        title: "Missing API Key",
-        description: "ANTHROPIC_API_KEY not found in Supabase secrets. Claude AI features will not work.",
-        variant: "destructive",
-        duration: 7000,
-      });
-      return false;
-    }
-    
-    return true;
-  } catch (err) {
-    console.error('Error verifying Anthropic API key:', err);
-    return false;
-  }
-};
+1. Business challenges and market trends
+2. Audience gaps and behavior patterns
+3. Competitive threats and positioning
+4. Gaming industry-specific opportunities 
+5. Strategic recommendations for growth
+6. Key narratives that resonate with gaming audiences
+
+Provide detailed, evidence-based insights with high confidence where possible.
+`;
+
+// Additional AI configuration
+export const AI_TIMEOUT_MS = 120000; // 2 minutes
+export const DEFAULT_TEMPERATURE = 0.3;
+export const MAX_TOKENS_RESPONSE = 4000;
+
+// Configuration for insight generation
+export const INSIGHT_CATEGORIES = [
+  'business_challenges',
+  'audience_gaps', 
+  'competitive_threats',
+  'gaming_opportunities',
+  'strategic_recommendations',
+  'key_narratives'
+];
+
+// Default confidence thresholds
+export const HIGH_CONFIDENCE_THRESHOLD = 85;
+export const MEDIUM_CONFIDENCE_THRESHOLD = 70;
+export const LOW_CONFIDENCE_THRESHOLD = 50;
