@@ -1,3 +1,4 @@
+
 /**
  * Module for handling AI API interactions
  */
@@ -17,24 +18,25 @@ export const callClaudeApi = async (
 ): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
   console.log('Making API call to Supabase Edge Function for Claude analysis...');
   
+  // Prepare document IDs and website context
   const documentIds = documents.map(doc => doc.id);
-  const websiteContext = generateWebsiteContext(project.clientWebsite);
+  const websiteContext = project.clientWebsite ? generateWebsiteContext(project.clientWebsite) : '';
   
   try {
-    // Call the Supabase Edge Function that uses Anthropic
-    console.log("Calling Supabase Edge Function with project:", project.id);
+    // Call the proper edge function
+    console.log("Calling generate-insights-with-anthropic with project:", project.id);
     const { data, error } = await supabase.functions.invoke('generate-insights-with-anthropic', {
       body: { 
         projectId: project.id, 
         documentIds,
-        clientIndustry: project.clientIndustry,
+        clientIndustry: project.clientIndustry || 'technology',
         clientWebsite: project.clientWebsite,
         projectTitle: project.title,
         documentContents,
-        processingMode: 'comprehensive', // Changed from 'quick' to 'comprehensive' for more detailed analysis
+        processingMode: 'comprehensive',
         includeComprehensiveDetails: true,
-        maximumResponseTime: 110, // Tell Claude to try to respond within 110 seconds (just under our 2-minute timeout)
-        systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext // Add the gaming specialist prompt with website context
+        maximumResponseTime: 110,
+        systemPrompt: GAMING_SPECIALIST_PROMPT + websiteContext
       }
     });
     
@@ -42,14 +44,10 @@ export const callClaudeApi = async (
     
     if (error) {
       console.error('Error from Edge Function:', error);
-      const errorMessage = error.message || 'Unknown error';
-      const statusCode = error.code || 'No status code';
-      console.error(`Edge Function error: ${errorMessage} (Status: ${statusCode})`);
-      
-      throw new Error(`Edge Function returned a non-2xx status code: ${statusCode} - ${errorMessage}`);
+      throw new Error(`Edge Function error: ${error.message || 'Unknown error'}`);
     }
     
-    // Check if the response indicates insufficient content
+    // Check for insufficient content flag
     if (data && data.insufficientContent === true) {
       console.log('Claude AI reported insufficient document content for meaningful insights');
       return {
@@ -59,33 +57,29 @@ export const callClaudeApi = async (
       };
     }
     
-    // Check if we received valid insights from the API
+    // Validate insights from API
     if (!data || !data.insights || data.insights.length === 0) {
       throw new Error('No insights returned from Claude AI');
     }
     
-    // Add explicit source marker to all insights
+    // Add source marker to insights
     const markedInsights = data.insights.map((insight: StrategicInsight) => {
       return {
         ...insight,
-        source: 'document' as 'document'  // Explicitly cast to the literal type
+        source: 'document' as 'document'
       };
     });
     
     console.log('Successfully received insights from Anthropic:', markedInsights.length);
-    console.log('Insight categories:', markedInsights.map((i: StrategicInsight) => i.category));
     
     return { 
-      insights: markedInsights || [],
+      insights: markedInsights,
       error: undefined,
       insufficientContent: false
     };
   } catch (apiError: any) {
     console.error('Error calling Anthropic API:', apiError);
-    const errorDetails = apiError instanceof Error ? apiError.message : JSON.stringify(apiError);
-    console.error(`API call error details: ${errorDetails}`);
-    
-    throw new Error(`Claude AI error: ${errorDetails}`);
+    throw new Error(`Claude AI error: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
   }
 };
 
@@ -122,8 +116,20 @@ export const createTimeoutPromise = (
  */
 export const checkSupabaseConnection = async () => {
   try {
-    // Simulated API call
-    return { success: true, message: 'Connection successful' };
+    // Check if Anthropic API key exists
+    const { data, error } = await supabase.functions.invoke('test-connection', {
+      body: { checkAnthropicKey: true }
+    });
+    
+    if (error) {
+      console.error('Error checking Supabase connection:', error);
+      return { success: false, message: `Connection failed: ${error.message}` };
+    }
+    
+    return { 
+      success: data?.keyExists === true, 
+      message: data?.keyExists ? 'Anthropic API key verified' : 'Anthropic API key not found'
+    };
   } catch (error) {
     console.error('Error checking Supabase connection:', error);
     return { success: false, message: 'Connection failed' };

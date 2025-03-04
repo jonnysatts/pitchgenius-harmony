@@ -13,20 +13,27 @@ export const analyzeDocuments = async (
   try {
     console.log(`Analyzing ${documents.length} documents for project ${projectId}`);
     
-    // Prepare documents for analysis
+    // Prepare documents for analysis - this extracts text content
     const documentsContent = prepareDocumentContents(documents);
     
-    // In a real implementation, this would call an AI service
-    // For now, we'll simulate a successful analysis
+    if (documentsContent.length === 0) {
+      return {
+        success: false,
+        message: 'No document content could be extracted. Please check the document formats.'
+      };
+    }
+    
+    // In a real implementation, here we would call the API with documentsContent
+    // We'll mark it as successful for now since the actual API call happens elsewhere
     return {
       success: true,
-      message: `Successfully analyzed ${documents.length} documents.`
+      message: `Successfully prepared ${documents.length} documents for analysis.`
     };
   } catch (error) {
     console.error('Error analyzing documents:', error);
     return {
       success: false,
-      message: 'Failed to analyze documents. Please try again later.'
+      message: `Failed to analyze documents: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 };
@@ -35,6 +42,27 @@ export const analyzeDocuments = async (
  * Extracts key insights from document analysis
  */
 export const extractInsightsFromAnalysis = (analysisResults: any[]): StrategicInsight[] => {
-  // Simulated insights extraction
-  return [];
+  // Transformation logic here - this would convert raw API data into our insight format
+  return analysisResults.map(result => {
+    const insightId = uuidv4();
+    
+    // Basic structure conversion
+    return {
+      id: insightId,
+      category: result.category || 'business_challenges',
+      content: {
+        title: result.title || 'Strategic Insight',
+        summary: result.summary || 'Key strategic finding',
+        details: result.details || undefined,
+        evidence: result.evidence || undefined,
+        recommendations: result.recommendations || undefined,
+        dataPoints: result.dataPoints || undefined,
+        sources: result.sources || undefined,
+        impact: result.impact || undefined
+      },
+      confidence: result.confidence || 75,
+      needsReview: result.needsReview !== undefined ? result.needsReview : true,
+      source: 'document'
+    };
+  });
 };

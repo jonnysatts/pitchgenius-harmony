@@ -1,7 +1,8 @@
 
 import { useState, useCallback } from "react";
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { generateInsights } from "@/services/ai";
+import { prepareDocumentContents } from "@/services/ai/promptUtils";
+import { callClaudeApi, createTimeoutPromise } from "@/services/ai/apiClient";
 
 export const useAiGeneration = (
   project: Project,
@@ -10,7 +11,7 @@ export const useAiGeneration = (
   completeProcessing: (message: string) => void,
   setUsingFallbackInsights: (usingFallback: boolean) => void
 ) => {
-  const [useRealAI, setUseRealAI] = useState<boolean>(true); // Set to true by default
+  const [useRealAI, setUseRealAI] = useState<boolean>(true);
   const [insufficientContent, setInsufficientContent] = useState<boolean>(false);
 
   const generateProjectInsights = useCallback(
@@ -23,9 +24,27 @@ export const useAiGeneration = (
       }
 
       try {
-        console.log(`Generating insights with ${isRetry ? "retry" : "initial"} attempt`);
-        // Generate insights with proper shape
-        const result = generateInsights();
+        console.log(`Generating insights with ${isRetry ? "retry" : "initial"} attempt for ${documents.length} documents`);
+        
+        if (documents.length === 0) {
+          console.error("No documents provided for analysis");
+          setError("No documents provided for analysis. Please upload documents first.");
+          completeProcessing("Analysis failed - no documents");
+          return false;
+        }
+        
+        // Prepare document contents for analysis
+        const documentContents = prepareDocumentContents(documents);
+        console.log(`Prepared ${documentContents.length} document contents for analysis`);
+        
+        // Create a promise that will resolve with fallback insights after timeout
+        const timeoutPromise = createTimeoutPromise(project, documents);
+        
+        // Create the actual API call promise
+        const apiPromise = callClaudeApi(project, documents, documentContents);
+        
+        // Race the promises - whichever resolves first will be used
+        const result = await Promise.race([apiPromise, timeoutPromise]);
         
         // Check if there was insufficient content
         if (result.insufficientContent) {
@@ -60,6 +79,7 @@ export const useAiGeneration = (
       } catch (err) {
         console.error("Error generating insights:", err);
         setError(`Error generating insights: ${err instanceof Error ? err.message : String(err)}`);
+        completeProcessing("Analysis failed - error");
         return false;
       }
     },

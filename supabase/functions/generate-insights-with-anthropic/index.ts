@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
 // Define CORS headers for browser requests
 const corsHeaders = {
@@ -22,8 +21,9 @@ serve(async (req) => {
     const { 
       projectId, 
       documentContents, 
-      clientIndustry, 
-      projectTitle 
+      clientIndustry = 'technology', 
+      projectTitle = 'Project Analysis',
+      maximumResponseTime = 110 // Default to 110 seconds max response time
     } = await req.json();
     
     console.log(`Processing project ${projectId} with ${documentContents?.length || 0} documents`);
@@ -47,11 +47,9 @@ serve(async (req) => {
       );
     }
     
-    console.log(`Processing all ${documentContents.length} documents without filtering`);
-    
-    // Process all documents (no filtering by priority)
-    const documentSummaries = documentContents.map(doc => 
-      `Document: ${doc.name}\nType: ${doc.type}\nPriority: ${doc.priority}\nContent: ${doc.content.substring(0, 1000)}`
+    // Process document contents into a combined text for analysis
+    const documentSummaries = documentContents.map((doc: any) => 
+      `Document: ${doc.name}\nType: ${doc.type}\nPriority: ${doc.priority || 'normal'}\nContent: ${doc.content.substring(0, 2000)}${doc.content.length > 2000 ? '...(truncated)' : ''}`
     ).join("\n\n");
     
     console.log("Prepared document summaries for Claude");
@@ -76,6 +74,9 @@ serve(async (req) => {
       4. Business impact assessment
       5. Specific gaming recommendations
       6. Confidence level (0-100)
+      
+      You have ${maximumResponseTime} seconds to respond. If you cannot complete a thorough analysis in that time,
+      provide the highest quality insights you can within the time constraint.
     `.trim();
     
     // Create the user prompt with document content
@@ -114,7 +115,7 @@ serve(async (req) => {
         ]
       }
       
-      Aim to provide 12-15 comprehensive insights across different categories based on the document content.
+      Aim to provide 6-10 comprehensive insights across different categories based on the document content.
       Ensure your insights are specific to the ${clientIndustry} industry and directly related to gaming opportunities.
     `.trim();
     
@@ -129,7 +130,7 @@ serve(async (req) => {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3-opus-20240229",
+        model: "claude-3-sonnet-20240229",
         max_tokens: 4000,
         system: systemPrompt,
         messages: [
@@ -187,7 +188,7 @@ serve(async (req) => {
       const insights = insightsData.insights || [];
       
       // Add unique IDs to insights if not present
-      const finalInsights = insights.map((insight, index) => ({
+      const finalInsights = insights.map((insight: any, index: number) => ({
         id: insight.id || `insight_${Math.random().toString(36).substring(2, 11)}`,
         ...insight
       }));
