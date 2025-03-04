@@ -35,7 +35,9 @@ export async function handleAnalysisRequest(req: Request): Promise<Response> {
           validFormat: keyVerification.formatValid,
           keyPrefix: keyVerification.keyPrefix
         },
-        error: keyVerification.message
+        error: keyVerification.message,
+        message: "Please run diagnostics tests to identify the issue",
+        suggestDiagnostics: true
       };
       
       return createErrorResponse(errorDetails, 400, client_industry);
@@ -43,18 +45,20 @@ export async function handleAnalysisRequest(req: Request): Promise<Response> {
     
     // Validate the website URL
     if (!website_url) {
-      return createErrorResponse("No website URL provided", 400, client_industry);
+      return createErrorResponse({
+        error: "No website URL provided",
+        suggestDiagnostics: true
+      }, 400, client_industry);
     }
     
     // Extract website content using the appropriate service
     const websiteContent = await extractWebsiteContent(website_url, use_firecrawl);
     
     if (!websiteContent || websiteContent.length < 100) {
-      return createErrorResponse(
-        `Failed to extract sufficient content from website: ${website_url}`, 
-        400, 
-        client_industry
-      );
+      return createErrorResponse({
+        error: `Failed to extract sufficient content from website: ${website_url}`,
+        suggestDiagnostics: true
+      }, 400, client_industry);
     }
     
     // Analyze the website with Claude
@@ -73,7 +77,10 @@ export async function handleAnalysisRequest(req: Request): Promise<Response> {
     });
   } catch (error) {
     console.error('Error in request handler:', error);
-    return createErrorResponse(error, 500, "technology");
+    return createErrorResponse({
+      error: error instanceof Error ? error.message : String(error),
+      suggestDiagnostics: true
+    }, 500, "technology");
   }
 }
 

@@ -3,7 +3,6 @@ import React from "react";
 import { useLocation } from "react-router-dom";
 import { Project, AIProcessingStatus, StrategicInsight } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import ApiConnectionTest from "./ApiConnectionTest";
 import { Globe } from "lucide-react";
 
 interface ProjectHeaderProps {
@@ -57,10 +56,6 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
               </a>
             )}
           </div>
-        </div>
-        
-        <div className="mt-1">
-          <ApiConnectionTest />
         </div>
       </div>
     </div>

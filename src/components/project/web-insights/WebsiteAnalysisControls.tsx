@@ -4,7 +4,6 @@ import { Server } from 'lucide-react';
 import { Project, AIProcessingStatus } from '@/lib/types';
 import { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
 import { toast } from "@/hooks/use-toast";
-import { Alert } from "@/components/ui/alert";
 import {
   AnalysisButton,
   AnalysisProgressIndicator,
