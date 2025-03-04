@@ -1,4 +1,3 @@
-
 /**
  * Service for extracting content from websites
  */
