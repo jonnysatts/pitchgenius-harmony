@@ -2,29 +2,53 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box } from "lucide-react";
-import { Project } from "@/lib/types";
+import { Project, StrategicInsight } from "@/lib/types";
 import ApiConnectionTest from "@/components/project/ApiConnectionTest";
 import ClaudeApiTester from "@/components/project/ClaudeApiTester";
 import WebsiteUrlCard from "@/components/project/web-insights/WebsiteUrlCard";
 import NoWebsiteCard from "@/components/project/web-insights/NoWebsiteCard";
 import WebInsightsTabs from "@/components/project/web-insights/WebInsightsTabs";
-import WebsiteAnalysisControls from "@/components/project/web-insights/WebsiteAnalysisControls";
-import { useWebsiteAnalysis } from "@/hooks/ai/website";
+import { WebsiteAnalysisControls } from "@/components/project/web-insights/WebsiteAnalysisControls";
+import { useWebsiteAnalysisState } from "@/hooks/ai/website";
 
 interface WebInsightsTabContentProps {
   project: Project;
+  websiteInsights?: StrategicInsight[];
+  reviewedInsights?: Record<string, 'accepted' | 'rejected' | 'pending'>;
+  isAnalyzingWebsite?: boolean;
+  error?: string | null;
+  onAnalyzeWebsite?: () => void;
+  onAcceptInsight?: (insightId: string) => void;
+  onRejectInsight?: (insightId: string) => void;
+  onUpdateInsight?: (insightId: string, updatedContent: Record<string, any>) => void;
+  onNavigateToInsights?: () => void;
+  onRetryAnalysis?: () => void;
+  aiStatus?: any;
 }
 
-const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({ project }) => {
+const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({ 
+  project,
+  websiteInsights = [],
+  reviewedInsights = {},
+  isAnalyzingWebsite = false,
+  error = null,
+  onAnalyzeWebsite = () => {},
+  onAcceptInsight = () => {},
+  onRejectInsight = () => {},
+  onUpdateInsight = () => {},
+  onNavigateToInsights = () => {},
+  onRetryAnalysis = () => {},
+  aiStatus
+}) => {
   const {
-    websiteUrl,
-    websiteInsights,
-    analysisPhase,
-    analysisError,
-    startWebsiteAnalysis,
     isAnalyzing,
-    hasWebsiteUrl
-  } = useWebsiteAnalysis(project);
+    websiteInsights: stateWebsiteInsights,
+  } = useWebsiteAnalysisState();
+
+  // Use either passed websiteInsights prop or the ones from state
+  const insights = websiteInsights.length > 0 ? websiteInsights : stateWebsiteInsights;
+  const hasWebsiteUrl = !!project.clientWebsite;
+  const websiteUrl = project.clientWebsite || "";
 
   return (
     <div className="pt-4 space-y-4">
@@ -49,17 +73,25 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({ project }
           <ApiConnectionTest />
           {hasWebsiteUrl && (
             <WebsiteAnalysisControls
-              onStartAnalysis={startWebsiteAnalysis}
-              isAnalyzing={isAnalyzing}
-              analysisPhase={analysisPhase}
-              error={analysisError}
+              project={project}
+              isAnalyzing={isAnalyzingWebsite || isAnalyzing}
+              onAnalyzeWebsite={onAnalyzeWebsite}
+              hasInsights={insights.length > 0}
+              aiStatus={aiStatus}
             />
           )}
         </div>
       </div>
 
-      {websiteInsights.length > 0 && (
-        <WebInsightsTabs insights={websiteInsights} />
+      {insights.length > 0 && (
+        <WebInsightsTabs
+          insightsByCategory={{}}
+          reviewedInsights={reviewedInsights}
+          onAcceptInsight={onAcceptInsight}
+          onRejectInsight={onRejectInsight}
+          onUpdateInsight={onUpdateInsight}
+          totalInsightsCount={insights.length}
+        />
       )}
     </div>
   );

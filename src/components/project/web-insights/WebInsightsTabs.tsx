@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
@@ -12,6 +13,7 @@ interface WebInsightsTabsProps {
   onRejectInsight: (insightId: string) => void;
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   totalInsightsCount: number;
+  insights?: StrategicInsight[]; // Add this optional prop
 }
 
 const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
@@ -20,7 +22,8 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
   onAcceptInsight,
   onRejectInsight,
   onUpdateInsight,
-  totalInsightsCount
+  totalInsightsCount,
+  insights = [] // Provide a default value
 }) => {
   return (
     <div className="space-y-6">
@@ -55,6 +58,7 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
           />
         </TabsContent>
         
+        {/* Map over the categories to generate their tab content */}
         {websiteInsightCategories.map((category) => {
           const categoryId = category.id as WebsiteInsightCategory;
           const categoryInsights = insightsByCategory[categoryId] || [];
