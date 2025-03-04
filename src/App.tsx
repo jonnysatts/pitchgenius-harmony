@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
@@ -32,10 +32,17 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Standardize on /project/:id for project details */}
               <Route path="/project/:id" element={<ProjectDetail />} />
-              <Route path="/new-project" element={<NewProject />} />
+              
+              {/* Support legacy /projects/:id for compatibility */}
               <Route path="/projects/:id" element={<ProjectDetail />} />
-              <Route path="/projects/new" element={<NewProject />} />
+              
+              {/* New project routes */}
+              <Route path="/new-project" element={<NewProject />} />
+              <Route path="/projects/new" element={<Navigate to="/new-project" replace />} />
+              
               <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

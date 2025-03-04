@@ -101,24 +101,18 @@ export const findProjectById = (id: string): Project | undefined => {
   
   // Get all projects including new ones from storage
   const allProjects = getAllProjects();
-  
-  // First check projects from localStorage
-  const localProject = allProjects.find(p => p.id === id);
-  if (localProject) {
-    console.log(`Found project in combined projects: ${id}`);
-    return localProject;
-  }
-  
-  // If not found, try to find in BASE_MOCK_PROJECTS
-  const baseProject = BASE_MOCK_PROJECTS.find(p => p.id === id);
-  if (baseProject) {
-    console.log(`Found project in base mock projects: ${id}`);
-    return baseProject;
-  }
-  
-  // Still not found, log debug info
-  console.error(`Project not found with ID: ${id}`);
+  console.log(`Looking for project with ID: ${id}`);
   console.log(`Available project IDs:`, allProjects.map(p => p.id));
   
+  // First check in all projects
+  const project = allProjects.find(p => p.id === id);
+  
+  if (project) {
+    console.log(`Found project: ${project.title}`);
+    return project;
+  }
+  
+  // If not found, log debug info
+  console.error(`Project not found with ID: ${id}`);
   return undefined;
 };

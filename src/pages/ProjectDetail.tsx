@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { findProjectById } from "@/data/mockProjects";
 import { useAuth } from "@/context/AuthContext";
@@ -18,10 +18,39 @@ import { useProjectDetail } from "@/hooks/useProjectDetail";
 import ProjectDetailContent from "@/components/project/ProjectDetailContent";
 
 const ProjectDetail = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   
-  const project = useMemo(() => findProjectById(projectId || ''), [projectId]);
+  // Try to get projectId from different sources
+  const projectId = useMemo(() => {
+    // First check URL param
+    if (id) return id;
+    
+    // Check if ID might be in a different part of the URL
+    const pathParts = location.pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    
+    if (lastPart && lastPart !== 'project' && lastPart !== 'projects') {
+      return lastPart;
+    }
+    
+    console.error("Could not determine project ID from URL:", location.pathname);
+    return '';
+  }, [id, location.pathname]);
+  
+  // Log the project ID for debugging
+  useEffect(() => {
+    console.log("ProjectDetail attempting to load project with ID:", projectId);
+  }, [projectId]);
+  
+  const project = useMemo(() => {
+    if (!projectId) {
+      console.error("No project ID available to load project");
+      return undefined;
+    }
+    return findProjectById(projectId);
+  }, [projectId]);
   
   // Use the useProjectDetail hook
   const {
@@ -49,7 +78,7 @@ const ProjectDetail = () => {
     // Add the website analysis functionality
     isAnalyzingWebsite,
     handleAnalyzeWebsite
-  } = useProjectDetail(projectId || '', user?.id || '', project || {} as Project);
+  } = useProjectDetail(projectId, user?.id || '', project || {} as Project);
   
   // Set up the AI configuration
   const { setUseRealAI } = useAiAnalysis(project || {} as Project);
@@ -87,6 +116,10 @@ const ProjectDetail = () => {
         <div className="container mx-auto px-4 py-12">
           <h1 className="text-2xl font-bold text-red-500">Project not found</h1>
           <p className="mt-2">The project you're looking for doesn't exist or has been deleted.</p>
+          <p className="mt-2 text-sm text-gray-500">Project ID: {projectId}</p>
+          <p className="mt-2 text-sm text-gray-500">
+            If you just created this project, try returning to the dashboard and clicking on it again.
+          </p>
         </div>
       </AppLayout>
     );

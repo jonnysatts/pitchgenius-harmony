@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/context/AuthContext';
-import { addNewProject } from '@/data/mockProjects';
+import { addNewProject, findProjectById } from '@/data/mockProjects';
 import { Project } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -46,9 +46,12 @@ const NewProject: React.FC = () => {
       return;
     }
     
+    // Create a unique ID for the new project
+    const newProjectId = `new_${Date.now()}_${uuidv4().substring(0, 8)}`;
+    
     // Create new project object
     const newProject: Project = {
-      id: `new_${Date.now()}_${uuidv4().substring(0, 8)}`,
+      id: newProjectId,
       title: projectTitle,
       clientName,
       clientIndustry,
@@ -63,19 +66,28 @@ const NewProject: React.FC = () => {
     // Save to mock data store
     addNewProject(newProject);
     
+    // Verify the project was saved correctly
+    const savedProject = findProjectById(newProjectId);
+    
+    if (!savedProject) {
+      console.error("Failed to save project with ID:", newProjectId);
+      toast.error('Failed to create project', {
+        description: 'There was an error saving your project. Please try again.'
+      });
+      return;
+    }
+    
     // Show success message
     toast.success('Project created', {
       description: `${projectTitle} has been created successfully`
     });
     
-    // Navigate to the project detail page with state (using the consistent route)
-    navigate(`/project/${newProject.id}`, {
-      state: {
-        newProjectTitle: projectTitle,
-        newProjectClient: clientName,
-        newProject: true
-      }
-    });
+    // Log for debugging
+    console.log("Created new project:", newProjectId);
+    console.log("Navigating to:", `/project/${newProjectId}`);
+    
+    // Navigate to the project detail page using the consistent route pattern
+    navigate(`/project/${newProjectId}`);
   };
   
   return (
