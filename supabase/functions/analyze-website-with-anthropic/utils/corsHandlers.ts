@@ -1,18 +1,20 @@
 
-// CORS headers for cross-origin requests
+// CORS headers for Supabase Edge Functions
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
-// Handle CORS preflight requests
+/**
+ * Handle CORS preflight requests
+ */
 export function handleCorsPreflightRequest(req: Request): Response | null {
-  // Handle CORS preflight request
+  // Check if this is a preflight CORS request
   if (req.method === 'OPTIONS') {
     return new Response(null, {
+      status: 204, // No content
       headers: corsHeaders,
-      status: 204,
     });
   }
   

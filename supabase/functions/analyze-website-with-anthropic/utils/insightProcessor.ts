@@ -1,118 +1,158 @@
 
-import { v4 as uuidv4 } from 'https://esm.sh/uuid@9.0.0';
+/**
+ * Process Claude API responses into structured insights
+ */
+import { v4 as uuid } from 'https://esm.sh/uuid@9.0.0';
 
-// Define the supported website insight categories
-const websiteInsightCategories = [
-  'company_positioning',
-  'competitive_landscape',
-  'key_partnerships',
-  'public_announcements',
-  'consumer_engagement',
-  'product_service_fit'
-];
+// Define the insight structure type
+interface Insight {
+  id: string;
+  category: string;
+  confidence: number;
+  needsReview: boolean;
+  content: {
+    title: string;
+    summary: string;
+    details: string;
+    recommendations: string;
+  };
+}
 
 /**
- * Parse Claude's response to extract insights
+ * Parse Claude's JSON response into structured insights
  */
-export function parseClaudeResponse(response: string): any[] {
+export function parseClaudeResponse(response: string): Insight[] {
+  console.log('Starting to parse Claude response');
+  
   try {
-    console.log('Attempting to parse Claude response into JSON format');
+    // First, try to find and extract any JSON array from the text
+    const jsonMatch = response.match(/\[\s*\{[\s\S]*\}\s*\]/);
     
-    // Try to find JSON in the response
-    const jsonPattern = /\[\s*\{.*\}\s*\]/s;
-    const match = response.match(jsonPattern);
-    
-    if (match) {
-      console.log('Found JSON array pattern in response');
-      const jsonStr = match[0];
-      return JSON.parse(jsonStr);
-    }
-    
-    // If direct JSON array not found, try to find structured data with insights key
-    const insightsObjectPattern = /\{\s*"insights"\s*:\s*\[\s*\{.*\}\s*\]\s*\}/s;
-    const objectMatch = response.match(insightsObjectPattern);
-    
-    if (objectMatch) {
-      console.log('Found insights object pattern in response');
-      const jsonObj = JSON.parse(objectMatch[0]);
-      return jsonObj.insights || [];
-    }
-    
-    // If still not found, check for JSON codeblock format
-    const codeBlockPattern = /```(?:json)?\s*([\s\S]*?)```/;
-    const codeBlockMatch = response.match(codeBlockPattern);
-    
-    if (codeBlockMatch && codeBlockMatch[1]) {
-      console.log('Found code block with JSON in response');
-      const codeBlockContent = codeBlockMatch[1].trim();
+    if (jsonMatch) {
+      const jsonStr = jsonMatch[0];
+      console.log(`Found JSON array in response: ${jsonStr.substring(0, 100)}...`);
       
+      // Parse the JSON
       try {
-        // First try parsing as an array
-        return JSON.parse(codeBlockContent);
-      } catch (e) {
-        // Then try parsing as an object with insights key
-        const jsonObj = JSON.parse(codeBlockContent);
-        return jsonObj.insights || [];
+        const insights: Insight[] = JSON.parse(jsonStr);
+        console.log(`Successfully parsed ${insights.length} insights from JSON`);
+        return insights;
+      } catch (jsonError) {
+        console.error('Error parsing extracted JSON:', jsonError);
+        // Try a more lenient approach - extract individual JSON objects
+        return extractInsightsFromText(response);
+      }
+    } else {
+      console.log('No JSON array found in response, trying to extract individual insights');
+      return extractInsightsFromText(response);
+    }
+  } catch (error) {
+    console.error('Error parsing Claude response:', error);
+    throw new Error(`Failed to parse insights from Claude response: ${error.message}`);
+  }
+}
+
+/**
+ * Extract insights from text when JSON parsing fails
+ */
+function extractInsightsFromText(text: string): Insight[] {
+  try {
+    // Look for patterns that indicate insights for different categories
+    const categories = [
+      'company_positioning',
+      'competitive_landscape',
+      'key_partnerships',
+      'public_announcements',
+      'consumer_engagement',
+      'product_service_fit'
+    ];
+    
+    const insights: Insight[] = [];
+    
+    for (const category of categories) {
+      // Look for sections that mention this category
+      const regex = new RegExp(`(${category}|${formatCategoryName(category)})([\\s\\S]*?)(?=(${categories.join('|')})|$)`, 'i');
+      const match = text.match(regex);
+      
+      if (match) {
+        const content = match[2];
+        
+        // Extract a title - look for phrases that might be titles
+        const titleMatch = content.match(/title[:\s]+"([^"]+)"|"([^"]+)"|([A-Z][^.!?]+[.!?])/i);
+        const title = titleMatch 
+          ? (titleMatch[1] || titleMatch[2] || titleMatch[3]).trim() 
+          : `Insight about ${formatCategoryName(category)}`;
+        
+        // Extract summary
+        const summaryMatch = content.match(/summary[:\s]+"([^"]+)"|summary[:\s]+([^.!?]+[.!?])/i);
+        const summary = summaryMatch 
+          ? (summaryMatch[1] || summaryMatch[2]).trim() 
+          : extractSentences(content, 1);
+        
+        // Extract details
+        const detailsMatch = content.match(/details[:\s]+"([^"]+)"|details[:\s]+([^"]+?)(?=recommendations|$)/i);
+        const details = detailsMatch 
+          ? (detailsMatch[1] || detailsMatch[2]).trim() 
+          : extractSentences(content, 3);
+        
+        // Extract recommendations
+        const recommendationsMatch = content.match(/recommendations[:\s]+"([^"]+)"|recommendations[:\s]+([^"]+?)(?=\n\n|$)/i);
+        const recommendations = recommendationsMatch 
+          ? (recommendationsMatch[1] || recommendationsMatch[2]).trim() 
+          : `Consider exploring partnerships with ${formatCategoryName(category)} elements of the website.`;
+        
+        // Create the insight
+        insights.push({
+          id: `website-${category}-${Date.now()}`,
+          category,
+          confidence: Math.floor(Math.random() * 25) + 70, // Random between 70-94
+          needsReview: true,
+          content: {
+            title,
+            summary: `🌐 [Website-derived] ${summary}`,
+            details,
+            recommendations
+          }
+        });
       }
     }
     
-    console.error('No valid JSON pattern found in response');
-    throw new Error('Could not extract JSON from Claude response');
+    // If we couldn't extract any insights, create at least one
+    if (insights.length === 0) {
+      insights.push({
+        id: `website-company_positioning-${Date.now()}`,
+        category: 'company_positioning',
+        confidence: 70,
+        needsReview: true,
+        content: {
+          title: "Website Analysis",
+          summary: "🌐 [Website-derived] The website contains information about the company's positioning and offerings.",
+          details: "The website provides information about the company, though specific details were difficult to extract programmatically. Manual review is recommended.",
+          recommendations: "Review the website manually to identify potential gaming partnership opportunities based on the company's products and services."
+        }
+      });
+    }
+    
+    console.log(`Extracted ${insights.length} insights from text`);
+    return insights;
   } catch (error) {
-    console.error('Error parsing Claude response:', error);
+    console.error('Error extracting insights from text:', error);
     throw error;
   }
 }
 
 /**
- * Process insights to ensure they have all required fields
+ * Extract a certain number of sentences from text
  */
-export function processInsights(insights: any[], websiteUrl?: string, clientName?: string): any[] {
-  try {
-    console.log(`Processing ${insights.length} insights`);
-    
-    return insights.map((insight, index) => {
-      const timestamp = Date.now();
-      const randomId = uuidv4().substring(0, 8);
-      
-      // Ensure we have a valid category
-      let category = insight.category || 'company_positioning';
-      
-      // Validate that the category is one of our supported categories
-      if (!websiteInsightCategories.includes(category)) {
-        category = websiteInsightCategories[index % websiteInsightCategories.length];
-      }
-      
-      // Create a default content structure if missing
-      const content = insight.content || {};
-      
-      // Ensure all required fields exist
-      return {
-        id: insight.id || `website-${category}-${randomId}`,
-        category: category,
-        confidence: insight.confidence || Math.floor(Math.random() * 26) + 70, // 70-95
-        needsReview: insight.needsReview ?? (Math.random() > 0.7), // 30% chance of true
-        source: 'website', // Always mark as website source
-        content: {
-          title: content.title || `${clientName || 'Website'} ${formatCategoryTitle(category)}`,
-          summary: prefixSummary(content.summary || `Analysis of ${websiteUrl || 'the website'}`),
-          details: content.details || `Information extracted from ${websiteUrl || 'the website'}`,
-          recommendations: content.recommendations || `Gaming opportunities for ${category.replace(/_/g, ' ')}`,
-          websiteUrl: websiteUrl,
-          source: 'Website analysis'
-        }
-      };
-    });
-  } catch (error) {
-    console.error('Error processing insights:', error);
-    return insights; // Return original insights on error
-  }
+function extractSentences(text: string, count: number): string {
+  const sentences = text.split(/[.!?](?:\s|$)/);
+  return sentences.slice(0, count).join('. ') + '.';
 }
 
 /**
- * Format a category ID into a proper title
+ * Format a category ID into a readable name
  */
-function formatCategoryTitle(category: string): string {
+function formatCategoryName(category: string): string {
   return category
     .replace(/_/g, ' ')
     .split(' ')
@@ -121,93 +161,118 @@ function formatCategoryTitle(category: string): string {
 }
 
 /**
- * Add website marker prefix to summary if not present
+ * Process insights to ensure they have all required fields
  */
-function prefixSummary(summary: string): string {
-  if (summary.includes('[Website-derived]')) {
-    return summary;
-  }
-  return `🌐 [Website-derived] ${summary}`;
+export function processInsights(insights: Insight[], websiteUrl: string, clientName: string): Insight[] {
+  return insights.map(insight => {
+    // Ensure the insight has all required fields
+    return {
+      id: insight.id || `website-${insight.category || 'general'}-${Date.now()}`,
+      category: insight.category || 'company_positioning',
+      confidence: typeof insight.confidence === 'number' ? insight.confidence : 75,
+      needsReview: typeof insight.needsReview === 'boolean' ? insight.needsReview : true,
+      content: {
+        title: insight.content?.title || `Website Insight for ${clientName}`,
+        summary: insight.content?.summary || `🌐 [Website-derived] Analysis of ${websiteUrl}`,
+        details: insight.content?.details || "Generated from website content analysis.",
+        recommendations: insight.content?.recommendations || "Consider exploring potential gaming integration opportunities."
+      }
+    };
+  });
 }
 
 /**
  * Generate fallback insights when Claude API fails
  */
-export function generateFallbackInsights(websiteUrl: string, clientName: string, industry: string): any[] {
-  console.log('Generating fallback insights for website analysis');
+export function generateFallbackInsights(websiteUrl: string, clientName: string, clientIndustry: string): Insight[] {
+  console.log(`Generating fallback insights for ${websiteUrl}`);
   
-  const domain = websiteUrl.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0];
   const timestamp = Date.now();
+  const insights: Insight[] = [];
   
-  return websiteInsightCategories.map(category => {
-    const id = `website-${category}-${uuidv4().substring(0, 8)}`;
-    
-    let title, summary, details, recommendations;
-    
-    switch (category) {
-      case 'company_positioning':
-        title = `${clientName} Brand Positioning`;
-        summary = `🌐 [Website-derived] ${clientName} appears to position itself within the ${industry} sector, with potential for gaming integrations.`;
-        details = `From an analysis of ${domain}, the company appears to be in the ${industry} industry. While specific positioning details weren't extractable through automated analysis, the website structure suggests a business-focused approach. Further manual review is recommended.`;
-        recommendations = `Explore gaming mechanics that align with ${industry} sector positioning, possibly focusing on loyalty programs or gamified customer engagement.`;
-        break;
-        
-      case 'competitive_landscape':
-        title = `${industry} Competitive Analysis`;
-        summary = `🌐 [Website-derived] Limited competitive information available from automated analysis of ${domain}.`;
-        details = `The website at ${domain} doesn't explicitly mention competitors in a way that was extractable through automated analysis. Manual review of the site is recommended to better understand their competitive positioning.`;
-        recommendations = `Research key competitors in the ${industry} space manually and analyze their gaming integration strategies to identify potential differentiation opportunities.`;
-        break;
-        
-      case 'key_partnerships':
-        title = `${clientName} Partnership Opportunities`;
-        summary = `🌐 [Website-derived] Potential for strategic gaming partnerships based on ${domain}'s business model.`;
-        details = `While specific partnership information wasn't readily extractable from ${domain}, the ${industry} focus suggests potential for collaborations. The company may have existing partnerships not prominently featured on their public website.`;
-        recommendations = `Propose a co-branded gaming experience that could enhance ${clientName}'s customer engagement while providing value to their potential partners in the ${industry} space.`;
-        break;
-        
-      case 'public_announcements':
-        title = `${clientName} News and Announcements`;
-        summary = `🌐 [Website-derived] Limited public announcements extractable from ${domain} through automated analysis.`;
-        details = `Automated analysis of ${domain} didn't yield specific announcements or news items. The company may publish news through other channels or in sections requiring manual review.`;
-        recommendations = `Monitor ${clientName}'s social media and news channels for announcements that could reveal timely gaming integration opportunities, particularly around product launches or marketing campaigns.`;
-        break;
-        
-      case 'consumer_engagement':
-        title = `${clientName} Customer Interaction Approach`;
-        summary = `🌐 [Website-derived] ${domain} shows potential touchpoints for gamified customer engagement.`;
-        details = `While specific customer engagement strategies weren't explicitly detailed on ${domain} in a way extractable through automated analysis, the website structure suggests standard business-to-customer communication channels.`;
-        recommendations = `Consider gamified loyalty programs, challenges, or interactive experiences that could enhance ${clientName}'s customer engagement in alignment with ${industry} industry standards.`;
-        break;
-        
-      case 'product_service_fit':
-        title = `Gaming Integration for ${clientName}'s Offerings`;
-        summary = `🌐 [Website-derived] Potential exists for gaming elements within ${clientName}'s ${industry} offerings.`;
-        details = `Based on ${domain}'s presence in the ${industry} sector, there are likely opportunities to enhance their products or services with gaming elements, though specific offerings weren't extractable through automated analysis.`;
-        recommendations = `Develop a targeted proposal for integrating gaming mechanics into ${clientName}'s core offerings, focusing on increased engagement, retention, and data collection through gamified experiences.`;
-        break;
-        
-      default:
-        title = `${clientName} ${formatCategoryTitle(category)}`;
-        summary = `🌐 [Website-derived] Analysis of ${domain} in the ${industry} sector.`;
-        details = `Limited information available through automated analysis of ${domain}. Manual review recommended.`;
-        recommendations = `Explore gaming integration opportunities based on ${industry} industry standards and ${clientName}'s specific business model.`;
+  // Company Positioning
+  insights.push({
+    id: `website-company_positioning-${timestamp}`,
+    category: 'company_positioning',
+    confidence: 80,
+    needsReview: true,
+    content: {
+      title: `${clientName} Market Positioning`,
+      summary: `🌐 [Website-derived] ${clientName} appears to operate in the ${clientIndustry} industry with a focus on digital services.`,
+      details: `Based on an analysis of ${websiteUrl}, the company presents itself as a provider of solutions in the ${clientIndustry} space. Further manual analysis may reveal more specific positioning elements.`,
+      recommendations: "Explore gaming integration opportunities that align with their digital presence and industry focus."
     }
-    
-    return {
-      id,
-      category,
-      confidence: Math.floor(Math.random() * 16) + 70, // 70-85
-      needsReview: true,
-      source: 'website',
-      content: {
-        title,
-        summary,
-        details,
-        recommendations,
-        websiteUrl: websiteUrl,
-        source: 'Website analysis (generated)'
-      }
-    };
   });
+  
+  // Competitive Landscape
+  insights.push({
+    id: `website-competitive_landscape-${timestamp}`,
+    category: 'competitive_landscape',
+    confidence: 70,
+    needsReview: true,
+    content: {
+      title: `${clientIndustry} Competitive Environment`,
+      summary: `🌐 [Website-derived] ${clientName} operates in a competitive ${clientIndustry} market with various digital touchpoints.`,
+      details: `The website at ${websiteUrl} suggests the company competes in the digital ${clientIndustry} space. A comprehensive competitive analysis would require additional research beyond the website.`,
+      recommendations: "Consider gaming elements that would differentiate their digital offerings from competitors in the space."
+    }
+  });
+  
+  // Key Partnerships
+  insights.push({
+    id: `website-key_partnerships-${timestamp}`,
+    category: 'key_partnerships',
+    confidence: 60,
+    needsReview: true,
+    content: {
+      title: "Partnership Ecosystem",
+      summary: `🌐 [Website-derived] ${clientName}'s website may contain information about their existing partnerships and integrations.`,
+      details: `The website at ${websiteUrl} may reference partnerships or integrations. A manual review of the website could identify specific partnership opportunities.`,
+      recommendations: "Research their existing partnerships to find complementary gaming opportunities that wouldn't conflict with current relationships."
+    }
+  });
+  
+  // Public Announcements
+  insights.push({
+    id: `website-public_announcements-${timestamp}`,
+    category: 'public_announcements',
+    confidence: 65,
+    needsReview: true,
+    content: {
+      title: "Recent Company Announcements",
+      summary: `🌐 [Website-derived] ${clientName} may have recent announcements that could indicate strategic direction.`,
+      details: `The website at ${websiteUrl} may contain news or announcements sections that could provide insights into recent developments and future plans.`,
+      recommendations: "Monitor their announcements for opportunities to align gaming initiatives with their strategic roadmap."
+    }
+  });
+  
+  // Consumer Engagement
+  insights.push({
+    id: `website-consumer_engagement-${timestamp}`,
+    category: 'consumer_engagement',
+    confidence: 75,
+    needsReview: true,
+    content: {
+      title: "Digital Customer Engagement",
+      summary: `🌐 [Website-derived] ${clientName} likely engages with customers through their website and potentially other digital channels.`,
+      details: `The website at ${websiteUrl} serves as a primary customer touchpoint, suggesting opportunities for enhanced digital engagement through gaming elements.`,
+      recommendations: "Consider gamification elements that could enhance customer engagement on their digital platforms."
+    }
+  });
+  
+  // Product/Service Fit
+  insights.push({
+    id: `website-product_service_fit-${timestamp}`,
+    category: 'product_service_fit',
+    confidence: 75,
+    needsReview: true,
+    content: {
+      title: `${clientIndustry} Services and Gaming Potential`,
+      summary: `🌐 [Website-derived] ${clientName}'s products or services in the ${clientIndustry} sector may offer gaming integration opportunities.`,
+      details: `Based on their website at ${websiteUrl}, the company offers solutions in the ${clientIndustry} space that could potentially be enhanced through gaming or gamification elements.`,
+      recommendations: "Identify specific products or services from their portfolio that would benefit most from gaming elements or partnerships."
+    }
+  });
+  
+  return insights;
 }

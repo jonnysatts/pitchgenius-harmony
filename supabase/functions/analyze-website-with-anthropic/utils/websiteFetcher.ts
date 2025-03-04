@@ -1,273 +1,155 @@
+
 /**
- * Basic utility to fetch website content 
- * Used when Firecrawl is not available
+ * Basic website content fetching implementation
+ */
+
+/**
+ * Fetch website content using basic fetch API
+ * @param url The website URL to fetch
+ * @returns The website content as a string
  */
 export async function fetchWebsiteContentBasic(url: string): Promise<string> {
   try {
-    console.log(`Fetching content from ${url} using basic fetch`);
+    console.log(`Fetching website content from ${url} using basic fetch`);
     
     // Ensure URL has protocol
     const urlWithProtocol = url.startsWith('http') ? url : `https://${url}`;
-    console.log(`Using URL with protocol: ${urlWithProtocol}`);
     
-    // Simple fetch of the website HTML with extended timeout
+    // Fetch with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.log(`Aborting fetch for ${urlWithProtocol} due to timeout`);
-      controller.abort();
-    }, 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    console.log(`Starting fetch request to ${urlWithProtocol}...`);
+    const response = await fetch(urlWithProtocol, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
+      signal: controller.signal
+    });
     
-    try {
-      const response = await fetch(urlWithProtocol, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; GameAnalytics/1.0; +https://example.com)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5'
-        },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      console.log(`Fetch response received with status: ${response.status}`);
-      
-      if (!response.ok) {
-        console.error(`Failed to fetch website: ${response.status} ${response.statusText}`);
-        
-        // Try to get the error response text if available
-        try {
-          const errorText = await response.text();
-          console.error(`Error response text: ${errorText.substring(0, 500)}`);
-        } catch (e) {
-          console.error(`Could not read error text: ${e}`);
-        }
-        
-        // Try again with www prefix if the domain doesn't already have it
-        if (!urlWithProtocol.includes("://www.") && (response.status === 404 || response.status === 403)) {
-          const wwwUrl = urlWithProtocol.replace("://", "://www.");
-          console.log(`Retrying with www prefix: ${wwwUrl}`);
-          
-          const wwwResponse = await fetch(wwwUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; GameAnalytics/1.0; +https://example.com)',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.5'
-            }
-          });
-          
-          if (wwwResponse.ok) {
-            const html = await wwwResponse.text();
-            console.log(`Successfully fetched raw HTML content with www prefix (${html.length} chars)`);
-            
-            if (html.length < 100) {
-              console.warn("Warning: Very short HTML content received");
-            }
-            
-            // More sophisticated HTML cleaning
-            const cleanText = cleanHtml(html);
-            
-            console.log(`Successfully cleaned content to (${cleanText.length} chars)`);
-            
-            // Return a limited amount of text - Claude has context limits
-            return cleanText.slice(0, 50000);
-          } else {
-            // Try to get alternative information from website
-            const alternativeUrl = `${urlWithProtocol}/about` || `${urlWithProtocol}/about-us`;
-            console.log(`Trying alternative URL: ${alternativeUrl}`);
-            
-            try {
-              const altResponse = await fetch(alternativeUrl, {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (compatible; GameAnalytics/1.0; +https://example.com)'
-                }
-              });
-              
-              if (altResponse.ok) {
-                const altHtml = await altResponse.text();
-                if (altHtml.length > 500) {
-                  return cleanHtml(altHtml);
-                }
-              }
-            } catch (altError) {
-              console.error(`Error fetching alternative URL: ${altError}`);
-            }
-          }
-        }
-        
-        // If we still can't get content, try to extract anything from the error page
-        const errorPageContent = await response.text();
-        if (errorPageContent.length > 500) {
-          console.log("Attempting to extract content from error page");
-          const cleanedErrorPage = cleanHtml(errorPageContent);
-          if (cleanedErrorPage.length > 500) {
-            return cleanedErrorPage + "\n[Note: This content was extracted from an error page as the main website couldn't be accessed]";
-          }
-        }
-        
-        throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
-      }
-      
-      // Get website text
-      const html = await response.text();
-      console.log(`Successfully fetched raw HTML content (${html.length} chars)`);
-      console.log(`First 100 chars of HTML: ${html.substring(0, 100)}`);
-      
-      if (html.length < 100) {
-        console.warn("Warning: Very short HTML content received");
-        return `The website at ${urlWithProtocol} appears to have very limited content. Only ${html.length} characters were found. This may be a placeholder site, under construction, or have content loaded dynamically via JavaScript which cannot be captured by this basic scraper.`;
-      }
-      
-      // More sophisticated HTML cleaning
-      const cleanText = cleanHtml(html);
-      
-      if (cleanText.length < 200) {
-        console.warn(`Warning: Cleaned content is very short (${cleanText.length} chars)`);
-        // Try to get alternate content from metadata
-        const metaDescription = html.match(/<meta name="description" content="([^"]+)"/i);
-        const title = html.match(/<title>([^<]+)<\/title>/i);
-        
-        let extraContent = "";
-        if (title && title[1]) {
-          extraContent += `Page Title: ${title[1]}\n\n`;
-        }
-        if (metaDescription && metaDescription[1]) {
-          extraContent += `Meta Description: ${metaDescription[1]}\n\n`;
-        }
-        
-        return extraContent + cleanText + `\n\nNote: Limited content was found on this website (${cleanText.length} characters). The site may use JavaScript to load content dynamically or might be a simple landing page.`;
-      }
-      
-      console.log(`Successfully cleaned content to (${cleanText.length} chars)`);
-      console.log(`First 100 chars of cleaned text: ${cleanText.substring(0, 100)}`);
-      
-      // Return a limited amount of text - Claude has context limits
-      return cleanText.slice(0, 50000);
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      console.error(`Error during fetch: ${fetchError.message}`);
-      throw fetchError;
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
     }
+    
+    // Check content type
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) {
+      console.warn(`Warning: Content type is not HTML: ${contentType}`);
+    }
+    
+    const html = await response.text();
+    
+    // Extract text content from HTML
+    const textContent = extractTextFromHtml(html);
+    
+    console.log(`Successfully fetched ${textContent.length} characters of content from ${url}`);
+    
+    return textContent;
   } catch (error) {
-    console.error(`Error fetching website with basic fetch:`, error);
-    if (error.name === 'AbortError') {
-      return `Error fetching website content: Request timed out after 30 seconds. The website might be too slow or blocking our requests.`;
-    }
-    return `Error fetching website content: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(`Error fetching website content from ${url}:`, error);
+    throw new Error(`Failed to fetch website content: ${error.message}`);
   }
 }
 
 /**
- * More sophisticated HTML cleaning function
+ * Extract text content from HTML
+ * @param html The HTML string
+ * @returns Cleaned text content
  */
-function cleanHtml(html: string): string {
+function extractTextFromHtml(html: string): string {
   try {
-    console.log('Starting HTML cleaning process...');
+    // Remove scripts and styles first to prevent their content from being included
+    const withoutScripts = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ');
+    const withoutStyles = withoutScripts.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
     
-    // Quick check if content seems to be JSON instead of HTML
-    if (html.trim().startsWith('{') && html.trim().endsWith('}')) {
-      try {
-        const jsonData = JSON.parse(html);
-        console.log('Content appears to be JSON, converting to plaintext');
-        return `JSON Data: ${JSON.stringify(jsonData, null, 2)}`;
-      } catch (e) {
-        // Not valid JSON, continue with HTML cleaning
+    // Extract meta description if available
+    const metaDescription = withoutStyles.match(/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i);
+    const metaDescriptionText = metaDescription ? `Description: ${metaDescription[1]}\n\n` : '';
+    
+    // Extract title
+    const titleMatch = withoutStyles.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const titleText = titleMatch ? `Title: ${titleMatch[1]}\n\n` : '';
+    
+    // Extract headings
+    const headings = [];
+    const h1Matches = withoutStyles.matchAll(/<h1[^>]*>([^<]*)<\/h1>/gi);
+    for (const match of h1Matches) {
+      headings.push(`Heading: ${match[1].trim()}`);
+    }
+    
+    const h2Matches = withoutStyles.matchAll(/<h2[^>]*>([^<]*)<\/h2>/gi);
+    for (const match of h2Matches) {
+      headings.push(`Subheading: ${match[1].trim()}`);
+    }
+    
+    const headingsText = headings.length > 0 ? headings.join('\n') + '\n\n' : '';
+    
+    // Extract text from paragraphs and lists
+    const paragraphs = [];
+    const pMatches = withoutStyles.matchAll(/<p[^>]*>([^<]*)<\/p>/gi);
+    for (const match of pMatches) {
+      if (match[1].trim().length > 0) {
+        paragraphs.push(match[1].trim());
       }
     }
     
-    // Check if it might be a text/plain response instead of HTML
-    if (!html.includes('<html') && !html.includes('<body') && !html.includes('<div')) {
-      console.log('Content appears to be plain text rather than HTML');
-      return html.trim().slice(0, 50000);
-    }
-    
-    // Extract important metadata first
-    let metadata = '';
-    
-    // Get page title
-    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
-    if (titleMatch && titleMatch[1]) {
-      metadata += `PAGE TITLE: ${titleMatch[1].trim()}\n\n`;
-    }
-    
-    // Get meta description
-    const descriptionMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-    if (descriptionMatch && descriptionMatch[1]) {
-      metadata += `META DESCRIPTION: ${descriptionMatch[1].trim()}\n\n`;
-    }
-    
-    // Get meta keywords
-    const keywordsMatch = html.match(/<meta\s+name=["']keywords["']\s+content=["']([^"']+)["']/i);
-    if (keywordsMatch && keywordsMatch[1]) {
-      metadata += `META KEYWORDS: ${keywordsMatch[1].trim()}\n\n`;
-    }
-    
-    // Remove script tags and their content
-    let cleaned = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ');
-    
-    // Remove style tags and their content
-    cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
-    
-    // Remove SVG tags and their content
-    cleaned = cleaned.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, ' ');
-    
-    // Remove meta tags
-    cleaned = cleaned.replace(/<meta\b[^<]*(?:(?!>)<[^<]*)*>/gi, ' ');
-    
-    // Replace common HTML entities
-    cleaned = cleaned.replace(/&nbsp;/g, ' ');
-    cleaned = cleaned.replace(/&amp;/g, '&');
-    cleaned = cleaned.replace(/&lt;/g, '<');
-    cleaned = cleaned.replace(/&gt;/g, '>');
-    
-    // Replace div, p, h1, h2, h3, h4, h5, h6, tr, li with newlines before removal
-    cleaned = cleaned.replace(/<\/(div|p|h1|h2|h3|h4|h5|h6|tr|li)>/gi, '\n');
-    
-    // Replace br, hr tags with newlines
-    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
-    cleaned = cleaned.replace(/<hr\s*\/?>/gi, '\n---\n');
-    
-    // Add newline before headings for better readability
-    cleaned = cleaned.replace(/<(h1|h2|h3|h4|h5|h6)[^>]*>/gi, '\n\n');
-    
-    // Preserve important content from headings
-    const headingMatches = cleaned.matchAll(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi);
-    let headings = '';
-    for (const match of headingMatches) {
-      if (match[1] && match[1].trim() && !match[1].includes('<') && match[1].length > 2) {
-        headings += `HEADING: ${match[1].trim()}\n`;
+    // Extract list items
+    const listItems = [];
+    const liMatches = withoutStyles.matchAll(/<li[^>]*>([^<]*)<\/li>/gi);
+    for (const match of liMatches) {
+      if (match[1].trim().length > 0) {
+        listItems.push(`• ${match[1].trim()}`);
       }
     }
     
-    if (headings) {
-      headings = "\nPAGE HEADINGS:\n" + headings + "\n";
+    const listItemsText = listItems.length > 0 ? listItems.join('\n') + '\n\n' : '';
+    
+    // Extract text from divs if we have little content
+    let divTexts = '';
+    if (paragraphs.length < 5) {
+      const divMatches = withoutStyles.matchAll(/<div[^>]*>([^<]*)<\/div>/gi);
+      const divs = [];
+      for (const match of divMatches) {
+        if (match[1].trim().length > 20) { // Only include divs with substantial text
+          divs.push(match[1].trim());
+        }
+      }
+      divTexts = divs.length > 0 ? divs.join('\n\n') + '\n\n' : '';
     }
     
-    // Keep content of specific tags that might contain important text but remove the tags
-    cleaned = cleaned.replace(/<(a|span|strong|em|b|i|u|label)[^>]*>/gi, '');
-    cleaned = cleaned.replace(/<\/(a|span|strong|em|b|i|u|label)>/gi, '');
+    // Combine all text parts
+    let textContent = titleText + metaDescriptionText + headingsText + 
+                      paragraphs.join('\n\n') + '\n\n' + listItemsText + divTexts;
     
-    // Now remove all remaining HTML tags
-    cleaned = cleaned.replace(/<[^>]*>/g, ' ');
+    // Clean up the text
+    textContent = textContent
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ')
+      .trim();
     
-    // Remove extra whitespace
-    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    // As a last resort, if we have very little content, just strip all HTML tags
+    if (textContent.length < 200) {
+      console.log('Extracted too little content, falling back to stripping all HTML tags');
+      textContent = withoutStyles
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
     
-    // Normalize newlines
-    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-    
-    // Trim whitespace
-    cleaned = cleaned.trim();
-    
-    // Add the metadata and headings at the beginning
-    const finalText = metadata + headings + cleaned;
-    
-    console.log(`HTML cleaning complete. Reduced from ${html.length} to ${finalText.length} chars`);
-    
-    return finalText;
+    return textContent;
   } catch (error) {
-    console.error('Error cleaning HTML:', error);
-    return html; // Return original HTML if cleaning fails
+    console.error('Error extracting text from HTML:', error);
+    // Fallback to simply removing HTML tags
+    return html
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

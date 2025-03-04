@@ -34,19 +34,33 @@ export function generateOutputFormat(): string {
     }
     
     If a website has minimal content, still provide insights based on what's available. If content is sparse, focus on the most promising categories and note the limited information.
-    
-    CRITICAL INSTRUCTIONS:
-    1. ONLY include information actually present on the website - DO NOT HALLUCINATE or INVENT details
-    2. If you cannot find specific information for a category, explicitly note this in the details
-    3. Include direct quotes and specific details wherever possible
-    4. For recommendations, be specific about gaming integrations
-    5. If the content is insufficient, state so clearly in the details field
-    6. Include DATES of announcements, NAMES of partners, and SPECIFIC products/services when available
     `;
 }
 
 /**
- * Call Claude API to analyze website content
+ * Verify the Anthropic API key is valid and well-formed
+ */
+export function verifyAnthropicApiKey(): boolean {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  
+  // Check if key exists
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY environment variable is not set');
+    return false;
+  }
+  
+  // Check if key has the expected format (Claude API keys start with 'sk-ant-')
+  if (!apiKey.startsWith('sk-ant-')) {
+    console.error('ANTHROPIC_API_KEY does not have the expected format (should start with sk-ant-)');
+    return false;
+  }
+  
+  // Key passes basic validation
+  return true;
+}
+
+/**
+ * Call Claude API to analyze website content with improved error handling
  */
 export async function analyzeWebsiteWithAnthropic(
   websiteContent: string,
@@ -55,6 +69,11 @@ export async function analyzeWebsiteWithAnthropic(
   clientIndustry: string
 ): Promise<string> {
   try {
+    // First verify the API key
+    if (!verifyAnthropicApiKey()) {
+      throw new Error('Invalid or missing Anthropic API key. Please check your ANTHROPIC_API_KEY in Supabase secrets.');
+    }
+    
     // Verify we have minimum content
     if (!websiteContent || websiteContent.length < 50) {
       console.error('Website content is too short for analysis:', websiteContent.length);
@@ -81,9 +100,17 @@ export async function analyzeWebsiteWithAnthropic(
     // Use a more structured prompt format
     const prompt = `\n\nHuman: I need to analyze this website for a gaming strategy project. The website belongs to ${clientName || "a company"} in the ${clientIndustry} industry. Here's the website content:\n\n${truncatedContent}\n\nPlease analyze this content and generate strategic insights that would be valuable for a gaming company considering a potential partnership. Focus on identifying specific opportunities, challenges, and unique strategic positions.\n\nAssistant:`;
     
-    console.log('Prompt structure created, about to make API call');
-    
     try {
+      // Log the request parameters for debugging
+      console.log('Claude API request parameters:', {
+        model: 'claude-2.1',
+        maxTokensToSample: 4000,
+        hasSystemPrompt: !!fullSystemPrompt,
+        promptLength: prompt.length,
+        apiKeyExists: !!Deno.env.get('ANTHROPIC_API_KEY'),
+        apiKeyPrefix: Deno.env.get('ANTHROPIC_API_KEY')?.substring(0, 8) + '...'
+      });
+      
       const completion = await anthropic.completions.create({
         model: 'claude-2.1',
         max_tokens_to_sample: 4000,
@@ -101,17 +128,31 @@ export async function analyzeWebsiteWithAnthropic(
       }
       
       console.log(`Claude response length: ${completion.completion.length} chars`);
+      console.log(`Claude response sample: ${completion.completion.substring(0, 200)}...`);
+      
       return completion.completion;
     } catch (apiError) {
-      console.error('Claude API error details:', JSON.stringify(apiError));
+      // Log detailed error information
+      console.error('Claude API error details:', typeof apiError === 'object' ? JSON.stringify(apiError) : apiError);
       
-      // Check for specific API error types
+      // Try to extract more useful error information for different types of errors
+      let errorMessage = 'Unknown Claude API error';
+      
       if (apiError.toString().includes('invalid_request_error')) {
-        throw new Error(`Claude API invalid request: ${apiError.message || 'Check API format and parameters'}`);
+        errorMessage = `Claude API invalid request: ${apiError.message || 'Check API format and parameters'}`;
+      } else if (apiError.toString().includes('authentication')) {
+        errorMessage = `Claude API authentication error: ${apiError.message || 'Invalid API key'}`;
+      } else if (apiError.toString().includes('rate_limit')) {
+        errorMessage = `Claude API rate limit exceeded: ${apiError.message || 'Too many requests'}`;
+      } else if (apiError.toString().includes('context_length')) {
+        errorMessage = `Claude API context length exceeded: ${apiError.message || 'Input too long'}`;
+      } else if (typeof apiError === 'object' && apiError !== null) {
+        errorMessage = apiError.message || JSON.stringify(apiError);
+      } else {
+        errorMessage = String(apiError);
       }
       
-      // Regular error handling
-      throw new Error(`Claude API error: ${apiError.message || apiError.toString()}`);
+      throw new Error(`Claude API error: ${errorMessage}`);
     }
   } catch (error) {
     console.error('Error in analyzeWebsiteWithAnthropic:', error);

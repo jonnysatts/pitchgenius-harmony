@@ -5,7 +5,6 @@
 import { Project, StrategicInsight } from "@/lib/types";
 import { checkSupabaseConnection, verifyAnthropicApiKey } from "../config";
 import { createTimeoutPromise } from "../apiClient";
-import { callWebsiteAnalysisApi } from "./claudeApiService";
 import { generateWebsiteMockInsights } from "./mockGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -78,10 +77,9 @@ export const analyzeClientWebsite = async (
     const timeoutPromise = createTimeoutPromise(project, [], 180000);
     
     try {
-      console.log('Using enhanced website analysis via Supabase Edge Function');
-      console.log('Preparing request payload for edge function...');
+      console.log('Calling website analysis via Supabase Edge Function...');
       
-      // Prepare the request payload with complete debugging information
+      // Prepare the request payload with all the necessary information
       const payload = { 
         projectId: project.id,
         clientWebsite: project.clientWebsite,
@@ -91,132 +89,87 @@ export const analyzeClientWebsite = async (
         debugInfo: true  // Flag to enable extra debugging in the edge function
       };
       
-      console.log('Edge function payload:', JSON.stringify(payload));
-      
-      // Direct call to edge function with better error handling
-      try {
-        console.log('Invoking analyze-website-with-anthropic edge function...');
-        
-        // Log complete function invocation details including URL construction
-        const functionUrl = 'analyze-website-with-anthropic';
-        console.log(`Invoking edge function at URL: ${functionUrl}`);
-        console.log(`Payload size: ${JSON.stringify(payload).length} characters`);
-
-        // Call the enhanced website analysis 
-        const apiPromise = (async () => {
-          try {
-            const { data, error } = await supabase.functions.invoke(functionUrl, {
-              body: payload
-            });
-            
-            if (error) {
-              console.error('Error from Edge Function:', error);
-              console.error('Error details:', JSON.stringify(error));
-              
-              toast({
-                title: "Supabase Edge Function Error",
-                description: error.message || "Unknown edge function error",
-                variant: "destructive",
-                duration: 7000,
-              });
-              
-              throw new Error(`Edge Function error: ${error.message || 'Unknown error'}`);
-            }
-            
-            console.log('Edge function response received');
-            
-            // Validate the response structure
-            if (!data) {
-              console.error('Edge function returned empty data');
-              throw new Error('Empty response from Edge Function');
-            }
-            
-            if (data.error) {
-              console.error('Edge function returned error in data:', data.error);
-              throw new Error(`Analysis error: ${data.error}`);
-            }
-            
-            if (!data.insights || !Array.isArray(data.insights)) {
-              console.error('Invalid insights format in response:', data);
-              throw new Error('No insights array in Edge Function response');
-            }
-            
-            // Success - log the insights
-            console.log(`Received ${data.insights.length} insights from Edge Function`);
-            if (data.insights.length > 0) {
-              console.log('First insight sample:', JSON.stringify(data.insights[0]));
-            }
+      // Call the enhanced website analysis edge function
+      const apiPromise = (async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+            body: payload
+          });
+          
+          if (error) {
+            console.error('Error from Edge Function:', error);
+            console.error('Error details:', JSON.stringify(error));
             
             toast({
-              title: "Analysis Complete",
-              description: `Generated ${data.insights.length} insights from website analysis`,
-              duration: 5000,
+              title: "Analysis Error",
+              description: error.message || "Error connecting to edge function",
+              variant: "destructive",
+              duration: 7000,
             });
             
-            return { insights: data.insights };
-          } catch (innerError) {
-            console.error('Inner error in website analysis:', innerError);
-            throw innerError;
+            throw new Error(`Edge Function error: ${error.message || 'Unknown error'}`);
           }
-        })();
-        
-        // Race between the API call and timeout
-        const result = await Promise.race([apiPromise, timeoutPromise]);
-        return result;
-      } catch (apiError) {
-        // Handle different error types
-        console.error('Edge function error details:', apiError);
-        
-        // Try to get more specific error information
-        let errorMessage = 'Edge Function returned a non-2xx status code';
-        if (apiError instanceof Error) {
-          errorMessage = apiError.message;
-        } else if (typeof apiError === 'object' && apiError !== null) {
-          errorMessage = JSON.stringify(apiError);
+          
+          console.log('Edge function response received');
+          
+          // Validate the response structure
+          if (!data) {
+            console.error('Edge function returned empty data');
+            throw new Error('Empty response from Edge Function');
+          }
+          
+          if (data.error) {
+            console.error('Edge function returned error in data:', data.error);
+            throw new Error(`Analysis error: ${data.error}`);
+          }
+          
+          if (!data.insights || !Array.isArray(data.insights)) {
+            console.error('Invalid insights format in response:', data);
+            throw new Error('No insights array in Edge Function response');
+          }
+          
+          // Process the insights to make sure they're properly formatted
+          const processedInsights = data.insights.map(insight => ({
+            ...insight,
+            source: 'website' as 'website' // Explicitly cast to 'website' literal type
+          }));
+          
+          // Success - log the insights
+          console.log(`Received ${processedInsights.length} insights from Edge Function`);
+          if (processedInsights.length > 0) {
+            console.log('First insight sample:', JSON.stringify(processedInsights[0]));
+          }
+          
+          toast({
+            title: "Analysis Complete",
+            description: `Generated ${processedInsights.length} insights from website analysis`,
+            duration: 5000,
+          });
+          
+          return { insights: processedInsights };
+        } catch (innerError) {
+          console.error('Error in website analysis:', innerError);
+          throw innerError;
         }
-        
-        toast({
-          title: "Analysis Error",
-          description: "Error connecting to edge function. Trying alternative approach...",
-          variant: "destructive",
-          duration: 5000,
-        });
-        
-        throw new Error(errorMessage);
-      }
-    } catch (apiError) {
-      console.log('Error during website analysis, trying fallback approach');
-      console.error('API error details:', apiError);
+      })();
       
-      try {
-        // Try with direct Claude API as fallback
-        toast({
-          title: "Trying Alternative Method",
-          description: "Website analysis failed, trying another approach...",
-          duration: 5000,
-        });
-        
-        return await Promise.race([
-          callWebsiteAnalysisApi(project),
-          timeoutPromise
-        ]);
-      } catch (claudeError) {
-        console.log('All API approaches failed, using mock insights');
-        console.error('Claude API error details:', claudeError);
-        
-        toast({
-          title: "Analysis Failed",
-          description: "Using generated samples instead.",
-          variant: "destructive",
-          duration: 5000,
-        });
-        
-        const mockInsights = generateWebsiteMockInsights(project);
-        return { 
-          insights: mockInsights,
-          error: "API errors during website analysis - using generated sample insights instead. Error: " + (claudeError instanceof Error ? claudeError.message : String(claudeError))
-        };
-      }
+      // Race between the API call and timeout
+      return await Promise.race([apiPromise, timeoutPromise]);
+    } catch (apiError) {
+      console.error('Error during website analysis:', apiError);
+      
+      toast({
+        title: "Analysis Failed",
+        description: "Using generated samples instead.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      
+      const mockInsights = generateWebsiteMockInsights(project);
+      return { 
+        insights: mockInsights,
+        error: "API errors during website analysis - using generated sample insights instead. Error: " + (apiError instanceof Error ? apiError.message : String(apiError))
+      };
     }
   } catch (err) {
     console.error('Error analyzing website:', err);
