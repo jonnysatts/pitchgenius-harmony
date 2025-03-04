@@ -1,7 +1,3 @@
-
-/**
- * Service for interacting with Anthropic Claude API
- */
 import { callClaudeAPI } from './apiClient.ts';
 
 /**
@@ -70,15 +66,15 @@ export async function analyzeWebsiteWithAnthropic(
   clientIndustry: string = 'technology'
 ): Promise<string> {
   console.log(`Analyzing website content with Claude. Industry: ${clientIndustry}, Content length: ${websiteContent.length} chars`);
-  
+
   // Generate the prompts
   const systemPrompt = customSystemPrompt || generateSystemPrompt(clientIndustry, clientName);
   const userPrompt = generatePrompt(websiteContent, clientIndustry);
-  
+
   // Call Claude API
   try {
     console.log('Sending request to Claude API...');
-    
+
     const claudeResponse = await callClaudeAPI(
       websiteContent, 
       systemPrompt,
@@ -87,27 +83,27 @@ export async function analyzeWebsiteWithAnthropic(
       0.3,                         // Temperature
       4000                         // Max tokens
     );
-    
+
     // Parse the response to ensure it's valid JSON
     try {
       // Try to extract JSON from response if it's wrapped in markdown code blocks
       let jsonContent = claudeResponse;
-      
+
       // Remove markdown code blocks if present
       const jsonMatch = claudeResponse.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         jsonContent = jsonMatch[1];
       }
-      
+
       // Check if it's valid JSON
       JSON.parse(jsonContent);
-      
+
       console.log('Successfully validated Claude response as valid JSON');
       return jsonContent;
     } catch (jsonError) {
       console.error('Error parsing Claude response as JSON:', jsonError);
       console.error('Claude response:', claudeResponse.substring(0, 500) + '...');
-      
+
       // Return a valid JSON error response
       return JSON.stringify({
         error: "Failed to parse Claude response as valid JSON",
@@ -116,7 +112,7 @@ export async function analyzeWebsiteWithAnthropic(
     }
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    
+
     // Return a valid JSON error response
     return JSON.stringify({
       error: error instanceof Error ? error.message : String(error),
