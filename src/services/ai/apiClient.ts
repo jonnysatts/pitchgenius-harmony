@@ -1,5 +1,5 @@
 
-import { Project, Document, StrategicInsight } from "@/lib/types";
+import { Project, Document, StrategicInsight, InsightCategory } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
 import { prepareDocumentContents } from './promptUtils';
 import { mockApiResponse } from './mockData';
@@ -161,10 +161,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
           response.error.message?.includes('blob') ||
           response.error.message?.includes('inaccessible')) {
         return {
-          insights: mockApiResponse.insights.map(insight => ({
-            ...insight,
-            source: 'document'
-          })),
+          insights: mockApiResponse.insights,
           error: 'Document content extraction failed. Using generated sample insights instead. In production, please upload actual text content.',
           insufficientContent: false
         };
@@ -172,10 +169,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
       
       // Fall back to mock insights for any other errors
       return {
-        insights: mockApiResponse.insights.map(insight => ({
-          ...insight,
-          source: 'document'
-        })),
+        insights: mockApiResponse.insights,
         error: `API Error: ${response.error.message || 'Unknown error'}. Using generated sample insights instead.`,
         insufficientContent: false
       };
@@ -185,11 +179,24 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
     if (response.data?.insights && response.data.insights.length > 0) {
       console.log(`✅ Received ${response.data.insights.length} insights from Claude`);
       
-      return {
-        insights: response.data.insights.map((insight: any) => ({
+      // Make sure each insight has a valid category
+      const typedInsights = response.data.insights.map((insight: any) => {
+        // Ensure the category is a valid InsightCategory
+        let category = insight.category;
+        if (typeof category === 'string' && !Object.values(InsightCategory).includes(category as InsightCategory)) {
+          // Default to a valid category if needed
+          category = 'business_challenges' as InsightCategory;
+        }
+        
+        return {
           ...insight,
+          category,
           source: 'document'
-        }))
+        } as StrategicInsight;
+      });
+      
+      return {
+        insights: typedInsights
       };
     } else if (response.data?.error || response.data?.rawResponse) {
       console.error('❌ Claude failed to generate insights:', 
@@ -208,10 +215,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
       
       // If Claude couldn't access the content, use mocks
       return {
-        insights: mockApiResponse.insights.map(insight => ({
-          ...insight,
-          source: 'document'
-        })),
+        insights: mockApiResponse.insights,
         error: 'Claude could not process document content. Using generated sample insights instead. In production, please upload actual text content.',
         insufficientContent: false
       };
@@ -219,10 +223,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
     
     // If we got here, there's some unexpected issue
     return {
-      insights: mockApiResponse.insights.map(insight => ({
-        ...insight,
-        source: 'document'
-      })),
+      insights: mockApiResponse.insights,
       error: 'Unexpected API response format. Using generated sample insights instead.',
       insufficientContent: false
     };
@@ -232,10 +233,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
     // Handle timeout errors specifically
     if ((error as Error).message?.includes('timed out')) {
       return {
-        insights: mockApiResponse.insights.map(insight => ({
-          ...insight,
-          source: 'document'
-        })),
+        insights: mockApiResponse.insights,
         error: 'API request timed out. Using generated sample insights as fallback.',
         insufficientContent: false
       };
@@ -243,10 +241,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
     
     // For any other error, return mock data with error info
     return {
-      insights: mockApiResponse.insights.map(insight => ({
-        ...insight,
-        source: 'document'
-      })),
+      insights: mockApiResponse.insights,
       error: `Error calling API: ${(error as Error).message}. Using generated sample insights instead.`,
       insufficientContent: false
     };

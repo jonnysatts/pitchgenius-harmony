@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { StrategicInsight } from "@/lib/types";
+import { InsightCategory, StrategicInsight } from "@/lib/types";
 
 /**
  * Mock API response for when real API calls fail
@@ -9,7 +9,7 @@ export const mockApiResponse = {
   insights: [
     {
       id: uuidv4(),
-      category: 'business_challenges',
+      category: 'business_challenges' as InsightCategory,
       confidence: 85,
       needsReview: true,
       content: {
@@ -22,7 +22,7 @@ export const mockApiResponse = {
     },
     {
       id: uuidv4(),
-      category: 'audience_gaps',
+      category: 'audience_gaps' as InsightCategory,
       confidence: 78,
       needsReview: true,
       content: {
@@ -35,7 +35,7 @@ export const mockApiResponse = {
     },
     {
       id: uuidv4(),
-      category: 'competitive_threats',
+      category: 'competitive_threats' as InsightCategory,
       confidence: 82,
       needsReview: true,
       content: {
@@ -48,7 +48,7 @@ export const mockApiResponse = {
     },
     {
       id: uuidv4(),
-      category: 'gaming_opportunities',
+      category: 'gaming_opportunities' as InsightCategory,
       confidence: 90,
       needsReview: true,
       content: {
@@ -61,7 +61,7 @@ export const mockApiResponse = {
     },
     {
       id: uuidv4(),
-      category: 'strategic_recommendations',
+      category: 'strategic_recommendations' as InsightCategory,
       confidence: 88,
       needsReview: true,
       content: {
@@ -74,7 +74,7 @@ export const mockApiResponse = {
     },
     {
       id: uuidv4(),
-      category: 'key_narratives',
+      category: 'key_narratives' as InsightCategory,
       confidence: 75,
       needsReview: true,
       content: {
