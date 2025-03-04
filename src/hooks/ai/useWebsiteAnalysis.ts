@@ -80,15 +80,15 @@ export const useWebsiteAnalysis = (
         description: "Beginning analysis of " + project.clientWebsite,
       });
 
-      // Set up timeout for the entire operation
+      // Set up timeout for the entire operation - increased to 90 seconds to give more time
       const analysisTimeout = setTimeout(() => {
         console.log("Website analysis timed out - using fallback insights");
         
         // Generate fallback insights
         const fallbackInsights = generateFallbackWebsiteInsights(project);
         
-        // Add disclaimer that these are fallback insights
-        setError("Analysis timed out. Showing sample insights instead of actual website analysis.");
+        // Add timeout-specific message
+        setError("Analysis timed out. Using sample insights instead of actual website analysis. In a production environment with valid API keys, this would analyze your actual website data.");
         
         // Add the fallback insights
         setWebsiteInsights(fallbackInsights);
@@ -101,33 +101,34 @@ export const useWebsiteAnalysis = (
         
         toast({
           title: "Analysis Timeout",
-          description: "The website analysis took too long. Showing sample insights instead.",
+          description: "Using sample insights due to timeout. This would work with valid API keys in production.",
           variant: "destructive"
         });
-      }, 60000); // 60 second timeout for the entire process
+      }, 90000); // 90 second timeout for the entire process
 
-      // Create progress simulation
+      // Create progress simulation that moves faster at the beginning
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          if (prev < 20) {
+          // Move faster at the beginning to give a sense of progress
+          if (prev < 15) {
             setAnalysisStatus('Fetching website content...');
-            return prev + 2;
-          } else if (prev < 40) {
+            return prev + 3; // Move quickly to 15%
+          } else if (prev < 35) {
             setAnalysisStatus('Crawling website pages...');
-            return prev + 1;
+            return prev + 1.5; // Move at moderate speed to 35%
           } else if (prev < 60) {
             setAnalysisStatus('Claude AI is analyzing website data...');
-            return prev + 0.3;
+            return prev + 0.5; // Slow down to simulate AI processing
           } else if (prev < 80) {
             setAnalysisStatus('Generating strategic insights...');
-            return prev + 0.8;
+            return prev + 0.3; // Even slower for insight generation
           } else if (prev < 95) {
             setAnalysisStatus('Finalizing analysis...');
-            return prev + 0.5;
+            return prev + 0.2; // Very slow for finalization
           }
           return prev;
         });
-      }, 300);
+      }, 250); // Update progress more frequently
 
       // First perform a test to make sure the Edge Function is accessible
       const testResult = await FirecrawlService.testWebsiteAnalysis();
@@ -136,11 +137,16 @@ export const useWebsiteAnalysis = (
         clearInterval(progressInterval);
         clearTimeout(analysisTimeout);
         setIsAnalyzing(false);
-        setError(`Edge Function test failed: ${testResult.error || 'Unknown error'}`);
+        setError(`Edge Function unavailable: ${testResult.error || 'API keys not configured'}. Using sample insights instead.`);
+        
+        // Generate and use fallback insights
+        const fallbackInsights = generateFallbackWebsiteInsights(project);
+        setWebsiteInsights(fallbackInsights);
+        addInsights(fallbackInsights);
         
         toast({
-          title: "Analysis Setup Failed",
-          description: "Unable to initialize website analysis. Please try again later.",
+          title: "Analysis Setup Issue",
+          description: "Using sample insights. In production, this would connect to AI services.",
           variant: "destructive"
         });
         return;
@@ -181,14 +187,14 @@ export const useWebsiteAnalysis = (
         });
       } else {
         // Handle the case where we got a response but no insights
-        const errorMessage = result?.error || "No insights could be generated from the website analysis";
+        const errorMessage = result?.error || "No insights returned from website analysis. The API may have failed to extract meaningful content.";
         setError(errorMessage);
         
         // Generate fallback insights
         const fallbackInsights = generateFallbackWebsiteInsights(project);
         
         // Add disclaimer that these are fallback insights
-        setError("No insights returned from the API. Showing sample insights instead.");
+        setError("No insights returned from website analysis. Using sample insights instead.");
         
         // Add the fallback insights
         setWebsiteInsights(fallbackInsights);
@@ -196,7 +202,7 @@ export const useWebsiteAnalysis = (
         
         toast({
           title: "Analysis Issue",
-          description: "Using sample insights due to analysis error. This would work with valid API keys in production.",
+          description: "Using sample insights. This would work with valid API keys in production.",
           variant: "destructive"
         });
       }
@@ -213,8 +219,8 @@ export const useWebsiteAnalysis = (
       // Generate fallback insights
       const fallbackInsights = generateFallbackWebsiteInsights(project);
       
-      // Add disclaimer that these are fallback insights
-      setError("Analysis error. Showing sample insights instead: " + errorMessage);
+      // Add disclaimer that these are fallback insights with specific error message
+      setError(`Website analysis error: ${errorMessage}. Using sample insights instead.`);
       
       // Add the fallback insights
       setWebsiteInsights(fallbackInsights);
@@ -222,7 +228,7 @@ export const useWebsiteAnalysis = (
       
       toast({
         title: "Website Analysis Error",
-        description: "Using sample insights due to an error. This would work with valid API keys in production.",
+        description: "Using sample insights due to an error. This would work with configured API keys in production.",
         variant: "destructive"
       });
     } finally {

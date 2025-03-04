@@ -32,14 +32,17 @@ export const NoInsightsEmptyState = ({
       
       <p className="text-gray-500 max-w-md mb-6">
         {isAnalyzing 
-          ? "Please wait while we analyze the website content and generate strategic insights."
-          : "The website has been set up for analysis. Use the button at the top of the page to start analyzing the website."
+          ? "Please wait while we analyze the website content and generate strategic insights. This may take up to 90 seconds."
+          : "The website has been set up for analysis. Use the 'Analyze Website' button at the top of the page to start the process."
         }
       </p>
       
       {isAnalyzing && (
-        <div className="flex items-center justify-center w-full">
+        <div className="flex flex-col items-center gap-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p className="text-xs text-gray-500 mt-2">
+            <span className="font-medium">Note:</span> If analysis takes too long, we'll provide sample insights.
+          </p>
         </div>
       )}
     </div>

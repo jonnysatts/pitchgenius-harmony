@@ -135,7 +135,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
                   <span className="font-bold">Note:</span> {error}
                 </p>
                 <p className="text-xs mt-1 italic">
-                  For demonstration purposes, sample insights will be shown.
+                  For demonstration purposes, sample insights will be shown instead of actual analysis.
                 </p>
               </div>
             )}

@@ -69,6 +69,10 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
     });
   }, [insightsByCategory]);
 
+  // Only show error in the main content area if we're not analyzing and we have insights
+  // This prevents duplicate error messages (one in the controls during analysis, one after)
+  const shouldShowErrorBanner = error && !isAnalyzingWebsite && hasInsights;
+
   return (
     <div>
       <WebInsightsHeader 
@@ -110,7 +114,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             </div>
           )}
 
-          {error && !isAnalyzingWebsite && (
+          {shouldShowErrorBanner && (
             <div className="mt-4 p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
               <p>
                 <strong>Note:</strong> {error}
