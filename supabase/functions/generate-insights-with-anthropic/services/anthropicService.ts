@@ -20,24 +20,28 @@ export async function callAnthropicAPI(
   options: AnthropicApiOptions = {}
 ): Promise<string> {
   const {
-    model = 'claude-3-sonnet-20240229',
+    model = 'claude-3-opus-20240229', // Updated model name
     temperature = 0.3,
     maxTokens = 4000,
     timeoutMs = DEFAULT_TIMEOUT_MS
   } = options;
 
+  // Get API key from environment with detailed logging
   const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+  console.log('Checking for ANTHROPIC_API_KEY availability');
   
   if (!ANTHROPIC_API_KEY) {
     console.error('ANTHROPIC_API_KEY not found in environment');
-    throw new Error('ANTHROPIC_API_KEY not found. Please add it to your Supabase secrets.');
+    throw new Error('ANTHROPIC_API_KEY not found. Please add it to your Supabase secrets with exactly this name.');
   }
   
-  // Verify key format
+  // Verify key format with detailed logging
   if (!ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
-    console.error('ANTHROPIC_API_KEY has invalid format');
+    console.error('ANTHROPIC_API_KEY has invalid format:', ANTHROPIC_API_KEY.substring(0, 7) + '...');
     throw new Error('ANTHROPIC_API_KEY has invalid format. API keys should start with "sk-ant-".');
   }
+  
+  console.log(`API key validated successfully: ${ANTHROPIC_API_KEY.substring(0, 7)}... (${ANTHROPIC_API_KEY.length} chars)`);
   
   try {
     console.log(`Calling Anthropic API with model: ${model}, content length: ${content.length} chars`);
@@ -49,9 +53,22 @@ export async function callAnthropicAPI(
       controller.abort('Request timed out');
     }, timeoutMs);
     
-    // Log content sample for debugging
-    console.log(`Content sample: ${content.substring(0, 100)}...`);
-    console.log(`System prompt sample: ${systemPrompt.substring(0, 100)}...`);
+    // Log request structure for debugging
+    const requestBody = {
+      model,
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content }],
+      system: systemPrompt,
+      temperature
+    };
+    
+    console.log('Request structure:', JSON.stringify({
+      model: requestBody.model,
+      max_tokens: requestBody.max_tokens,
+      system_length: requestBody.system.length,
+      message_count: requestBody.messages.length,
+      first_message_length: requestBody.messages[0].content.length
+    }));
     
     try {
       const response = await fetch(CLAUDE_API_URL, {
@@ -61,31 +78,40 @@ export async function callAnthropicAPI(
           'x-api-key': ANTHROPIC_API_KEY,
           'anthropic-version': CLAUDE_API_VERSION
         },
-        body: JSON.stringify({
-          model,
-          max_tokens: maxTokens,
-          messages: [{ role: 'user', content }],
-          system: systemPrompt,
-          temperature
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
       
       // Clear the timeout
       clearTimeout(timeoutId);
       
+      // Log the response status and headers for debugging
+      console.log(`Claude API response status: ${response.status}`);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        return await handleApiResponseError(response);
+        // Attempt to get more detailed error information
+        let errorDetails = '';
+        try {
+          const errorBody = await response.text();
+          errorDetails = errorBody;
+          console.error('Claude API error response:', errorBody);
+        } catch (readError) {
+          console.error('Could not read error response:', readError);
+        }
+        
+        throw new Error(`Claude API returned ${response.status}: ${errorDetails}`);
       }
       
       const data = await response.json();
+      console.log('Successfully received response from Anthropic API');
       
+      // Validate response structure
       if (!data.content || data.content.length === 0 || !data.content[0].text) {
         console.error('Empty or invalid response from Anthropic API:', data);
         throw new Error('Received empty or invalid response from Anthropic API');
       }
       
-      console.log('Successfully received response from Anthropic API');
       return data.content[0].text;
     } catch (fetchError) {
       // Clear the timeout if we're failing due to other reasons
