@@ -1,32 +1,29 @@
-/**
- * Module for handling AI prompt utilities
- */
-import { Document, Project } from "@/lib/types";
+import { Document } from "@/lib/types";
 
 /**
- * Generate a website research prompt
+ * Formats document information to present to AI
  */
-export const generateWebsiteResearchPrompt = (websiteUrl: string, clientName: string, clientIndustry: string): string => {
-  return `
-    Please analyze the content from ${clientName}'s website (${websiteUrl}) in the ${clientIndustry} industry.
-    Identify key strategic opportunities, business challenges, and potential areas for gaming partnerships.
-  `;
+export const formatDocumentInfo = (doc: Document): string => {
+  return `Document: ${doc.name} (${doc.type}, ${formatFileSize(doc.size)})`;
 };
 
 /**
- * Prepare document contents for AI processing
+ * Formats a file size in bytes to a human-readable string
  */
-export const prepareDocumentContents = (documents: Document[], project: Project): any[] => {
-  return documents.map(doc => {
-    // Sort by priority if available
-    const priority = doc.priority || 0;
-    
-    return {
-      id: doc.id,
-      name: doc.name,
-      type: doc.type,
-      content: `Content from document: ${doc.name}`, // Simplified for mock purposes
-      priority: priority
-    };
-  }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+/**
+ * Prepare document contents for AI prompt
+ */
+export const prepareDocumentContents = (documents: Document[]): string => {
+  return documents
+    .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+    .map((doc, index) => {
+      return `Document ${index + 1}: ${doc.name}\nType: ${doc.type}\nSize: ${formatFileSize(doc.size)}\n`;
+    })
+    .join("\n");
 };

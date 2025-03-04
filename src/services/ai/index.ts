@@ -1,12 +1,11 @@
 
-// Export all the AI-related functions
-export * from './apiClient';
-export * from './config';
-export * from './insightGenerator';
-export * from './insightAnalytics';
-export * from './statusTracking'; // This exports monitorWebsiteAnalysisProgress
-export * from './promptUtils';
-export * from './websiteAnalysis'; // Website analysis services
+/**
+ * Export all AI services
+ */
+export { analyzeDocuments } from './insightGenerator';
+export { trackAnalysisProgress } from './statusTracking';
+export { analyzeInsightMetrics } from './insightAnalytics';
+export { generateComprehensiveInsights } from './mockGenerators/insightFactory';
 
-// Make sure these exports are available
-export { monitorAIProcessingProgress, monitorWebsiteAnalysisProgress } from './statusTracking';
+// Website analysis
+export * from './websiteAnalysis';

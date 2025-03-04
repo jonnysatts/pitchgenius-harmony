@@ -1,146 +1,71 @@
+import { StrategicInsight, Document } from "@/lib/types";
 
-import { StrategicInsight, InsightCategory, NarrativeSection, WebsiteInsightCategory } from "@/lib/types";
+// Define the NarrativeSection type as string enum
+export enum NarrativeSection {
+  INTRODUCTION = "introduction",
+  BUSINESS_CHALLENGES = "business_challenges",
+  AUDIENCE_ANALYSIS = "audience_analysis",
+  COMPETITIVE_LANDSCAPE = "competitive_landscape",
+  STRATEGIC_RECOMMENDATIONS = "strategic_recommendations",
+  TACTICAL_IMPLEMENTATION = "tactical_implementation",
+  CONCLUSION = "conclusion"
+}
 
-/**
- * Groups insights by their category
- */
-export const groupInsightsByCategory = (insights: StrategicInsight[]): Record<string, StrategicInsight[]> => {
-  return insights.reduce((groups, insight) => {
-    const category = insight.category || 'other';
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(insight);
-    return groups;
-  }, {} as Record<string, StrategicInsight[]>);
+// Function to map insight categories to narrative sections
+export const mapInsightToNarrativeSection = (insight: StrategicInsight): string => {
+  switch (insight.category) {
+    case 'business_challenges':
+    case 'competitive_threats':
+      return NarrativeSection.BUSINESS_CHALLENGES;
+    case 'audience_gaps':
+      return NarrativeSection.AUDIENCE_ANALYSIS;
+    case 'gaming_opportunities':
+      return NarrativeSection.STRATEGIC_RECOMMENDATIONS;
+    case 'strategic_recommendations':
+      return NarrativeSection.TACTICAL_IMPLEMENTATION;
+    case 'key_narratives':
+      return NarrativeSection.CONCLUSION;
+    default:
+      return NarrativeSection.STRATEGIC_RECOMMENDATIONS;
+  }
 };
 
-/**
- * Groups insights by their source (document or website)
- */
-export const groupInsightsBySource = (insights: StrategicInsight[]): Record<string, StrategicInsight[]> => {
-  return insights.reduce((sources, insight) => {
-    const source = insight.source || 'document';
-    if (!sources[source]) {
-      sources[source] = [];
-    }
-    sources[source].push(insight);
-    return sources;
-  }, {} as Record<string, StrategicInsight[]>);
-};
-
-/**
- * Groups website insights by their specific website category
- */
-export const groupWebsiteInsightsByCategory = (insights: StrategicInsight[]): Record<WebsiteInsightCategory, StrategicInsight[]> => {
-  return insights.reduce((categories, insight) => {
-    if (insight.source === 'website') {
-      const category = insight.category as WebsiteInsightCategory;
-      if (!categories[category]) {
-        categories[category] = [];
-      }
-      categories[category].push(insight);
-    }
-    return categories;
-  }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
-};
-
-/**
- * Groups insights by narrative section based on their category
- */
-export const groupInsightsByNarrativeSection = (
-  insights: StrategicInsight[], 
-  narrativeSections: {id: NarrativeSection, sourceCategories: InsightCategory[]}[]
-): Record<string, StrategicInsight[]> => {
-  return insights.reduce((sections, insight) => {
-    // Find matching narrative sections based on insight category
-    const matchingSections = narrativeSections.filter(section => 
-      section.sourceCategories.includes(insight.category as InsightCategory)
-    );
-    
-    // Add the insight to each matching section
-    matchingSections.forEach(section => {
-      if (!sections[section.id]) {
-        sections[section.id] = [];
-      }
-      sections[section.id].push(insight);
-    });
-    
-    return sections;
-  }, {} as Record<string, StrategicInsight[]>);
-};
-
-/**
- * Format category string into readable title
- */
-export const formatCategoryTitle = (category: string): string => {
-  return category
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-/**
- * Calculate category distribution metrics
- */
-export const getCategoryDistribution = (insights: StrategicInsight[]): Record<string, number> => {
-  return insights.reduce((distribution, insight) => {
-    const category = insight.category || 'other';
-    distribution[category] = (distribution[category] || 0) + 1;
-    return distribution;
-  }, {} as Record<string, number>);
-};
-
-/**
- * Calculate confidence level distribution
- */
-export const getConfidenceDistribution = (insights: StrategicInsight[]): Record<string, number> => {
-  const ranges = {
-    'very_high': 0, // 90-100
-    'high': 0,      // 80-89
-    'medium': 0,    // 70-79
-    'low': 0,       // 60-69
-    'very_low': 0   // <60
+// Function to generate a narrative framework from strategic insights
+export const generateNarrativeFramework = (insights: StrategicInsight[]) => {
+  // Initialize sections with empty arrays
+  const sections: Record<string, StrategicInsight[]> = {
+    [NarrativeSection.INTRODUCTION]: [],
+    [NarrativeSection.BUSINESS_CHALLENGES]: [],
+    [NarrativeSection.AUDIENCE_ANALYSIS]: [],
+    [NarrativeSection.COMPETITIVE_LANDSCAPE]: [],
+    [NarrativeSection.STRATEGIC_RECOMMENDATIONS]: [],
+    [NarrativeSection.TACTICAL_IMPLEMENTATION]: [],
+    [NarrativeSection.CONCLUSION]: []
   };
-  
+
+  // Distribute insights to appropriate sections
   insights.forEach(insight => {
-    const confidence = insight.confidence;
-    if (confidence >= 90) ranges.very_high++;
-    else if (confidence >= 80) ranges.high++;
-    else if (confidence >= 70) ranges.medium++;
-    else if (confidence >= 60) ranges.low++;
-    else ranges.very_low++;
+    // Logic to assign insights to narrative sections
+    const section = mapInsightToNarrativeSection(insight);
+    if (section) {
+      sections[section].push(insight);
+    }
   });
-  
-  return ranges;
+
+  return sections;
 };
 
-/**
- * Calculate priority level distribution
- */
-export const getPriorityDistribution = (insights: StrategicInsight[]): Record<string, number> => {
-  return insights.reduce((distribution, insight) => {
-    const priority = insight.priorityLevel || 'unspecified';
-    distribution[priority] = (distribution[priority] || 0) + 1;
-    return distribution;
-  }, {} as Record<string, number>);
+// Function to extract key points from insights
+export const extractKeyPoints = (insights: StrategicInsight[]): string[] => {
+  return insights.map(insight => insight.content.summary);
 };
 
-/**
- * Calculate review status distribution
- */
-export const getReviewStatusDistribution = (
-  reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>
-): Record<string, number> => {
-  const statusCount = {
-    accepted: 0,
-    rejected: 0,
-    pending: 0
-  };
-  
-  Object.values(reviewedInsights).forEach(status => {
-    statusCount[status]++;
-  });
-  
-  return statusCount;
+// Function to generate recommendations based on insights
+export const generateRecommendations = (insights: StrategicInsight[]): string[] => {
+  return insights.map(insight => insight.content.recommendations);
+};
+
+// Function to identify potential risks based on insights
+export const identifyPotentialRisks = (insights: StrategicInsight[]): string[] => {
+  return insights.filter(insight => insight.confidence < 50).map(insight => insight.content.summary);
 };
