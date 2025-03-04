@@ -38,16 +38,19 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
       </div>
       
       <Tabs defaultValue="all" className="w-full">
-        <div className="bg-slate-50 rounded-lg mb-6 p-1">
-          <TabsList className="w-full h-auto p-1 bg-transparent flex overflow-x-auto no-scrollbar">
-            <TabsTrigger value="all" className="text-sm rounded-md py-2">
+        <div className="bg-slate-50 rounded-lg mb-6 p-1.5 border border-slate-200">
+          <TabsList className="w-full h-auto p-1 bg-transparent flex overflow-x-auto no-scrollbar gap-1">
+            <TabsTrigger 
+              value="all" 
+              className="text-sm font-medium rounded-md py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
               All Categories
             </TabsTrigger>
             {filteredCategories.map((category) => (
               <TabsTrigger 
                 key={category.id} 
                 value={category.id}
-                className="text-sm rounded-md py-2 whitespace-nowrap"
+                className="text-sm font-medium rounded-md py-2.5 px-4 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
                 {category.label}
               </TabsTrigger>

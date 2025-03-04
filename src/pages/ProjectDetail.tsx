@@ -6,6 +6,7 @@ import { findProjectById } from "@/data/mockProjects";
 import { useAuth } from "@/context/AuthContext";
 import { checkSupabaseConnection } from "@/services/ai";
 import { Project } from "@/lib/types";
+import { calculateOverallConfidence } from "@/services/ai/insightAnalytics";
 
 // Import hooks
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
@@ -45,7 +46,7 @@ const ProjectDetail = () => {
     handleNavigateToPresentation,
     handleRetryAnalysis,
     isNewProject,
-    // Add the new website analysis functionality
+    // Add the website analysis functionality
     isAnalyzingWebsite,
     handleAnalyzeWebsite
   } = useProjectDetail(projectId || '', user?.id || '', project || {} as Project);
@@ -72,6 +73,10 @@ const ProjectDetail = () => {
     checkAiAvailability();
   }, [setUseRealAI]);
   
+  // Calculate the confidence manually as a fallback
+  const calculatedConfidence = calculateOverallConfidence(insights);
+  const confidenceToUse = overallConfidence > 0 ? overallConfidence : calculatedConfidence;
+  
   if (!project) {
     return (
       <AppLayout>
@@ -94,7 +99,7 @@ const ProjectDetail = () => {
         setActiveTab={setActiveTab}
         error={aiError}
         aiStatus={aiStatus}
-        overallConfidence={overallConfidence}
+        overallConfidence={confidenceToUse}
         needsReviewCount={needsReviewCount}
         usingFallbackInsights={usingFallbackInsights}
         isNewProject={isNewProject}

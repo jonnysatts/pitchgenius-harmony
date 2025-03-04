@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { InfoIcon } from "lucide-react";
 
 interface ConfidenceCardProps {
   confidence: number;
@@ -19,24 +20,43 @@ const ConfidenceCard: React.FC<ConfidenceCardProps> = ({
     return "bg-red-500";
   };
 
+  // Define text color based on confidence level
+  const getTextColorClass = () => {
+    if (confidence >= 80) return "text-green-600";
+    if (confidence >= 60) return "text-amber-600";
+    return "text-red-600";
+  };
+
+  // Get confidence label
+  const getConfidenceLabel = () => {
+    if (confidence >= 80) return "High";
+    if (confidence >= 60) return "Medium";
+    return "Low";
+  };
+
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-sm border-slate-200">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span>Overall Confidence</span>
+          <span>AI Confidence</span>
           {usingFallbackInsights && (
-            <span className="text-xs text-amber-500 ml-2 px-2 py-0.5 bg-amber-50 rounded-full">Fallback</span>
+            <span className="text-xs text-amber-500 ml-2 px-2 py-0.5 bg-amber-50 rounded-full flex items-center gap-1">
+              <InfoIcon size={12} /> Fallback Data
+            </span>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
-          <div className="flex items-center">
-            <span className="text-2xl font-bold">{confidence}%</span>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-3xl font-bold">{confidence}%</span>
+            <span className={`text-sm font-medium ${getTextColorClass()} bg-slate-50 px-2 py-1 rounded-full`}>
+              {getConfidenceLabel()}
+            </span>
           </div>
           <Progress 
             value={confidence} 
-            className="h-2 w-full" 
+            className="h-2.5 w-full bg-slate-100" 
             indicatorColor={getColorClass()}
           />
         </div>
