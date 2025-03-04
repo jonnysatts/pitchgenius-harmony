@@ -14,6 +14,58 @@ export const createTimeoutPromise = (timeoutMs: number): Promise<never> => {
 };
 
 /**
+ * Check Supabase connection and if Anthropic API key exists
+ */
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    console.log('Checking Supabase connection and API keys...');
+    const { data, error } = await supabase.functions.invoke('test-connection', {
+      body: { 
+        testType: 'anthropic-key-check',
+        timestamp: new Date().toISOString(),
+        debugMode: true
+      }
+    });
+    
+    if (error) {
+      console.error('Error checking Supabase connection:', error);
+      return false;
+    }
+    
+    // Check if the API key exists in the response
+    const anthropicKeyExists = data?.anthropicKeyExists === true;
+    console.log(`Anthropic API key ${anthropicKeyExists ? 'exists' : 'does not exist'}`);
+    
+    return anthropicKeyExists;
+  } catch (err) {
+    console.error('Error checking Supabase connection:', err);
+    return false;
+  }
+};
+
+/**
+ * Generate a context description from a website URL for AI analysis
+ */
+export const generateWebsiteContext = async (
+  websiteUrl: string,
+  projectId: string
+): Promise<string> => {
+  try {
+    // Simple validation of the URL
+    if (!websiteUrl || !websiteUrl.startsWith('http')) {
+      return `Website URL (${websiteUrl}) is invalid or missing.`;
+    }
+    
+    // This would typically call an API to extract content
+    // For now, we'll return a simple description
+    return `Website ${websiteUrl} for project ${projectId}. This appears to be a website related to gaming or internet services.`;
+  } catch (error) {
+    console.error('Error generating website context:', error);
+    return `Error generating context for ${websiteUrl}: ${error instanceof Error ? error.message : String(error)}`;
+  }
+};
+
+/**
  * Call Claude API via Supabase Edge Function with timeout
  */
 export const callClaudeApi = async (
@@ -75,10 +127,13 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
     const timeout = 90000; // 90 seconds
     
     // Call the Edge Function with timeout
-    const [response] = await Promise.race([
-      supabase.functions.invoke('generate-insights-with-anthropic', {
-        body: payload,
-      }),
+    // Fix the type for Promise.race by properly handling the response
+    const responsePromise = supabase.functions.invoke('generate-insights-with-anthropic', {
+      body: payload,
+    });
+    
+    const response = await Promise.race([
+      responsePromise,
       createTimeoutPromise(timeout)
     ]);
     
@@ -175,7 +230,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
     console.error('❌ Error calling Claude API:', error);
     
     // Handle timeout errors specifically
-    if (error.message?.includes('timed out')) {
+    if ((error as Error).message?.includes('timed out')) {
       return {
         insights: mockApiResponse.insights.map(insight => ({
           ...insight,
@@ -192,7 +247,7 @@ The client's website is ${project.clientWebsite || ''}. Please consider this whe
         ...insight,
         source: 'document'
       })),
-      error: `Error calling API: ${error.message}. Using generated sample insights instead.`,
+      error: `Error calling API: ${(error as Error).message}. Using generated sample insights instead.`,
       insufficientContent: false
     };
   }

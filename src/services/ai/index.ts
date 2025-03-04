@@ -13,3 +13,4 @@ export * from './statusTracking';
 export * from './insightAnalytics';
 export * from './mockGenerators/contentTemplates';
 export * from './mockGenerators/insightGenerator';
+export * from './mockData';
