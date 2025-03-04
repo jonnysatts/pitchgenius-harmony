@@ -1,5 +1,5 @@
 
-import { Document } from "@/lib/types";
+import { Document, Project } from "@/lib/types";
 import { prepareDocumentContents } from '../promptUtils';
 import { callClaudeApi } from '../apiClient';
 
@@ -27,12 +27,18 @@ export const analyzeDocuments = async (
     const totalContentSize = documentsContent.reduce((total, doc) => total + (doc.content?.length || 0), 0);
     console.log(`Prepared ${documentsContent.length} documents with total content size: ${totalContentSize} characters`);
     
-    // Create a mock project object for the API call
-    const mockProject = {
+    // Create a complete mock project object for the API call that satisfies the Project interface
+    const mockProject: Project = {
       id: projectId,
       title: "Document Analysis",
+      clientName: "Unknown Client", // Added missing required property
       clientIndustry: "technology", // Default value
-      clientWebsite: ""
+      clientWebsite: "",
+      createdAt: new Date(), // Added missing required property
+      updatedAt: new Date(), // Added missing required property
+      ownerId: "system", // Added missing required property
+      description: "Automated document analysis", // Added missing required property
+      status: "in_progress" // Optional but added for completeness
     };
     
     // Actually call the API to analyze the documents
