@@ -30,7 +30,7 @@ export const prepareDocumentContents = (documents: Document[]): any[] => {
         type: doc.type,
         size: formatFileSize(doc.size),
         priority: doc.priority || 0,
-        content: doc.content || '',
+        content: doc.url ? 'Content from URL: ' + doc.url : '',
         index: index + 1
       };
     });
