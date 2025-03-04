@@ -57,7 +57,7 @@ export const useWebsiteInsightsProcessor = () => {
   const createReplacementInsight = (category: WebsiteInsightCategory): StrategicInsight => {
     // Get category name
     const categoryObj = websiteInsightCategories.find(c => c.id === category);
-    const categoryName = categoryObj?.name || 'Website Analysis';
+    const categoryName = categoryObj?.label || 'Website Analysis';
     
     // Generate a more specific title
     let title: string;
