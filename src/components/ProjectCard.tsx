@@ -37,7 +37,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, className }) 
   const navigate = useNavigate();
   
   const handleClick = () => {
-    navigate(`/projects/${project.id}`);
+    navigate(`/project/${project.id}`);
   };
   
   return (

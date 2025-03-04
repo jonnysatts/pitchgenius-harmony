@@ -8,10 +8,18 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
+    // Check if the URL might have used projects (plural) instead of project (singular)
+    if (location.pathname.includes('/projects/')) {
+      console.error(
+        "404 Error: Possible path mismatch. URL uses '/projects/' but routes use '/project/':",
+        location.pathname
+      );
+    } else {
+      console.error(
+        "404 Error: User attempted to access non-existent route:",
+        location.pathname
+      );
+    }
   }, [location.pathname]);
 
   return (
