@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
@@ -25,6 +25,12 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
   totalInsightsCount,
   insights = [] // Provide a default value
 }) => {
+  // Filter websiteInsightCategories to only show categories that have insights
+  const filteredCategories = websiteInsightCategories.filter(category => {
+    const categoryId = category.id as WebsiteInsightCategory;
+    return insightsByCategory[categoryId]?.length > 0;
+  });
+
   return (
     <div className="space-y-6">
       <div className="text-sm text-slate-600 mb-2">
@@ -36,7 +42,7 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
           <TabsTrigger value="all" className="whitespace-nowrap">
             All Categories
           </TabsTrigger>
-          {websiteInsightCategories.map((category) => (
+          {filteredCategories.map((category) => (
             <TabsTrigger 
               key={category.id} 
               value={category.id}
@@ -50,7 +56,7 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
         <TabsContent value="all">
           <AllInsightsTab
             insightsByCategory={insightsByCategory}
-            websiteInsightCategories={websiteInsightCategories}
+            websiteInsightCategories={filteredCategories}
             reviewedInsights={reviewedInsights}
             onAcceptInsight={onAcceptInsight}
             onRejectInsight={onRejectInsight}
@@ -58,8 +64,8 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
           />
         </TabsContent>
         
-        {/* Map over the categories to generate their tab content */}
-        {websiteInsightCategories.map((category) => {
+        {/* Map over the filtered categories to generate their tab content */}
+        {filteredCategories.map((category) => {
           const categoryId = category.id as WebsiteInsightCategory;
           const categoryInsights = insightsByCategory[categoryId] || [];
           

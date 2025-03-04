@@ -2,7 +2,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box } from "lucide-react";
-import { Project, StrategicInsight } from "@/lib/types";
+import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import ApiConnectionTest from "@/components/project/ApiConnectionTest";
 import ClaudeApiTester from "@/components/project/ClaudeApiTester";
 import WebsiteUrlCard from "@/components/project/web-insights/WebsiteUrlCard";
@@ -10,6 +10,7 @@ import NoWebsiteCard from "@/components/project/web-insights/NoWebsiteCard";
 import WebInsightsTabs from "@/components/project/web-insights/WebInsightsTabs";
 import { WebsiteAnalysisControls } from "@/components/project/web-insights/WebsiteAnalysisControls";
 import { useWebsiteAnalysisState } from "@/hooks/ai/website";
+import { websiteInsightCategories } from "@/components/project/insights/constants";
 
 interface WebInsightsTabContentProps {
   project: Project;
@@ -50,6 +51,40 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   const hasWebsiteUrl = !!project.clientWebsite;
   const websiteUrl = project.clientWebsite || "";
 
+  // Create a properly structured insightsByCategory object
+  const categorizeInsights = () => {
+    // Initialize with empty arrays for all categories
+    const initialCategories: Record<WebsiteInsightCategory, StrategicInsight[]> = {
+      business_imperatives: [],
+      gaming_audience_opportunity: [],
+      strategic_activation_pathways: [],
+      company_positioning: [],
+      competitive_landscape: [],
+      key_partnerships: [],
+      public_announcements: [],
+      consumer_engagement: [],
+      product_service_fit: []
+    };
+    
+    // If no insights, return the empty structure
+    if (!insights.length) return initialCategories;
+    
+    // Organize insights by category
+    return insights.reduce((acc, insight) => {
+      // Check if the insight category is a valid WebsiteInsightCategory
+      if (Object.keys(initialCategories).includes(insight.category as string)) {
+        const category = insight.category as WebsiteInsightCategory;
+        acc[category].push(insight);
+      } else {
+        // If not a website category, put it in business_imperatives as a fallback
+        acc.business_imperatives.push(insight);
+      }
+      return acc;
+    }, {...initialCategories});
+  };
+
+  const insightsByCategory = categorizeInsights();
+
   return (
     <div className="pt-4 space-y-4">
       <div className="lg:flex justify-between items-start">
@@ -85,12 +120,13 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
 
       {insights.length > 0 && (
         <WebInsightsTabs
-          insightsByCategory={{}}
+          insightsByCategory={insightsByCategory}
           reviewedInsights={reviewedInsights}
           onAcceptInsight={onAcceptInsight}
           onRejectInsight={onRejectInsight}
           onUpdateInsight={onUpdateInsight}
           totalInsightsCount={insights.length}
+          insights={insights}
         />
       )}
     </div>
