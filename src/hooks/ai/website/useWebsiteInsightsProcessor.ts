@@ -1,6 +1,7 @@
 
 import { StrategicInsight, WebsiteInsightCategory } from '@/lib/types';
 import { websiteInsightCategories } from '@/components/project/insights/constants';
+import { getCategoryTitle, getCategoryRecommendation, formatCategoryName } from '@/services/ai/websiteAnalysis/insightContentUtils';
 
 /**
  * Hook to process and format website insights
