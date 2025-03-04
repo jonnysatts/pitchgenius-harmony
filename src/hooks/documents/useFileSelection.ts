@@ -1,4 +1,5 @@
 
+import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AuthenticationError } from "@/services/documents/errors";
 
