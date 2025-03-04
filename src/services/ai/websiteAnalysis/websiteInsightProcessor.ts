@@ -95,6 +95,7 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
     let summary = insight.content?.summary || '';
     summary = summary.replace(/\[Website-derived\]/g, '').trim();
     summary = summary.replace(/🌐\s*🌐/g, '🌐').trim();
+    summary = summary.replace(/Website-derived/g, '').trim(); // Remove any remaining text mentions
     
     // Check for error patterns in summary
     if (summary.includes('-1685557426') || summary.includes('category') || summary === '.' || summary === '') {
@@ -107,11 +108,14 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       details = `Website analysis focused on ${normalizedCategory.replace(/_/g, ' ')}.`;
     }
     
-    // Clean up recommendations
+    // Clean up recommendations and replace "A gaming company" with "Games Age"
     let recommendations = insight.content?.recommendations || '';
     if (!recommendations || recommendations.includes('-1685557426')) {
       recommendations = getCategoryRecommendation(normalizedCategory);
     }
+    
+    // Replace "A gaming company" with "Games Age" in recommendations
+    recommendations = recommendations.replace(/A gaming company/g, 'Games Age');
     
     // Fix the type by explicitly setting source to 'website'
     return {
@@ -121,7 +125,7 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       content: {
         ...insight.content,
         title,
-        summary: `🌐 ${summary}`, // Simplified marker without [Website-derived]
+        summary: `🌐 ${summary}`, // Use only the globe icon without [Website-derived]
         details,
         recommendations,
         websiteUrl: project.clientWebsite,

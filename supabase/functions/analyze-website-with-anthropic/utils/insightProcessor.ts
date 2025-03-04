@@ -116,10 +116,14 @@ function validateAndFixInsight(insight: any): Insight {
     ? cleanTextContent(insight.content.details)
     : `Website analysis focused on ${category.replace(/_/g, ' ')}.`;
   
-  const recommendations = typeof insight.content?.recommendations === 'string' && 
+  // Get recommendations and replace "A gaming company" with "Games Age"
+  let recommendations = typeof insight.content?.recommendations === 'string' && 
                          insight.content.recommendations.length > 0
     ? cleanTextContent(insight.content.recommendations)
     : getCategoryRecommendation(category);
+  
+  // Replace "A gaming company" with "Games Age"
+  recommendations = recommendations.replace(/A gaming company/g, 'Games Age');
   
   return {
     id,
@@ -128,7 +132,7 @@ function validateAndFixInsight(insight: any): Insight {
     needsReview: typeof insight.needsReview === 'boolean' ? insight.needsReview : true,
     content: {
       title,
-      summary: `🌐 [Website-derived] ${summary.startsWith('🌐 [Website-derived]') ? summary.substring(21) : summary}`,
+      summary: `🌐 ${summary}`, // Use only the globe icon
       details,
       recommendations
     }
@@ -182,16 +186,16 @@ function getCategoryTitle(category: string): string {
  */
 function getCategoryRecommendation(category: string): string {
   const recommendations = {
-    company_positioning: "Align gaming initiatives with the company's brand positioning to ensure consistency and leverage existing brand equity.",
-    competitive_landscape: "Identify gaps in competitors' gaming strategies to develop a distinctive positioning in the gaming space.",
-    key_partnerships: "Explore gaming partnerships that complement existing strategic alliances and extend their value proposition.",
-    public_announcements: "Time gaming initiatives to coincide with or follow major company announcements for maximum visibility.",
-    consumer_engagement: "Develop gaming elements that enhance the existing customer journey and interaction points.",
-    product_service_fit: "Integrate gaming mechanics that highlight and enhance the core value of existing products and services."
+    company_positioning: "Games Age should align gaming initiatives with the company's brand positioning to ensure consistency and leverage existing brand equity.",
+    competitive_landscape: "Games Age should identify gaps in competitors' gaming strategies to develop a distinctive positioning in the gaming space.",
+    key_partnerships: "Games Age should explore gaming partnerships that complement existing strategic alliances and extend their value proposition.",
+    public_announcements: "Games Age should time gaming initiatives to coincide with or follow major company announcements for maximum visibility.",
+    consumer_engagement: "Games Age should develop gaming elements that enhance the existing customer journey and interaction points.",
+    product_service_fit: "Games Age should integrate gaming mechanics that highlight and enhance the core value of existing products and services."
   };
   
   return recommendations[category as keyof typeof recommendations] || 
-         "Consider incorporating gaming elements that align with the company's strategic goals.";
+         "Games Age should consider incorporating gaming elements that align with the company's strategic goals.";
 }
 
 /**
@@ -239,9 +243,12 @@ function extractInsightsFromText(text: string): Insight[] {
         
         // Extract recommendations
         const recommendationsMatch = content.match(/recommendations[:\s]+"([^"]+)"|recommendations[:\s]+([^"]+?)(?=\n\n|$)/i);
-        const recommendations = recommendationsMatch 
+        let recommendations = recommendationsMatch 
           ? (recommendationsMatch[1] || recommendationsMatch[2]).trim() 
           : getCategoryRecommendation(category);
+        
+        // Replace "A gaming company" with "Games Age"
+        recommendations = recommendations.replace(/A gaming company/g, 'Games Age');
         
         // Create the insight
         insights.push({
@@ -251,7 +258,7 @@ function extractInsightsFromText(text: string): Insight[] {
           needsReview: true,
           content: {
             title: cleanTextContent(title) || getCategoryTitle(category),
-            summary: `🌐 [Website-derived] ${cleanTextContent(summary) || "Analysis from website content"}`,
+            summary: `🌐 ${cleanTextContent(summary) || "Analysis from website content"}`, // Use only the globe icon
             details: cleanTextContent(details) || `Website analysis focused on ${category.replace(/_/g, ' ')}.`,
             recommendations: cleanTextContent(recommendations) || getCategoryRecommendation(category)
           }
@@ -324,9 +331,9 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
     needsReview: true,
     content: {
       title: `Brand Positioning in ${formatCategoryName(industry)}`,
-      summary: `🌐 [Website-derived] ${companyName} positions itself in the ${industry} market with a focus on customer service and innovation.`,
+      summary: `${companyName} positions itself in the ${industry} market with a focus on customer service and innovation.`,
       details: `Based on website analysis, the company emphasizes its customer-focused approach and technological capabilities in the ${industry} sector. Their positioning appears to target both business and consumer segments with a premium service offering.`,
-      recommendations: `Leverage the company's customer-centric positioning by creating gaming experiences that reinforce their commitment to service excellence and innovation.`
+      recommendations: `Games Age should leverage the company's customer-centric positioning by creating gaming experiences that reinforce their commitment to service excellence and innovation.`
     }
   });
   
@@ -338,9 +345,9 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
     needsReview: true,
     content: {
       title: `Competitive Differentiation Points`,
-      summary: `🌐 [Website-derived] ${companyName} differentiates from competitors through service quality, reliability, and technological innovation.`,
+      summary: `${companyName} differentiates from competitors through service quality, reliability, and technological innovation.`,
       details: `The website highlights key differentiators including superior customer support, advanced technology infrastructure, and reliability. These appear to be core competitive advantages in a crowded market.`,
-      recommendations: `Develop gaming elements that highlight competitive differentiators - consider a game that demonstrates superior service quality or technology advantages in an engaging way.`
+      recommendations: `Games Age should develop gaming elements that highlight competitive differentiators - consider a game that demonstrates superior service quality or technology advantages in an engaging way.`
     }
   });
   
@@ -352,9 +359,9 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
     needsReview: true,
     content: {
       title: `Strategic Alliance Opportunities`,
-      summary: `🌐 [Website-derived] ${companyName} appears to maintain strategic partnerships with technology providers and industry associations.`,
+      summary: `${companyName} appears to maintain strategic partnerships with technology providers and industry associations.`,
       details: `The website mentions partnerships with technology providers and industry organizations, suggesting an openness to strategic alliances that enhance their market position and service offerings.`,
-      recommendations: `Explore gaming partnerships that complement existing alliances, particularly with technology providers who could help implement gaming elements into current offerings.`
+      recommendations: `Games Age should explore gaming partnerships that complement existing alliances, particularly with technology providers who could help implement gaming elements into current offerings.`
     }
   });
   
@@ -366,9 +373,9 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
     needsReview: true,
     content: {
       title: `Recent Corporate Developments`,
-      summary: `🌐 [Website-derived] ${companyName} has recently announced service expansions and technology upgrades according to their website.`,
+      summary: `${companyName} has recently announced service expansions and technology upgrades according to their website.`,
       details: `News sections on the website indicate recent expansions in service offerings and technology infrastructure upgrades, reflecting a growth-oriented business strategy.`,
-      recommendations: `Time gaming initiative announcements to align with planned product or service launches to maximize visibility and create marketing synergies.`
+      recommendations: `Games Age should time gaming initiative announcements to align with planned product or service launches to maximize visibility and create marketing synergies.`
     }
   });
   
@@ -380,9 +387,9 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
     needsReview: true,
     content: {
       title: `Digital Customer Experience`,
-      summary: `🌐 [Website-derived] ${companyName}'s website reveals multiple digital touchpoints for customer engagement including online account management and support.`,
+      summary: `${companyName}'s website reveals multiple digital touchpoints for customer engagement including online account management and support.`,
       details: `The website features multiple customer engagement channels including online account management, support portals, and social media integration, indicating a commitment to digital customer experience.`,
-      recommendations: `Implement gamification elements within existing customer portals to increase engagement and time spent in owned digital channels.`
+      recommendations: `Games Age should implement gamification elements within existing customer portals to increase engagement and time spent in owned digital channels.`
     }
   });
   
@@ -394,9 +401,9 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
     needsReview: true,
     content: {
       title: `Gaming Integration Potential`,
-      summary: `🌐 [Website-derived] ${companyName}'s ${industry} services offer several opportunities for gaming integration, particularly in customer education and loyalty.`,
+      summary: `${companyName}'s ${industry} services offer several opportunities for gaming integration, particularly in customer education and loyalty.`,
       details: `The product and service offerings displayed on the website could benefit from gaming elements particularly in areas of customer education, loyalty development, and community building among users.`,
-      recommendations: `Create interactive games or challenges that educate customers about service offerings while rewarding engagement and loyalty.`
+      recommendations: `Games Age should create interactive games or challenges that educate customers about service offerings while rewarding engagement and loyalty.`
     }
   });
   

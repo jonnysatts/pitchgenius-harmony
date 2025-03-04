@@ -26,11 +26,15 @@ export const useWebsiteInsightsProcessor = () => {
         return createReplacementInsight(insight.category as WebsiteInsightCategory);
       }
       
-      // Check if the summary needs the website marker
+      // Clean up the summary to remove duplicate website-derived markers
       let summary = insight.content.summary || '';
-      if (!summary.includes('[Website-derived]')) {
-        summary = `🌐 [Website-derived] ${summary}`;
-      }
+      summary = summary.replace(/\[Website-derived\]/g, '').trim();
+      summary = summary.replace(/🌐\s*🌐/g, '🌐').trim();
+      summary = summary.replace(/Website-derived/g, '').trim(); // Remove any remaining text mentions
+      
+      // Fix recommendations to replace "A gaming company" with "Games Age"
+      let recommendations = insight.content.recommendations || '';
+      recommendations = recommendations.replace(/A gaming company/g, 'Games Age');
       
       // Ensure the insight has the correct source
       return {
@@ -44,9 +48,9 @@ export const useWebsiteInsightsProcessor = () => {
         content: {
           ...(insight.content || {}),
           title: insight.content?.title || 'Website Insight',
-          summary,
+          summary: `🌐 ${summary}`, // Use only the globe icon
           details: insight.content?.details || 'No details provided',
-          recommendations: insight.content?.recommendations || 'No recommendations provided'
+          recommendations
         }
       };
     });
@@ -69,37 +73,37 @@ export const useWebsiteInsightsProcessor = () => {
       case 'company_positioning':
         title = "Brand Positioning Analysis";
         summary = "Analysis of how the company presents itself in the market";
-        recommendations = "Align gaming initiatives with the company's existing brand positioning";
+        recommendations = "Games Age should align gaming initiatives with the company's existing brand positioning";
         break;
       case 'competitive_landscape':
         title = "Competitive Differentiators";
         summary = "Analysis of how the company positions against competitors";
-        recommendations = "Develop gaming experiences that emphasize competitive advantages";
+        recommendations = "Games Age should develop gaming experiences that emphasize competitive advantages";
         break;
       case 'key_partnerships':
         title = "Strategic Partnership Opportunities";
         summary = "Analysis of current and potential strategic alliances";
-        recommendations = "Explore gaming partnerships that complement existing business relationships";
+        recommendations = "Games Age should explore gaming partnerships that complement existing business relationships";
         break;
       case 'public_announcements':
         title = "Recent Company Developments";
         summary = "Analysis of public announcements and company news";
-        recommendations = "Time gaming initiatives to align with planned announcements for maximum impact";
+        recommendations = "Games Age should time gaming initiatives to align with planned announcements for maximum impact";
         break;
       case 'consumer_engagement':
         title = "Customer Engagement Channels";
         summary = "Analysis of how the company engages with its audience";
-        recommendations = "Implement gamification in existing customer touchpoints";
+        recommendations = "Games Age should implement gamification in existing customer touchpoints";
         break;
       case 'product_service_fit':
         title = "Gaming Integration Opportunities";
         summary = "Analysis of how gaming can enhance current offerings";
-        recommendations = "Create gaming experiences that showcase product benefits";
+        recommendations = "Games Age should create gaming experiences that showcase product benefits";
         break;
       default:
         title = "Website Analysis";
         summary = "Strategic insights derived from website content";
-        recommendations = "Consider gaming initiatives that align with overall business strategy";
+        recommendations = "Games Age should consider gaming initiatives that align with overall business strategy";
     }
     
     return {
@@ -110,7 +114,7 @@ export const useWebsiteInsightsProcessor = () => {
       needsReview: true,
       content: {
         title,
-        summary: `🌐 [Website-derived] ${summary}`,
+        summary: `🌐 ${summary}`, // Use only the globe icon
         details: `This insight was generated from analyzing the website content, focusing on ${categoryName.toLowerCase()} aspects.`,
         recommendations
       }
