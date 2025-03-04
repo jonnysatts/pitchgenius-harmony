@@ -10,7 +10,7 @@ import { getCategoryTitle, getCategoryRecommendation, cleanTextContent } from ".
 /**
  * Process and normalize raw insights from the API
  */
-export const processWebsiteInsights = (rawInsights: any[], project: Project): StrategicInsight[] => {
+export const processWebsiteInsights = (rawInsights: any[], project?: Project): StrategicInsight[] => {
   // Log the raw categories from API for debugging
   console.log('Raw categories from API:', rawInsights.map((i: any) => i.category));
   
@@ -66,6 +66,9 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       console.log(`Normalized category "${rawCategory}" to "${normalizedCategory}"`);
     }
     
+    // Client name fallback
+    const clientName = project?.clientName || 'the client';
+    
     // Clean up titles and ensure they're not empty or just punctuation
     let title = insight.content?.title || '';
     if (!title || title === ',' || title === '.') {
@@ -75,7 +78,7 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
     // Clean up summary
     let summary = insight.content?.summary || '';
     if (!summary || summary === ',' || summary === '.') {
-      summary = `Strategic ${normalizedCategory.replace(/_/g, ' ')} for ${project.clientName || 'the client'}`;
+      summary = `Strategic ${normalizedCategory.replace(/_/g, ' ')} for ${clientName}`;
     }
     
     // Clean up the summary to remove duplicate website-derived markers
@@ -109,7 +112,7 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
         summary: `🌐 ${summary}`, // Use only the globe icon
         details,
         recommendations,
-        websiteUrl: project.clientWebsite,
+        websiteUrl: project?.clientWebsite || '',
         source: 'Website analysis'
       }
     } as StrategicInsight;

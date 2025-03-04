@@ -5,6 +5,7 @@ import { useWebsiteAnalysisNotifications } from './useWebsiteAnalysisNotificatio
 import { useWebsiteInsightsProcessor } from './useWebsiteInsightsProcessor';
 import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
 import { useAiStatus } from '@/hooks/ai/useAiStatus';
+import { processWebsiteInsights } from '@/services/ai/websiteAnalysis/websiteInsightProcessor';
 
 /**
  * Hook to handle the logic for website analysis
@@ -22,7 +23,7 @@ export const useWebsiteAnalysisLogic = (
     notifyMissingWebsite,
     startProgressMonitoring 
   } = useWebsiteAnalysisNotifications();
-  const { processWebsiteInsights } = useWebsiteInsightsProcessor();
+  const { processWebsiteInsights: hookProcessInsights } = useWebsiteInsightsProcessor();
   
   // Use the AIStatus hook for progress tracking
   const { 
@@ -64,7 +65,8 @@ export const useWebsiteAnalysisLogic = (
       
       // Process the insights and add them to the state
       if (result.insights && result.insights.length > 0) {
-        const processedInsights = processWebsiteInsights(result.insights);
+        // Use the service function to process insights with the project context
+        const processedInsights = processWebsiteInsights(result.insights, project);
         
         if (processedInsights.length > 0) {
           // Add the insights to the project state
@@ -104,7 +106,6 @@ export const useWebsiteAnalysisLogic = (
     notifyAnalysisComplete, 
     notifyAnalysisError, 
     notifyMissingWebsite, 
-    processWebsiteInsights,
     startWebsiteAnalysis
   ]);
   

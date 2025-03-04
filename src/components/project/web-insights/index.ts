@@ -9,3 +9,4 @@ export { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
 export { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
 export { default as AllInsightsTab } from './AllInsightsTab';
 export { default as InsightCategoryTab } from './InsightCategoryTab';
+export { default as WebsiteAnalysisCard } from '../WebsiteAnalysisCard';
