@@ -45,7 +45,10 @@ export function createErrorResponse(
     insights: fallbackInsights,
     errorDetail,
     timestamp: new Date().toISOString(),
-    success: false
+    success: false,
+    retriableError: errorMessage.includes('rate limit') || 
+                   errorMessage.includes('timeout') || 
+                   errorMessage.includes('overloaded')
   };
   
   return new Response(

@@ -1,4 +1,3 @@
-
 import { Document, Project } from "@/lib/types";
 import { prepareDocumentContents } from '../promptUtils';
 import { callClaudeApi } from '../apiClient';
@@ -66,6 +65,9 @@ export const analyzeDocuments = async (
         source: 'document'  // Explicitly mark these as document insights
       }));
       
+      // Store insights in localStorage for React Query to access
+      storeInsightsInLocalStorage(projectId, enhancedInsights);
+      
       return {
         success: true,
         message: `Successfully analyzed ${documents.length} documents.`,
@@ -90,5 +92,40 @@ export const analyzeDocuments = async (
       success: false,
       message: `Failed to analyze documents: ${error instanceof Error ? error.message : String(error)}`
     };
+  }
+};
+
+/**
+ * Helper function to store insights in localStorage
+ */
+const storeInsightsInLocalStorage = (projectId: string, insights: any[]) => {
+  try {
+    // Get existing insights if any
+    const storageKey = `project_insights_${projectId}`;
+    let existingData: any = { insights: [] };
+    
+    const existingJson = localStorage.getItem(storageKey);
+    if (existingJson) {
+      existingData = JSON.parse(existingJson);
+    }
+    
+    // Only keep existing website insights, replace document insights
+    const websiteInsights = (existingData.insights || []).filter((insight: any) => insight.source === 'website');
+    
+    // Combine website insights with new document insights
+    const combinedInsights = [...websiteInsights, ...insights];
+    
+    // Update storage
+    localStorage.setItem(storageKey, JSON.stringify({
+      ...existingData,
+      projectId,
+      insights: combinedInsights,
+      generationTimestamp: Date.now(),
+      timestamp: new Date().toISOString()
+    }));
+    
+    console.log(`Stored ${insights.length} document insights in localStorage for project ${projectId}`);
+  } catch (error) {
+    console.error('Error storing insights in localStorage:', error);
   }
 };

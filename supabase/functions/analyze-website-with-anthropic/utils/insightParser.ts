@@ -35,7 +35,10 @@ export function parseClaudeResponse(response: string): any[] {
           console.log(`Found insights array in JSON object: ${jsonStr.substring(0, 100)}...`);
         } else {
           console.log('No JSON format found, using fallback extraction');
-          return extractInsightsFromText(response);
+          return extractInsightsFromText(response).map(insight => ({
+            ...insight,
+            source: 'website' // Ensure source is set
+          }));
         }
       }
     }
@@ -52,7 +55,10 @@ export function parseClaudeResponse(response: string): any[] {
         insights = parsed.insights;
       } else {
         console.error('Parsed JSON is not an array or object with insights array');
-        return generateFallbackInsights("", "", "");
+        return generateFallbackInsights("", "", "").map(insight => ({
+          ...insight,
+          source: 'website'
+        }));
       }
       
       console.log(`Successfully parsed ${insights.length} insights from JSON`);
