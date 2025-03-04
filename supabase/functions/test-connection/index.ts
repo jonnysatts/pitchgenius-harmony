@@ -48,9 +48,25 @@ serve(async (req) => {
       const activeKey = FIRECRAWL_API_KEY || FIRECRAWL_API_KPI;
       const keyName = FIRECRAWL_API_KEY ? 'FIRECRAWL_API_KEY' : 'FIRECRAWL_API_KPI';
       
+      // Verify key exists before proceeding
+      if (!firecrawlKeyExists) {
+        return new Response(
+          JSON.stringify({
+            message: "No Firecrawl API key found",
+            timestamp: new Date().toISOString(),
+            firecrawlKeyExists: false,
+            firecrawlKeyActive: false,
+            error: "No Firecrawl API key found. Either FIRECRAWL_API_KEY or FIRECRAWL_API_KPI must be set."
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
       return new Response(
         JSON.stringify({
-          message: firecrawlKeyExists ? "Firecrawl API key found" : "No Firecrawl API key found",
+          message: "Firecrawl API key found",
           timestamp: new Date().toISOString(),
           firecrawlKeyExists,
           firecrawlKeyActive,

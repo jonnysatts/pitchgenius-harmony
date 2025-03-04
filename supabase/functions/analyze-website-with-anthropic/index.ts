@@ -8,20 +8,20 @@ const DEBUG_MODE = true;
 
 // Handle requests
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders
-    });
-  }
-
-  // Get the request URL and path
-  const url = new URL(req.url);
-  const path = url.pathname.split('/').pop();
-  
-  if (DEBUG_MODE) console.log(`Request received for path: ${path || 'root'}, method: ${req.method}`);
-
   try {
+    // Handle CORS preflight requests
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: corsHeaders
+      });
+    }
+
+    // Get the request URL and path
+    const url = new URL(req.url);
+    const path = url.pathname.split('/').pop();
+    
+    if (DEBUG_MODE) console.log(`Request received for path: ${path || 'root'}, method: ${req.method}`);
+
     // Add diagnostic endpoint
     if (path === 'diagnose' || path === 'test') {
       if (DEBUG_MODE) console.log('Processing diagnostic request');
@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
               description: "This is a test insight for diagnostic purposes",
               category: "user-experience",
               confidence: 0.95
+            },
+            {
+              id: "test-2",
+              title: "Test Insight 2",
+              description: "Another test insight to verify connectivity",
+              category: "market-opportunity",
+              confidence: 0.88
             }
           ],
           website_url: requestData.website_url || "test.com",
@@ -110,9 +117,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Unknown error',
-        path: path,
-        detail: errorDetail,
-        timestamp: new Date().toISOString()
+        errorType: error instanceof Error ? error.name : 'Unknown',
+        timestamp: new Date().toISOString(),
+        detail: errorDetail
       }),
       {
         status: 500,

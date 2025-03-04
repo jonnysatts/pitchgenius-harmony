@@ -28,6 +28,7 @@ export const testSupabaseConnection = async () => {
 
 export const testFirecrawlAPI = async () => {
   try {
+    console.log("Testing Firecrawl API configuration...");
     const { data, error } = await supabase.functions.invoke('test-connection', {
       method: 'POST',
       body: { 
@@ -37,17 +38,20 @@ export const testFirecrawlAPI = async () => {
       }
     });
     
+    console.log("Firecrawl test response:", data);
+    
     // Check if either FIRECRAWL_API_KEY or FIRECRAWL_API_KPI exists
     const firecrawlKeyExists = 
-      (data?.environmentChecks?.FIRECRAWL_API_KEY?.exists === true) || 
-      (data?.environmentChecks?.FIRECRAWL_API_KPI?.exists === true);
+      (data?.firecrawlKeyExists === true);
+    
+    // Check for error message in data
+    const errorMessage = data?.error || 
+      (!firecrawlKeyExists ? "No Firecrawl API key found. Either FIRECRAWL_API_KEY or FIRECRAWL_API_KPI must be set." : null);
     
     return {
-      success: !error && firecrawlKeyExists,
+      success: !error && firecrawlKeyExists && !errorMessage,
       data,
-      error: error ? error.message : 
-             !firecrawlKeyExists ? "No Firecrawl API key found. Either FIRECRAWL_API_KEY or FIRECRAWL_API_KPI must be set." : 
-             data?.error || null,
+      error: error ? error.message : errorMessage,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -86,6 +90,8 @@ export const testClaudeDirectAPI = async () => {
 export const testWebsiteAnalysis = async () => {
   try {
     const testUrl = "https://example.com";
+    console.log("Testing website analysis with URL:", testUrl);
+    
     const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
       method: 'POST',
       body: { 
@@ -95,6 +101,8 @@ export const testWebsiteAnalysis = async () => {
         test_mode: true
       }
     });
+    
+    console.log("Website analysis test response:", data);
     
     return {
       success: !error && !!data,

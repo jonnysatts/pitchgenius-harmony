@@ -14,8 +14,9 @@ export async function fetchFirecrawlContent(url: string): Promise<string> {
   
   // Debug the actual key being used (partial for security)
   if (firecrawlApiKey) {
-    const safeKeyPreview = firecrawlApiKey.substring(0, 3) + '...' + firecrawlApiKey.substring(firecrawlApiKey.length - 4);
-    console.log(`Using Firecrawl API key (preview): ${safeKeyPreview}`);
+    const keySource = Deno.env.get('FIRECRAWL_API_KEY') ? 'FIRECRAWL_API_KEY' : 'FIRECRAWL_API_KPI';
+    const safeKeyPreview = firecrawlApiKey.substring(0, 3) + '...' + firecrawlApiKey.substring(firecrawlApiKey.length - 3);
+    console.log(`Using ${keySource} with preview: ${safeKeyPreview}`);
   } else {
     console.log(`No Firecrawl API key found, using basic fetch for ${url}`);
     return await fetchWebsiteContentBasic(url);

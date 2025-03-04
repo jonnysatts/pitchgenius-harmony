@@ -17,12 +17,20 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     throw new Error('Firecrawl API key not found in environment variables');
   }
   
+  // Log the key being used (safely)
+  const keySource = Deno.env.get('FIRECRAWL_API_KEY') ? 'FIRECRAWL_API_KEY' : 'FIRECRAWL_API_KPI';
+  const keyPrefix = firecrawlApiKey.substring(0, 5) + '...';
+  console.log(`Using ${keySource} with prefix: ${keyPrefix}`);
+  
   try {
     console.log('Making request to Firecrawl API...');
-    console.log('Using API key prefix:', firecrawlApiKey.substring(0, 5) + '...');
+    
+    // Prepare the request URL
+    const apiUrl = 'https://api.firecrawl.dev/crawl';
+    console.log(`API endpoint: ${apiUrl}`);
     
     // Make a request to the Firecrawl API
-    const response = await fetch('https://api.firecrawl.dev/crawl', {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,7 +49,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Firecrawl API error (${response.status}): ${errorText}`);
-      throw new Error(`Firecrawl API error: ${response.status}`);
+      throw new Error(`Firecrawl API error: ${response.status} - ${errorText.substring(0, 200)}`);
     }
     
     const data = await response.json();
@@ -49,7 +57,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     
     // Extract content from Firecrawl response
     if (!data || !data.results || !Array.isArray(data.results)) {
-      console.error('Invalid response from Firecrawl:', data);
+      console.error('Invalid response from Firecrawl:', JSON.stringify(data).substring(0, 200));
       throw new Error('Invalid response from Firecrawl API');
     }
     
@@ -58,7 +66,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
     
     for (const page of data.results) {
       if (page && page.content) {
-        allContent += page.content + '\n\n';
+        allContent += `\n\n## Page: ${page.url || 'Unknown URL'}\n\n${page.content}\n\n`;
       }
     }
     
@@ -68,7 +76,7 @@ export async function extractContentWithFirecrawl(websiteUrl: string): Promise<s
   } catch (error) {
     console.error(`Error in Firecrawl extraction: ${error instanceof Error ? error.message : String(error)}`);
     console.error('Falling back to basic website extraction');
-    // Return a minimal error message that will be handled upstream
+    // Return a more detailed error message that will be handled upstream
     throw new Error(`Firecrawl extraction failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
