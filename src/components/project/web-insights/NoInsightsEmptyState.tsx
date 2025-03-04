@@ -1,8 +1,6 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
 import { AlertCircle, Globe } from 'lucide-react';
-import { FirecrawlService } from '@/utils/FirecrawlService';
 
 interface NoInsightsEmptyStateProps {
   hasWebsiteUrl: boolean;
@@ -15,8 +13,6 @@ export const NoInsightsEmptyState = ({
   isAnalyzing = false,
   onAnalyzeWebsite
 }: NoInsightsEmptyStateProps) => {
-  const hasFirecrawlKey = !!FirecrawlService.getApiKey();
-  
   if (!hasWebsiteUrl) {
     return (
       <div className="flex flex-col items-center justify-center p-8 mt-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center">
@@ -39,22 +35,9 @@ export const NoInsightsEmptyState = ({
       <p className="text-gray-500 max-w-md mb-6">
         {isAnalyzing 
           ? "Please wait while we analyze the website content and generate strategic insights."
-          : hasFirecrawlKey 
-            ? "Start the analysis to extract strategic insights from the website using the Firecrawl API for comprehensive content analysis."
-            : "Start the analysis to extract strategic insights from the website. For better results, add a Firecrawl API key."
+          : "The website has been set up for analysis. Use the button at the top of the page to start analyzing the website."
         }
       </p>
-      
-      {!isAnalyzing && (
-        <Button 
-          onClick={onAnalyzeWebsite} 
-          disabled={isAnalyzing}
-          size="lg"
-        >
-          <Globe className="mr-2 h-4 w-4" />
-          Start Website Analysis
-        </Button>
-      )}
       
       {isAnalyzing && (
         <div className="flex items-center justify-center w-full">

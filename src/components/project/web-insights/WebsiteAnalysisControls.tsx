@@ -1,9 +1,6 @@
-
 import React, { useEffect } from 'react';
 import { Project, AIProcessingStatus } from '@/lib/types';
 import { toast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Globe, RefreshCw, ArrowRight } from 'lucide-react';
 import {
   AnalysisProgressIndicator,
   AnalysisStatusAlert,
@@ -87,10 +84,8 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
   // Show a success message when analysis completes
   useEffect(() => {
     if (isAnalyzing === false && internalProgress > 90) {
-      // Reset internal progress after completion
       setInternalProgress(0);
       
-      // Only show completion toast if aiStatus isn't handling it
       if (!aiStatus) {
         toast({
           title: "Analysis Complete",
@@ -100,53 +95,36 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
     }
   }, [isAnalyzing, internalProgress, aiStatus]);
 
+  // Only show controls when we're analyzing
+  if (!isAnalyzing) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
       {hasWebsiteUrl && (
         <div className="flex flex-col space-y-4">
-          {isAnalyzing ? (
-            <div className="space-y-3">
-              {/* Analysis status alert */}
-              <AnalysisStatusAlert 
-                isProcessingPhase={isProcessingPhase}
-                isInsightPhase={isInsightPhase}
-                isFinalizingPhase={isFinalizingPhase}
-                message={message}
-              />
-              
-              {/* Progress bar with phase indication */}
-              <AnalysisProgressIndicator 
-                progress={progress}
-                isProcessingPhase={isProcessingPhase}
-                isInsightPhase={isInsightPhase}
-                isFinalizingPhase={isFinalizingPhase}
-                message={message}
-              />
-              
-              {/* Timeline indicators */}
-              <AnalysisPhaseTimeline progress={progress} />
-            </div>
-          ) : (
-            <Button
-              onClick={onAnalyzeWebsite}
-              disabled={isAnalyzing || !hasWebsiteUrl}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6"
-              size="lg"
-            >
-              {hasInsights ? (
-                <>
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Refresh Website Analysis
-                </>
-              ) : (
-                <>
-                  <Globe className="mr-2 h-5 w-5" />
-                  Start Website Analysis
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
-          )}
+          <div className="space-y-3">
+            {/* Analysis status alert */}
+            <AnalysisStatusAlert 
+              isProcessingPhase={isProcessingPhase}
+              isInsightPhase={isInsightPhase}
+              isFinalizingPhase={isFinalizingPhase}
+              message={message}
+            />
+            
+            {/* Progress bar with phase indication */}
+            <AnalysisProgressIndicator 
+              progress={progress}
+              isProcessingPhase={isProcessingPhase}
+              isInsightPhase={isInsightPhase}
+              isFinalizingPhase={isFinalizingPhase}
+              message={message}
+            />
+            
+            {/* Timeline indicators */}
+            <AnalysisPhaseTimeline progress={progress} />
+          </div>
         </div>
       )}
     </div>

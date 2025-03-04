@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import NoWebsiteCard from "./web-insights/NoWebsiteCard";
@@ -86,8 +85,8 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
         <>
           <WebsiteUrlCard websiteUrl={websiteUrl} />
           
-          {/* Only show controls if not currently analyzing */}
-          {!isAnalyzingWebsite && !hasInsights && (
+          {/* Only show analysis controls when actively analyzing */}
+          {isAnalyzingWebsite && (
             <div className="mt-6">
               <WebsiteAnalysisControls 
                 project={{
@@ -117,28 +116,6 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             </div>
           )}
 
-          {isAnalyzingWebsite && (
-            <div className="mt-6">
-              <WebsiteAnalysisControls 
-                project={{
-                  id: '1',
-                  clientWebsite: websiteUrl,
-                  title: '',
-                  clientName: '',
-                  clientIndustry: '',
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  ownerId: '',
-                  description: ''
-                } as Project}
-                isAnalyzing={isAnalyzingWebsite}
-                onAnalyzeWebsite={handleAnalyzeWebsite}
-                hasInsights={hasInsights}
-                aiStatus={aiStatus}
-              />
-            </div>
-          )}
-
           {hasInsights ? (
             <WebInsightsTabs
               insightsByCategory={insightsByCategory}
@@ -153,7 +130,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             <NoInsightsEmptyState 
               hasWebsiteUrl={!!websiteUrl}
               isAnalyzing={isAnalyzingWebsite}
-              onAnalyzeWebsite={handleAnalyzeWebsite}
+              onAnalyzeWebsite={isAnalyzingWebsite ? undefined : undefined}
             />
           )}
         </>

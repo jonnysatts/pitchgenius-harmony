@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AIProcessingStatus, Project } from '@/lib/types';
+import { AIProcessingStatus } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Globe, ArrowRight } from 'lucide-react';
 
@@ -38,7 +38,8 @@ export const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
         Our AI will examine the website content and structure to identify key opportunities.
       </p>
       
-      {hasWebsiteUrl && websiteUrl && onAnalyzeWebsite && !isAnalyzing && !hasInsights && (
+      {/* Only show the button in the header if we're not analyzing and there's a valid website URL */}
+      {hasWebsiteUrl && !isAnalyzing && onAnalyzeWebsite && (
         <Button
           onClick={handleAnalyzeWebsite}
           className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6"

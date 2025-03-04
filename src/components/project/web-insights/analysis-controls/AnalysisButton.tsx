@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Globe, RefreshCw, ArrowRight } from 'lucide-react';
+import { Globe, RefreshCw } from 'lucide-react';
 
 interface AnalysisButtonProps {
   isAnalyzing: boolean;
@@ -10,36 +10,12 @@ interface AnalysisButtonProps {
   onAnalyzeWebsite: () => void;
 }
 
+// This component is no longer used as we've consolidated to a single button in the header
 export const AnalysisButton: React.FC<AnalysisButtonProps> = ({
   isAnalyzing,
   hasWebsiteUrl,
   hasInsights,
   onAnalyzeWebsite
 }) => {
-  return (
-    <Button
-      onClick={onAnalyzeWebsite}
-      disabled={isAnalyzing || !hasWebsiteUrl}
-      className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6"
-      size="lg"
-    >
-      {isAnalyzing ? (
-        <>
-          <Globe className="mr-2 h-5 w-5 animate-spin" />
-          Analyzing Website...
-        </>
-      ) : hasInsights ? (
-        <>
-          <RefreshCw className="mr-2 h-5 w-5" />
-          Refresh Website Analysis
-        </>
-      ) : (
-        <>
-          <Globe className="mr-2 h-5 w-5" />
-          Start Website Analysis
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </>
-      )}
-    </Button>
-  );
+  return null; // Component no longer in use
 };
