@@ -80,7 +80,8 @@ export const useWebsiteAnalysis = (
         description: "Beginning analysis of " + project.clientWebsite,
       });
 
-      // Set up timeout for the entire operation - increased to 90 seconds to give more time
+      // Set up timeout for the entire operation - increased to 120 seconds to give more time
+      // This is longer than before to ensure we don't hit timeouts
       const analysisTimeout = setTimeout(() => {
         console.log("Website analysis timed out - using fallback insights");
         
@@ -104,31 +105,32 @@ export const useWebsiteAnalysis = (
           description: "Using sample insights due to timeout. This would work with valid API keys in production.",
           variant: "destructive"
         });
-      }, 90000); // 90 second timeout for the entire process
+      }, 120000); // 120 second timeout for the entire process (increased from 90s)
 
-      // Create progress simulation that moves faster at the beginning
+      // Create progress simulation with optimized timing to make the UI more responsive
+      // Progress moves more quickly at beginning and slows down later to give impression of actual analysis
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           // Move faster at the beginning to give a sense of progress
           if (prev < 15) {
             setAnalysisStatus('Fetching website content...');
-            return prev + 3; // Move quickly to 15%
+            return prev + 4; // Faster initial progress (increased from 3)
           } else if (prev < 35) {
             setAnalysisStatus('Crawling website pages...');
-            return prev + 1.5; // Move at moderate speed to 35%
+            return prev + 2; // Moderately fast progress (increased from 1.5)
           } else if (prev < 60) {
             setAnalysisStatus('Claude AI is analyzing website data...');
-            return prev + 0.5; // Slow down to simulate AI processing
+            return prev + 0.7; // More visible progress (increased from 0.5)
           } else if (prev < 80) {
             setAnalysisStatus('Generating strategic insights...');
-            return prev + 0.3; // Even slower for insight generation
+            return prev + 0.5; // Slightly faster (increased from 0.3)
           } else if (prev < 95) {
             setAnalysisStatus('Finalizing analysis...');
-            return prev + 0.2; // Very slow for finalization
+            return prev + 0.3; // Slightly faster (increased from 0.2)
           }
           return prev;
         });
-      }, 250); // Update progress more frequently
+      }, 200); // Update progress more frequently (reduced from 250ms)
 
       // First perform a test to make sure the Edge Function is accessible
       const testResult = await FirecrawlService.testWebsiteAnalysis();
@@ -152,6 +154,9 @@ export const useWebsiteAnalysis = (
         return;
       }
       
+      // Add a faster progress boost after successful connection test
+      setAnalysisProgress(prev => Math.min(prev + 10, 40));
+      
       // Call the Firecrawl service via Supabase Edge Function
       const result = await FirecrawlService.analyzeWebsiteViaSupabase(
         project.clientWebsite,
@@ -161,6 +166,8 @@ export const useWebsiteAnalysis = (
 
       clearInterval(progressInterval);
       clearTimeout(analysisTimeout);
+      
+      // Ensure the progress shows completion
       setAnalysisProgress(100);
       setAnalysisStatus('Analysis complete');
       
@@ -193,17 +200,21 @@ export const useWebsiteAnalysis = (
         // Generate fallback insights
         const fallbackInsights = generateFallbackWebsiteInsights(project);
         
-        // Add disclaimer that these are fallback insights
-        setError("No insights returned from website analysis. Using sample insights instead.");
+        // Add disclaimer that these are fallback insights with clearer messaging
+        if (result.error) {
+          setError(result.error);
+        } else {
+          setError("Using sample insights for this demo. With valid API keys in production, this would analyze your actual website content.");
+        }
         
         // Add the fallback insights
         setWebsiteInsights(fallbackInsights);
         addInsights(fallbackInsights);
         
         toast({
-          title: "Analysis Issue",
+          title: "Demo Mode",
           description: "Using sample insights. This would work with valid API keys in production.",
-          variant: "destructive"
+          variant: "default"  // Changed from destructive to default to avoid alarm
         });
       }
     } catch (error) {

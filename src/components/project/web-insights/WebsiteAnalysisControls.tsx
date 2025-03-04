@@ -54,26 +54,26 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
         setInternalProgress(prev => {
           if (prev < 20) {
             setStatusMessage('Fetching website content...');
-            return prev + 2;
+            return prev + 3; // Faster initial progress
           } else if (prev < 40) {
             setStatusMessage('Crawling website pages...');
-            return prev + 1;
+            return prev + 1.5; // Faster mid progress
           } else if (prev < 60) {
             setStatusMessage('Claude AI is analyzing website data...');
-            return prev + 0.3;
+            return prev + 0.6; // Double the previous speed
           } else if (prev < 80) {
             setStatusMessage('Generating strategic insights...');
-            return prev + 0.8;
+            return prev + 1.0; // Slightly faster
           } else if (prev < 95) {
             setStatusMessage('Finalizing analysis...');
-            return prev + 0.5;
+            return prev + 0.8; // Faster finishing
           } else if (prev < 100) {
             setStatusMessage('Completing analysis...');
-            return prev + 0.2;
+            return prev + 0.4; // Double the previous speed
           }
           return prev;
         });
-      }, 300);
+      }, 250); // Slightly faster updates
     } else if (!isAnalyzing) {
       setInternalProgress(0);
       setStatusMessage('');
@@ -130,7 +130,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
             
             {/* Error message if any */}
             {error && (
-              <div className="mt-4 p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
+              <div className="mt-4 p-3 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
                 <p className="text-sm font-medium">
                   <span className="font-bold">Note:</span> {error}
                 </p>
