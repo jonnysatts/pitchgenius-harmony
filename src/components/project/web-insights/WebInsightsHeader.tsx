@@ -1,8 +1,7 @@
 
-import React from "react";
-import { Info } from "lucide-react";
-import { WebsiteAnalysisControls } from "./WebsiteAnalysisControls";
-import { Project } from "@/lib/types";
+import React from 'react';
+import { AIProcessingStatus } from '@/lib/types';
+import { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
 
 interface WebInsightsHeaderProps {
   websiteUrl?: string;
@@ -10,51 +9,43 @@ interface WebInsightsHeaderProps {
   isAnalyzing: boolean;
   onAnalyzeWebsite?: () => void;
   hasInsights: boolean;
+  aiStatus?: AIProcessingStatus; // Add aiStatus prop
 }
 
-const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
+export const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
   websiteUrl,
   hasWebsiteUrl,
   isAnalyzing,
   onAnalyzeWebsite,
-  hasInsights
+  hasInsights,
+  aiStatus
 }) => {
-  // Create a mock project with the websiteUrl for WebsiteAnalysisControls
-  // Include all required properties from the Project type
-  const project: Project = {
-    clientWebsite: websiteUrl || '',
-    id: '',
-    clientName: '',
-    clientIndustry: 'other',
-    title: '',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    createdBy: '',
-    collaborators: [],
-    status: 'draft'
+  const handleAnalyzeWebsite = () => {
+    if (onAnalyzeWebsite) {
+      onAnalyzeWebsite();
+    }
   };
-  
+
   return (
-    <div className="space-y-6 mb-6">
-      <div className="flex items-start gap-3">
-        <Info className="h-5 w-5 text-blue-500 mt-1" />
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Website Insights</h2>
-          <p className="text-slate-600">
-            Analyze the client's website to discover strategic insights about their online presence, positioning, and 
-            audience engagement. This data can help inform your gaming strategy recommendations.
-          </p>
-        </div>
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Website Insights</h2>
       </div>
       
-      <WebsiteAnalysisControls
-        project={project}
-        isAnalyzing={isAnalyzing}
-        onAnalyzeWebsite={onAnalyzeWebsite}
-        hasInsights={hasInsights}
-      />
+      <p className="text-slate-600 mb-6">
+        Analyze your client's website to generate additional strategic insights for potential gaming partnerships.
+        Our AI will examine the website content and structure to identify key opportunities.
+      </p>
+      
+      {hasWebsiteUrl && websiteUrl && onAnalyzeWebsite && (
+        <WebsiteAnalysisControls
+          project={{ id: '1', clientWebsite: websiteUrl }}
+          isAnalyzing={isAnalyzing}
+          onAnalyzeWebsite={handleAnalyzeWebsite}
+          hasInsights={hasInsights}
+          aiStatus={aiStatus} // Pass aiStatus to enable improved feedback
+        />
+      )}
     </div>
   );
 };
-
-export default WebInsightsHeader;

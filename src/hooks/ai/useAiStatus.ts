@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { AIProcessingStatus } from "@/lib/types";
-import { monitorAIProcessingProgress } from "@/services/ai";
+import { monitorAIProcessingProgress, monitorWebsiteAnalysisProgress } from "@/services/ai";
 import { useToast } from "@/hooks/use-toast";
 
 export const useAiStatus = (projectId: string) => {
@@ -13,6 +13,7 @@ export const useAiStatus = (projectId: string) => {
   });
   const [processingComplete, setProcessingComplete] = useState(false);
   const [isAnalysisInProgress, setIsAnalysisInProgress] = useState(false);
+  const [isWebsiteAnalysisInProgress, setIsWebsiteAnalysisInProgress] = useState(false);
 
   const startProcessing = (onComplete?: (setActiveTab: (tab: string) => void) => void) => {
     // Reset status
@@ -48,6 +49,40 @@ export const useAiStatus = (projectId: string) => {
     };
   };
 
+  const startWebsiteAnalysis = (onComplete?: (setActiveTab: (tab: string) => void) => void) => {
+    // Reset status for website analysis
+    setProcessingComplete(false);
+    setIsWebsiteAnalysisInProgress(true);
+    
+    // Update status to processing
+    setAiStatus({
+      status: 'processing',
+      progress: 0,
+      message: 'Starting website analysis...'
+    });
+    
+    return (setActiveTab: (tab: string) => void) => {
+      // Set up website progress monitoring with completion callback
+      return monitorWebsiteAnalysisProgress(
+        projectId,
+        (status) => setAiStatus(status),
+        () => {
+          console.log("Website analysis complete, navigating to web insights tab");
+          setProcessingComplete(true);
+          setIsWebsiteAnalysisInProgress(false);
+          
+          // Navigate to web insights tab
+          setActiveTab("webinsights");
+          
+          // Call additional completion callback if provided
+          if (onComplete) {
+            onComplete(setActiveTab);
+          }
+        }
+      );
+    };
+  };
+
   const completeProcessing = (message: string) => {
     setAiStatus({
       status: 'completed',
@@ -56,13 +91,16 @@ export const useAiStatus = (projectId: string) => {
     });
     setProcessingComplete(true);
     setIsAnalysisInProgress(false);
+    setIsWebsiteAnalysisInProgress(false);
   };
 
   return {
     aiStatus,
     processingComplete,
     isAnalysisInProgress,
+    isWebsiteAnalysisInProgress,
     startProcessing,
+    startWebsiteAnalysis,
     completeProcessing,
     setAiStatus
   };

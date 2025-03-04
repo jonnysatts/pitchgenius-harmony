@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -25,6 +24,7 @@ interface WebInsightsTabContentProps {
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   onNavigateToInsights: () => void;
   onRetryAnalysis?: () => void;
+  aiStatus: any; // Add this prop to receive aiStatus
 }
 
 const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
@@ -38,7 +38,8 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   onRejectInsight,
   onUpdateInsight,
   onNavigateToInsights,
-  onRetryAnalysis
+  onRetryAnalysis,
+  aiStatus
 }) => {
   const { toast } = useToast();
   const [showDebugInfo, setShowDebugInfo] = React.useState(false);
@@ -105,13 +106,14 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   
   return (
     <div className="bg-white p-6 rounded-lg border">
-      {/* Header with proper props */}
+      {/* Header with proper props including aiStatus */}
       <WebInsightsHeader 
         websiteUrl={project.clientWebsite}
         hasWebsiteUrl={hasWebsiteUrl}
         isAnalyzing={isAnalyzingWebsite}
         onAnalyzeWebsite={onAnalyzeWebsite}
         hasInsights={hasWebsiteInsights}
+        aiStatus={aiStatus}
       />
       
       {/* Debug Info Section */}
@@ -132,6 +134,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             <p>Is Analyzing: {isAnalyzingWebsite ? "Yes" : "No"}</p>
             <p>Has Error: {error ? "Yes" : "No"}</p>
             <p>Error: {error || "None"}</p>
+            <p>AI Status: {aiStatus ? `${aiStatus.status} (${aiStatus.progress}%)` : "Not available"}</p>
             <Button 
               variant="destructive" 
               size="sm" 

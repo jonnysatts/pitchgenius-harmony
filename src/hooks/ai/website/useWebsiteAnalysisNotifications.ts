@@ -1,10 +1,13 @@
 
 import { toast } from '@/hooks/use-toast';
+import { AIProcessingStatus } from '@/lib/types';
+import { monitorWebsiteAnalysisProgress } from '@/services/ai/statusTracking';
 
 /**
- * Hook to handle notifications for website analysis
+ * Hook to handle notifications and status updates for website analysis
  */
 export const useWebsiteAnalysisNotifications = () => {
+  // Basic toast notifications
   const notifyAnalysisStarted = (url: string) => {
     toast({
       title: 'Analyzing Website',
@@ -35,10 +38,24 @@ export const useWebsiteAnalysisNotifications = () => {
     });
   };
 
+  // Advanced progress monitoring
+  const startProgressMonitoring = (
+    projectId: string,
+    onStatusUpdate: (status: AIProcessingStatus) => void,
+    onCompletionCallback?: () => void
+  ): (() => void) => {
+    return monitorWebsiteAnalysisProgress(
+      projectId,
+      onStatusUpdate,
+      onCompletionCallback
+    );
+  };
+
   return {
     notifyAnalysisStarted,
     notifyAnalysisComplete,
     notifyAnalysisError,
-    notifyMissingWebsite
+    notifyMissingWebsite,
+    startProgressMonitoring
   };
 };

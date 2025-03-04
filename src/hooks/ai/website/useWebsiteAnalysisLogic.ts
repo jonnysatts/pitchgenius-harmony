@@ -1,85 +1,116 @@
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
-import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
-import { useWebsiteAnalysisState } from './useWebsiteAnalysisState';
 import { useWebsiteAnalysisNotifications } from './useWebsiteAnalysisNotifications';
 import { useWebsiteInsightsProcessor } from './useWebsiteInsightsProcessor';
+import { analyzeClientWebsite } from '@/services/ai/websiteAnalysis';
+import { useAiStatus } from '@/hooks/ai/useAiStatus';
 
 /**
- * Hook containing the core logic for website analysis
+ * Hook to handle the logic for website analysis
  */
 export const useWebsiteAnalysisLogic = (
   project: Project,
   addInsights: (insights: StrategicInsight[]) => void,
   setError: (error: string | null) => void
 ) => {
-  const { 
-    isAnalyzing, 
-    setIsAnalyzing, 
-    setWebsiteInsights 
-  } = useWebsiteAnalysisState();
-  
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const { 
     notifyAnalysisStarted, 
     notifyAnalysisComplete, 
     notifyAnalysisError, 
-    notifyMissingWebsite 
+    notifyMissingWebsite,
+    startProgressMonitoring 
   } = useWebsiteAnalysisNotifications();
-  
   const { processWebsiteInsights } = useWebsiteInsightsProcessor();
-
+  
+  // Use the AIStatus hook for progress tracking
+  const { 
+    aiStatus, 
+    setAiStatus, 
+    startWebsiteAnalysis 
+  } = useAiStatus(project.id);
+  
+  // Main function to analyze website URL
   const analyzeWebsiteUrl = useCallback(async () => {
+    // If no website URL, notify user and return
     if (!project.clientWebsite) {
-      setError('No website URL provided for analysis');
       notifyMissingWebsite();
       return;
     }
-
+    
     try {
+      // Set analyzing state to true and clear any existing errors
       setIsAnalyzing(true);
-      notifyAnalysisStarted(project.clientWebsite);
-
-      // Clear existing insights when starting a new analysis
-      setWebsiteInsights([]);
+      setError(null);
       
+      // Notify the user that analysis has started
+      notifyAnalysisStarted(project.clientWebsite);
+      
+      // Start the progress monitoring - this handles visual feedback
+      const cancelProgressMonitoring = startWebsiteAnalysis()((tab) => {
+        // This will be called when the progress monitoring completes
+        console.log("Website analysis progress monitoring complete, navigating to:", tab);
+      });
+      
+      // Perform the actual website analysis
       const result = await analyzeClientWebsite(project);
       
-      if (result.insights && result.insights.length > 0) {
-        // Process the insights to ensure proper formatting
-        const markedInsights = processWebsiteInsights(result.insights);
-        
-        console.log(`Website analysis generated ${markedInsights.length} insights`);
-        console.log('Website insight categories:', markedInsights.map(i => i.category));
-        
-        setWebsiteInsights(markedInsights);
-        
-        // Add the insights to the global state
-        addInsights(markedInsights);
-        
-        notifyAnalysisComplete(project.clientWebsite, markedInsights.length);
-      } else {
-        setError('No insights were generated from website analysis');
-        notifyAnalysisError('Could not generate insights from the website');
+      // Handle potential errors in the result
+      if (result.error) {
+        console.warn('Website analysis completed with warning:', result.error);
+        // We don't set the error state here because we want to still show the partial insights
       }
       
-      if (result.error) {
-        setError(result.error);
-        // Only show the error toast if no insights were generated
-        if (!result.insights || result.insights.length === 0) {
-          notifyAnalysisError(result.error);
+      // Process the insights and add them to the state
+      if (result.insights && result.insights.length > 0) {
+        const processedInsights = processWebsiteInsights(result.insights);
+        
+        if (processedInsights.length > 0) {
+          // Add the insights to the project state
+          addInsights(processedInsights);
+          
+          // Notify the user that analysis is complete
+          notifyAnalysisComplete(project.clientWebsite, processedInsights.length);
+        } else {
+          // Handle the case where no insights were generated
+          setError("No meaningful insights could be generated. Try refining the website URL.");
+          notifyAnalysisError("No insights could be extracted from the website.");
         }
+      } else {
+        // Handle the case where the API returned no insights
+        setError("No insights were returned from the analysis. Please try again later.");
+        notifyAnalysisError("Analysis did not return any insights.");
       }
+      
+      // Update the analysis state
+      setIsAnalyzing(false);
     } catch (err) {
+      // Handle any errors that occurred during the analysis
       console.error('Error analyzing website:', err);
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Error analyzing website: ${errorMessage}`);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      
+      setError(`Website analysis failed: ${errorMessage}`);
       notifyAnalysisError(errorMessage);
-    } finally {
+      
+      // Update the analysis state
       setIsAnalyzing(false);
     }
-  }, [project, addInsights, setError, notifyAnalysisStarted, notifyAnalysisComplete, 
-      notifyAnalysisError, notifyMissingWebsite, processWebsiteInsights, setIsAnalyzing, setWebsiteInsights]);
-
-  return { analyzeWebsiteUrl };
+  }, [
+    project, 
+    addInsights, 
+    setError, 
+    notifyAnalysisStarted, 
+    notifyAnalysisComplete, 
+    notifyAnalysisError, 
+    notifyMissingWebsite, 
+    processWebsiteInsights,
+    startWebsiteAnalysis
+  ]);
+  
+  return {
+    isAnalyzing,
+    aiStatus,
+    analyzeWebsiteUrl
+  };
 };
