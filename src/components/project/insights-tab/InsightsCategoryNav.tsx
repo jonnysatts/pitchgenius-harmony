@@ -13,20 +13,22 @@ const InsightsCategoryNav: React.FC<InsightsCategoryNavProps> = ({
   getCategoryName
 }) => {
   return (
-    <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
-      <TabsTrigger value="all" className="whitespace-nowrap">
-        All Categories
-      </TabsTrigger>
-      {categoriesWithInsights.map(category => (
-        <TabsTrigger 
-          key={category} 
-          value={category}
-          className="whitespace-nowrap"
-        >
-          {getCategoryName(category)}
+    <div className="bg-slate-50 rounded-lg mb-6 p-1">
+      <TabsList className="w-full h-auto p-1 bg-transparent flex overflow-x-auto no-scrollbar">
+        <TabsTrigger value="all" className="text-sm rounded-md py-2">
+          All Categories
         </TabsTrigger>
-      ))}
-    </TabsList>
+        {categoriesWithInsights.map(category => (
+          <TabsTrigger 
+            key={category} 
+            value={category}
+            className="text-sm rounded-md py-2 whitespace-nowrap"
+          >
+            {getCategoryName(category)}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </div>
   );
 };
 

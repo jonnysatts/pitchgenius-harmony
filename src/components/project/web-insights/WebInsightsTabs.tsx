@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
@@ -13,7 +13,7 @@ interface WebInsightsTabsProps {
   onRejectInsight: (insightId: string) => void;
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   totalInsightsCount: number;
-  insights?: StrategicInsight[]; // Add this optional prop
+  insights?: StrategicInsight[];
 }
 
 const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
@@ -23,7 +23,7 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
   onRejectInsight,
   onUpdateInsight,
   totalInsightsCount,
-  insights = [] // Provide a default value
+  insights = []
 }) => {
   // Filter websiteInsightCategories to only show categories that have insights
   const filteredCategories = websiteInsightCategories.filter(category => {
@@ -38,20 +38,22 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
       </div>
       
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="mb-4 w-full overflow-x-auto flex flex-nowrap">
-          <TabsTrigger value="all" className="whitespace-nowrap">
-            All Categories
-          </TabsTrigger>
-          {filteredCategories.map((category) => (
-            <TabsTrigger 
-              key={category.id} 
-              value={category.id}
-              className="whitespace-nowrap"
-            >
-              {category.label}
+        <div className="bg-slate-50 rounded-lg mb-6 p-1">
+          <TabsList className="w-full h-auto p-1 bg-transparent flex overflow-x-auto no-scrollbar">
+            <TabsTrigger value="all" className="text-sm rounded-md py-2">
+              All Categories
             </TabsTrigger>
-          ))}
-        </TabsList>
+            {filteredCategories.map((category) => (
+              <TabsTrigger 
+                key={category.id} 
+                value={category.id}
+                className="text-sm rounded-md py-2 whitespace-nowrap"
+              >
+                {category.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
         
         <TabsContent value="all">
           <AllInsightsTab
@@ -64,7 +66,6 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
           />
         </TabsContent>
         
-        {/* Map over the filtered categories to generate their tab content */}
         {filteredCategories.map((category) => {
           const categoryId = category.id as WebsiteInsightCategory;
           const categoryInsights = insightsByCategory[categoryId] || [];
