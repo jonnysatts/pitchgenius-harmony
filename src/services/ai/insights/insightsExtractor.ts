@@ -22,27 +22,30 @@ export const extractInsightsFromAnalysis = (analysisResults: any[]): StrategicIn
       // Determine the appropriate category
       const category = mapToInsightCategory(result.category || "gaming_opportunities");
       
+      // Check if source is explicitly provided
+      const sourceType = result.source || 'document';
+      
       // Create a strategic insight with required fields
       const insight: StrategicInsight = {
-        id: uuidv4(),
+        id: result.id || uuidv4(),
         category: category,
         confidence: result.confidence || Math.random() * 0.4 + 0.6, // Default to high confidence if not provided
         needsReview: result.needsReview !== false, // Default to requiring review
-        source: 'document',
+        source: sourceType,
         priorityLevel: result.priority || Math.floor(Math.random() * 3) + 1,
         content: {
-          title: result.title || "Untitled Insight",
-          summary: result.summary || result.description || "No summary provided",
-          details: result.details || result.content || "",
-          evidence: result.evidence || "",
-          recommendations: result.recommendations || "",
-          dataPoints: result.dataPoints || [],
-          sources: result.sources || [],
-          impact: result.impact || ""
+          title: result.title || result.content?.title || "Untitled Insight",
+          summary: result.summary || result.content?.summary || result.description || "No summary provided",
+          details: result.details || result.content?.details || result.content || "",
+          evidence: result.evidence || result.content?.evidence || "",
+          recommendations: result.recommendations || result.content?.recommendations || "",
+          dataPoints: result.dataPoints || result.content?.dataPoints || [],
+          sources: result.sources || result.content?.sources || [],
+          impact: result.impact || result.content?.impact || ""
         }
       };
       
-      console.log(`Created insight: ${insight.content.title} (${insight.category})`);
+      console.log(`Created insight: ${insight.content.title} (${insight.category}) from source: ${insight.source}`);
       return insight;
     });
     
@@ -65,6 +68,13 @@ const mapToInsightCategory = (rawCategory: string): InsightCategory => {
     'gaming_opportunities': 'gaming_opportunities',
     'strategic_recommendations': 'strategic_recommendations',
     'key_narratives': 'key_narratives',
+    // Website-specific categories
+    'company_positioning': 'business_challenges',
+    'competitive_landscape': 'competitive_threats',
+    'key_partnerships': 'business_challenges',
+    'public_announcements': 'key_narratives',
+    'consumer_engagement': 'audience_gaps',
+    'product_service_fit': 'gaming_opportunities',
     // Add fallbacks for common variations
     'business': 'business_challenges',
     'audience': 'audience_gaps',
@@ -79,7 +89,7 @@ const mapToInsightCategory = (rawCategory: string): InsightCategory => {
     'gaps': 'audience_gaps'
   };
   
-  const normalized = rawCategory.toLowerCase().trim();
+  const normalized = (rawCategory || '').toLowerCase().trim();
   
   // Try direct match first
   if (normalized in categoryMap) {

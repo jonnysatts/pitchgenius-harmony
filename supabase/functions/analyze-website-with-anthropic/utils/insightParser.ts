@@ -57,16 +57,30 @@ export function parseClaudeResponse(response: string): any[] {
       
       console.log(`Successfully parsed ${insights.length} insights from JSON`);
       
-      // Validate and fix the insights
-      return insights.map(insight => validateAndFixInsight(insight));
+      // Add source field to each insight
+      const enhancedInsights = insights.map(insight => {
+        const validatedInsight = validateAndFixInsight(insight);
+        return {
+          ...validatedInsight,
+          source: 'website'  // Explicitly mark these as website insights
+        };
+      });
+      
+      return enhancedInsights;
     } catch (jsonError) {
       console.error('Error parsing JSON:', jsonError);
       // Fall back to generated insights
-      return generateFallbackInsights("", "", "");
+      return generateFallbackInsights("", "", "").map(insight => ({
+        ...insight,
+        source: 'website'
+      }));
     }
   } catch (error) {
     console.error('Error parsing Claude response:', error);
-    return generateFallbackInsights("", "", "");
+    return generateFallbackInsights("", "", "").map(insight => ({
+      ...insight,
+      source: 'website'
+    }));
   }
 }
 

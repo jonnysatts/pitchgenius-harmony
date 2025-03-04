@@ -1,3 +1,4 @@
+
 /**
  * Error handling service for the website analysis function
  */
@@ -15,7 +16,10 @@ export function createErrorResponse(
   console.error('Creating error response:', error);
   
   // Generate fallback insights for the error response
-  const fallbackInsights = generateFallbackInsights(clientIndustry);
+  const fallbackInsights = generateFallbackInsights(clientIndustry).map(insight => ({
+    ...insight,
+    source: 'website'  // Explicitly mark these as website insights
+  }));
   
   let errorMessage: string;
   let errorDetail: any = {};
@@ -40,7 +44,8 @@ export function createErrorResponse(
     usingFallback: true,
     insights: fallbackInsights,
     errorDetail,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    success: false
   };
   
   return new Response(

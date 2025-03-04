@@ -1,3 +1,4 @@
+
 import { corsHeaders } from '../utils/corsHandlers.ts';
 import { analyzeWebsiteWithAnthropic } from './anthropicService.ts';
 import { extractWebsiteContent } from './websiteContentService.ts';
@@ -81,11 +82,24 @@ export async function handleAnalysisRequest(req: Request): Promise<Response> {
       
       if (!websiteContent || websiteContent.length < 100) {
         console.warn(`Insufficient content extracted: ${websiteContent.length} characters`);
-        return createErrorResponse({
+        
+        // Generate fallback insights instead of failing completely
+        const fallbackResponse = {
+          success: false,
           error: `Failed to extract sufficient content from website: ${website_url}`,
           insufficientContent: true,
-          suggestDiagnostics: true
-        }, 400, client_industry);
+          insights: generateFallbackInsights(client_industry),
+          usingFallback: true,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log('Returning fallback insights due to insufficient content');
+        return new Response(JSON.stringify(fallbackResponse), {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
       }
       
       console.log(`Successfully extracted ${websiteContent.length} characters from website`);
@@ -100,12 +114,50 @@ export async function handleAnalysisRequest(req: Request): Promise<Response> {
       );
       
       console.log('Claude analysis completed successfully');
-      return new Response(result, {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
+      // Parse the result to ensure it's valid JSON
+      try {
+        const resultObj = JSON.parse(result);
+        // Make sure insights exist and are an array
+        if (!resultObj.insights || !Array.isArray(resultObj.insights) || resultObj.insights.length === 0) {
+          console.warn('No insights returned from Claude API, using fallbacks');
+          resultObj.insights = generateFallbackInsights(client_industry);
+          resultObj.usingFallback = true;
+          resultObj.success = true;
+          resultObj.insufficientContent = false;
+          // Return the modified result
+          return new Response(JSON.stringify(resultObj), {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json'
+            }
+          });
         }
-      });
+        
+        // Ensure insights have source field
+        resultObj.insights = resultObj.insights.map((insight: any) => {
+          return {
+            ...insight,
+            source: 'website'
+          };
+        });
+        
+        // Return the validated result
+        return new Response(JSON.stringify(resultObj), {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (parseError) {
+        console.error('Error parsing Claude API result:', parseError);
+        // Fallback to returning the raw result
+        return new Response(result, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
     } catch (extractionError) {
       console.error('Error during content extraction or analysis:', extractionError);
       return createErrorResponse({

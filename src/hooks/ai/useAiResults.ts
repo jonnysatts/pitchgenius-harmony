@@ -45,11 +45,30 @@ export const useAiResults = (project: Project) => {
   const setPersistentInsights = useCallback((newInsights: StrategicInsight[], usingFallback: boolean = false) => {
     setInsights(newInsights);
     persistInsights(newInsights, usingFallback);
-  }, [persistInsights]);
+    
+    // Show a toast notification when insights are updated
+    if (newInsights.length > 0) {
+      toast({
+        title: `${usingFallback ? "Sample" : "New"} insights added`,
+        description: `${newInsights.length} insights are now available for review.`,
+        variant: "default"
+      });
+    }
+  }, [persistInsights, toast]);
   
   // Add new insights to existing ones
   const addInsights = useCallback((newInsights: StrategicInsight[]) => {
-    if (newInsights.length === 0) return;
+    if (!newInsights || newInsights.length === 0) {
+      console.warn('No new insights to add');
+      toast({
+        title: "No insights generated",
+        description: "The analysis completed but no insights were generated. Try again or check your content.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log(`Adding ${newInsights.length} new insights`, newInsights);
     
     setInsights(currentInsights => {
       // For website insights, remove all existing website insights first
@@ -67,6 +86,13 @@ export const useAiResults = (project: Project) => {
         // Persist the combined insights
         persistInsights(combinedInsights);
         
+        // Show a toast notification
+        toast({
+          title: "Website insights added",
+          description: `${newInsights.length} website insights are now available for review.`,
+          variant: "default"
+        });
+        
         return combinedInsights;
       }
       
@@ -80,15 +106,32 @@ export const useAiResults = (project: Project) => {
         insight.content && insight.content.title && !existingTitles.has(insight.content.title)
       );
       
+      if (filteredNewInsights.length === 0) {
+        console.warn('All new insights are duplicates of existing ones');
+        toast({
+          title: "No new insights",
+          description: "The analysis completed but all insights were duplicates of existing ones.",
+          variant: "default"
+        });
+        return currentInsights;
+      }
+      
       // Combine existing and new insights
       const combinedInsights = [...currentInsights, ...filteredNewInsights];
       
       // Persist the combined insights
       persistInsights(combinedInsights);
       
+      // Show a toast notification
+      toast({
+        title: "Document insights added",
+        description: `${filteredNewInsights.length} document insights are now available for review.`,
+        variant: "default"
+      });
+      
       return combinedInsights;
     });
-  }, [persistInsights]);
+  }, [persistInsights, toast]);
 
   // Show completion toast based on insight generation results
   const handleCompletionToast = useCallback((usingFallbackInsights: boolean) => {

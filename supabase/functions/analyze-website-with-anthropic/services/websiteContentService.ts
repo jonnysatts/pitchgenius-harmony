@@ -1,3 +1,4 @@
+
 /**
  * Service for extracting content from websites
  */
@@ -15,14 +16,22 @@ export async function extractWebsiteContent(
   console.log(`Using Firecrawl: ${useFirecrawl ? 'yes' : 'no'}`);
   
   try {
+    // Normalize URL format
+    let normalizedUrl = websiteUrl.trim();
+    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = `https://${normalizedUrl}`;
+      console.log(`Normalized URL to: ${normalizedUrl}`);
+    }
+    
     // Try the improved firecrawlFetcher first which has its own fallbacks
     try {
       console.log('Using enhanced Firecrawl fetcher with fallbacks');
-      const content = await fetchFirecrawlContent(websiteUrl);
+      const content = await fetchFirecrawlContent(normalizedUrl);
       if (content && content.length > 100) {
         console.log(`Successfully extracted ${content.length} characters using enhanced fetcher`);
         return content;
       }
+      console.log('Enhanced fetcher returned insufficient content, trying alternative methods');
     } catch (fetcherError) {
       console.warn('Enhanced fetcher failed, trying alternative methods:', fetcherError);
     }
@@ -30,7 +39,7 @@ export async function extractWebsiteContent(
     // Use Firecrawl for enhanced content extraction if requested
     if (useFirecrawl) {
       try {
-        const content = await extractContentWithFirecrawl(websiteUrl);
+        const content = await extractContentWithFirecrawl(normalizedUrl);
         console.log(`Successfully extracted ${content.length} characters with Firecrawl`);
         return content;
       } catch (firecrawlError) {
@@ -40,7 +49,7 @@ export async function extractWebsiteContent(
     
     // Fallback to basic fetch method
     console.log('Falling back to basic extraction method');
-    return await extractContentWithBasicFetch(websiteUrl);
+    return await extractContentWithBasicFetch(normalizedUrl);
   } catch (error) {
     console.error(`Error extracting website content: ${error instanceof Error ? error.message : String(error)}`);
     throw new Error(`Failed to extract content from ${websiteUrl}: ${error instanceof Error ? error.message : String(error)}`);
@@ -54,15 +63,15 @@ async function extractContentWithBasicFetch(websiteUrl: string): Promise<string>
   console.log(`Using basic fetch for ${websiteUrl}`);
   
   try {
-    // Ensure URL has protocol
-    const urlWithProtocol = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
-    
     // Create timeout signal
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const response = await fetch(urlWithProtocol, {
-      signal: controller.signal
+    const response = await fetch(websiteUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
     });
     
     clearTimeout(timeoutId);

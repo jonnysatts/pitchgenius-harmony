@@ -111,20 +111,21 @@ export function parseClaudeResponse(responseText: string): any[] {
           console.error('❌ Lenient parsing approach failed:', lenientError);
         }
         
-        // If all parsing attempts fail, throw the original error
-        throw parseError;
+        // If all parsing attempts fail, return an empty array
+        console.error('❌ All parsing attempts failed, returning empty array');
+        return [];
       }
     }
     
     // Check if the expected structure exists
-    if (!parsedData.insights || !Array.isArray(parsedData.insights)) {
+    if (!parsedData.insights && !Array.isArray(parsedData)) {
       console.error('❌ Invalid response structure - missing insights array:', 
                     Object.keys(parsedData));
       
       // Try to convert the structure if possible
       if (Array.isArray(parsedData)) {
         if (DEBUG_MODE) console.log('✅ Data is an array, using as insights directly');
-        parsedData = { insights: parsedData };
+        return parsedData;
       } else {
         console.error('❌ Could not find or create a valid insights array structure');
         // Create a default structure
@@ -132,17 +133,20 @@ export function parseClaudeResponse(responseText: string): any[] {
       }
     }
     
+    // Return the insights array if it exists, otherwise return the parsed data directly
+    const insightsArray = parsedData.insights || parsedData;
+    
     // Add IDs if they're missing
     const timestamp = Date.now();
-    parsedData.insights = parsedData.insights.map((insight: any, index: number) => {
+    const processedInsights = Array.isArray(insightsArray) ? insightsArray.map((insight: any, index: number) => {
       if (!insight.id) {
         insight.id = `insight_${timestamp}_${index}`;
       }
       return insight;
-    });
+    }) : [];
     
-    if (DEBUG_MODE) console.log(`✅ Successfully parsed ${parsedData.insights.length} insights`);
-    return parsedData.insights;
+    if (DEBUG_MODE) console.log(`✅ Successfully parsed ${processedInsights.length} insights`);
+    return processedInsights;
   } catch (error) {
     console.error('❌ Error parsing Claude response:', error);
     console.error('📄 Response text sample:', responseText.substring(0, 500) + '...');

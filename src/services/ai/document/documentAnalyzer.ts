@@ -40,14 +40,14 @@ export const analyzeDocuments = async (
     const mockProject: Project = {
       id: projectId,
       title: "Document Analysis",
-      clientName: "Unknown Client", // Added missing required property
+      clientName: "Unknown Client",
       clientIndustry: "technology", // Default value
       clientWebsite: "",
-      createdAt: new Date(), // Added missing required property
-      updatedAt: new Date(), // Added missing required property
-      ownerId: "system", // Added missing required property
-      description: "Automated document analysis", // Added missing required property
-      status: "in_progress" // Optional but added for completeness
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ownerId: "system",
+      description: "Automated document analysis",
+      status: "in_progress"
     };
     
     console.log("Calling Claude API with mock project:", mockProject.id);
@@ -59,10 +59,17 @@ export const analyzeDocuments = async (
     // Check if we got valid insights
     if (apiResult.insights && apiResult.insights.length > 0) {
       console.log(`Success: Received ${apiResult.insights.length} insights from Claude API`);
+      
+      // Ensure all insights have the correct source field
+      const enhancedInsights = apiResult.insights.map((insight: any) => ({
+        ...insight,
+        source: 'document'  // Explicitly mark these as document insights
+      }));
+      
       return {
         success: true,
         message: `Successfully analyzed ${documents.length} documents.`,
-        analysisResults: apiResult.insights
+        analysisResults: enhancedInsights
       };
     } else if (apiResult.error) {
       console.error("Claude API returned an error:", apiResult.error);
