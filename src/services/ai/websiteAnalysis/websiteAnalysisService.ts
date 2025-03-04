@@ -9,6 +9,7 @@ import { callWebsiteAnalysisApi } from "./claudeApiService";
 import { generateWebsiteMockInsights } from "./mockGenerator";
 import { FirecrawlService } from "@/utils/FirecrawlService";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Analyze a client website to generate preliminary insights
@@ -30,8 +31,12 @@ export const analyzeClientWebsite = async (
     // Check if we can use the real API
     const useRealApi = await checkSupabaseConnection();
     
-    // By default, assume we're using Firecrawl via Supabase
-    const useFirecrawl = true;
+    // Notify user of analysis start
+    toast({
+      title: "Website Analysis Started",
+      description: `Analyzing ${project.clientWebsite}...`,
+      duration: 5000,
+    });
     
     if (!useRealApi) {
       console.log('Supabase connection not available, using mock website insights');
@@ -42,86 +47,106 @@ export const analyzeClientWebsite = async (
       };
     }
     
-    if (useFirecrawl) {
-      console.log('Using Firecrawl enhanced website analysis via Supabase Edge Function');
-      
-      // Create a timeout promise - 180 seconds (3 minutes) for Firecrawl analysis
-      const timeoutPromise = createTimeoutPromise(project, [], 180000);
-      
-      try {
-        // Race between the Firecrawl analysis and the timeout
-        return await Promise.race([
-          (async () => {
-            try {
-              // Call the Firecrawl-enhanced website analysis via Supabase Edge Function
-              const result = await FirecrawlService.analyzeWebsiteViaSupabase(
-                project.clientWebsite!,
-                project.id,
-                project.clientName || 'Client',
-                project.clientIndustry || 'General'
-              );
-              
-              if (result.insights && Array.isArray(result.insights)) {
-                return { insights: result.insights };
-              } else {
-                console.error('Invalid response from Firecrawl analysis:', result);
-                throw new Error('Invalid response from website analysis');
+    // Create a timeout promise - 3 minutes for analysis
+    const timeoutPromise = createTimeoutPromise(project, [], 180000);
+    
+    try {
+      console.log('Using enhanced website analysis via Supabase Edge Function');
+      // Call the enhanced website analysis
+      const result = await Promise.race([
+        (async () => {
+          try {
+            // Direct call to edge function with better error handling
+            const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+              body: { 
+                projectId: project.id,
+                clientWebsite: project.clientWebsite,
+                clientName: project.clientName || 'Client',
+                clientIndustry: project.clientIndustry || 'General',
+                timestamp: new Date().toISOString() // Add timestamp to avoid caching
               }
-            } catch (error) {
-              console.error('Error in Firecrawl analysis:', error);
-              throw error;
+            });
+            
+            if (error) {
+              console.error('Error from Edge Function:', error);
+              throw new Error(`Edge function error: ${error.message || 'Unknown error'}`);
             }
-          })(),
-          timeoutPromise
-        ]);
-      } catch (apiError: any) {
-        console.log('Falling back to Claude direct API due to Firecrawl error');
-        console.error('Firecrawl error details:', apiError);
-        
-        try {
-          // Try with direct Claude API as fallback
-          return await Promise.race([
-            callWebsiteAnalysisApi(project),
-            timeoutPromise
-          ]);
-        } catch (claudeError: any) {
-          console.log('Falling back to mock website insights due to all API errors');
-          console.error('Claude API error details:', claudeError);
-          const mockInsights = generateWebsiteMockInsights(project);
-          return { 
-            insights: mockInsights,
-            error: "API errors during website analysis - using generated sample insights instead. Error: " + (claudeError.message || String(claudeError))
-          };
-        }
-      }
-    } else {
-      console.log('Using Anthropic API via Supabase Edge Function to analyze website');
+            
+            // Validate the response structure
+            if (!data) {
+              throw new Error('Empty response from Edge Function');
+            }
+            
+            if (data.error) {
+              throw new Error(`Analysis error: ${data.error}`);
+            }
+            
+            if (!data.insights || !Array.isArray(data.insights)) {
+              throw new Error('No insights array in Edge Function response');
+            }
+            
+            // Success - log the insights
+            console.log(`Received ${data.insights.length} insights from Edge Function`);
+            
+            return { insights: data.insights };
+          } catch (error) {
+            console.error('Error in website analysis:', error);
+            throw error;
+          }
+        })(),
+        timeoutPromise
+      ]);
       
-      // Create a timeout promise - 60 seconds (1 minute) for regular analysis
-      const timeoutPromise = createTimeoutPromise(project, [], 60000);
+      return result;
+    } catch (apiError: any) {
+      console.log('Error during website analysis, trying fallback approach');
+      console.error('API error details:', apiError);
       
       try {
-        // Race between the actual API call and the timeout
+        // Try with direct Claude API as fallback
+        toast({
+          title: "Trying Alternative Method",
+          description: "Website analysis failed, trying another approach...",
+          duration: 5000,
+        });
+        
         return await Promise.race([
           callWebsiteAnalysisApi(project),
           timeoutPromise
         ]);
-      } catch (apiError: any) {
-        console.log('Falling back to mock website insights due to API error');
-        console.error('API error details:', apiError);
+      } catch (claudeError: any) {
+        console.log('All API approaches failed, using mock insights');
+        console.error('Claude API error details:', claudeError);
+        
+        toast({
+          title: "Analysis Failed",
+          description: "Using generated samples instead.",
+          variant: "destructive",
+          duration: 5000,
+        });
+        
         const mockInsights = generateWebsiteMockInsights(project);
         return { 
           insights: mockInsights,
-          error: "Claude AI error during website analysis - using generated sample insights instead. Error: " + (apiError.message || String(apiError))
+          error: "API errors during website analysis - using generated sample insights instead. Error: " + (claudeError.message || String(claudeError))
         };
       }
     }
   } catch (err: any) {
     console.error('Error analyzing website:', err);
+    const errorMessage = err.message || 'An unexpected error occurred while analyzing the website';
+    
+    toast({
+      title: "Analysis Error",
+      description: errorMessage,
+      variant: "destructive", 
+      duration: 7000,
+    });
+    
     const mockInsights = generateWebsiteMockInsights(project);
     return { 
       insights: mockInsights,
-      error: "Using generated sample website insights due to an error: " + (err.message || 'An unexpected error occurred while analyzing the website')
+      error: "Using generated sample website insights due to an error: " + errorMessage
     };
   }
 };

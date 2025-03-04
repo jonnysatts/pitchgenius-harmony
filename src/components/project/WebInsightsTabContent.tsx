@@ -11,6 +11,7 @@ import {
   WebInsightsTabs,
   WebInsightsHeader
 } from "@/components/project/web-insights";
+import { useToast } from "@/hooks/use-toast";
 
 interface WebInsightsTabContentProps {
   project: Project;
@@ -39,6 +40,9 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   onNavigateToInsights,
   onRetryAnalysis
 }) => {
+  const { toast } = useToast();
+  const [showDebugInfo, setShowDebugInfo] = React.useState(false);
+  
   // Check if there's a website URL available
   const hasWebsiteUrl = !!project.clientWebsite;
   
@@ -54,6 +58,11 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   
   // Ensure we have website insights before trying to render them
   const hasWebsiteInsights = websiteInsights.length > 0;
+  
+  // Handle showing debug info
+  const toggleDebugInfo = () => {
+    setShowDebugInfo(!showDebugInfo);
+  };
   
   // Group insights by category with proper type checking and fallbacks
   const insightsByCategory = websiteInsights.reduce((acc, insight) => {
@@ -83,6 +92,17 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
     }
   });
   
+  // Function to retry website analysis with debug toast
+  const handleRetryWithDebug = () => {
+    if (onAnalyzeWebsite) {
+      toast({
+        title: "Retrying with debug mode",
+        description: "Attempting website analysis with additional logging",
+      });
+      onAnalyzeWebsite();
+    }
+  };
+  
   return (
     <div className="bg-white p-6 rounded-lg border">
       {/* Header with proper props */}
@@ -93,6 +113,36 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
         onAnalyzeWebsite={onAnalyzeWebsite}
         hasInsights={hasWebsiteInsights}
       />
+      
+      {/* Debug Info Section */}
+      <div className="mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={toggleDebugInfo}
+          className="text-xs"
+        >
+          {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
+        </Button>
+        
+        {showDebugInfo && (
+          <div className="mt-2 p-3 bg-slate-50 rounded text-xs font-mono">
+            <p>Website URL: {project.clientWebsite || "None"}</p>
+            <p>Insights Count: {websiteInsights.length}</p>
+            <p>Is Analyzing: {isAnalyzingWebsite ? "Yes" : "No"}</p>
+            <p>Has Error: {error ? "Yes" : "No"}</p>
+            <p>Error: {error || "None"}</p>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleRetryWithDebug}
+              className="mt-2 text-xs"
+            >
+              Force Retry Analysis
+            </Button>
+          </div>
+        )}
+      </div>
       
       {/* Error display for website analysis */}
       <InsightsErrorAlert 

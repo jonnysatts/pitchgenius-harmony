@@ -32,7 +32,8 @@ serve(async (req) => {
       projectId: requestData.projectId,
       clientIndustry: requestData.clientIndustry,
       clientWebsite: requestData.clientWebsite,
-      hasWebsiteContent: !!requestData.websiteContent
+      hasWebsiteContent: !!requestData.websiteContent,
+      timestamp: requestData.timestamp
     });
     
     const { 
@@ -59,20 +60,39 @@ serve(async (req) => {
     // Print current environment variables (securely)
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-    console.log(`Environment check: Firecrawl API Key exists: ${!!firecrawlKey}, Anthropic API Key exists: ${!!anthropicKey}`);
+    
+    console.log(`Environment check: Firecrawl API Key exists: ${!!firecrawlKey} (${firecrawlKey ? firecrawlKey.substring(0, 3) + '...' : 'missing'})`);
+    console.log(`Environment check: Anthropic API Key exists: ${!!anthropicKey}`);
+    
+    if (!anthropicKey) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Anthropic API key not configured',
+          details: 'Please add ANTHROPIC_API_KEY to the Supabase secrets'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Try to use provided content first, otherwise fetch it
     let contentToAnalyze = websiteContent;
+    
     if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
       console.log("No valid content provided, attempting to fetch website content");
       
-      try {
-        // First try using Firecrawl for enhanced scraping
-        console.log("Attempting to fetch content with Firecrawl...");
-        contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
-        console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
-      } catch (fetchError) {
-        console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
+      if (firecrawlKey) {
+        try {
+          // First try using Firecrawl for enhanced scraping
+          console.log(`Attempting to fetch content with Firecrawl for ${clientWebsite}...`);
+          contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
+          console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
+        } catch (fetchError) {
+          console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
+          contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
+          console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
+        }
+      } else {
+        console.log("No Firecrawl API key found, using basic fetch");
         contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
         console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
       }
@@ -83,7 +103,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Failed to fetch website content or content too short',
-          content: contentToAnalyze
+          content: contentToAnalyze?.substring(0, 200) || 'No content'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -146,7 +166,7 @@ serve(async (req) => {
     console.error('Error in analyze-website-with-anthropic:', error);
     
     return new Response(
-      JSON.stringify({ error: `Server error: ${error.message}` }),
+      JSON.stringify({ error: `Server error: ${error.message || 'Unknown error'}` }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
