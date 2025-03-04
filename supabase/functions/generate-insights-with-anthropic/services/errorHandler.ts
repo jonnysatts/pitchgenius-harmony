@@ -107,11 +107,33 @@ export async function handleApiResponseError(response: Response): Promise<never>
   const statusCode = response.status;
   
   let errorBody = '';
+  let errorJson = null;
+  
   try {
-    errorBody = await response.text();
+    // Try to parse as JSON first
+    const bodyText = await response.text();
+    errorBody = bodyText;
+    
+    try {
+      errorJson = JSON.parse(bodyText);
+      console.error('API error response JSON:', errorJson);
+    } catch {
+      // Not JSON, just use as text
+      console.error('API error response text:', bodyText);
+    }
   } catch (e) {
     errorBody = 'Could not read error response body';
+    console.error('Could not read error response body:', e);
   }
+  
+  // Log detailed information about the error
+  console.error('API error details:', {
+    status: statusCode,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    body: errorBody.substring(0, 1000), // Log first 1000 chars
+    isJson: !!errorJson
+  });
   
   // Create more specific error messages based on status code
   let errorMessage = `API request failed with status ${statusCode}`;
@@ -126,10 +148,14 @@ export async function handleApiResponseError(response: Response): Promise<never>
     errorMessage = 'Server error - please try again later';
   }
   
-  console.error(`API error: ${errorMessage}`, {
-    status: statusCode,
-    body: errorBody.substring(0, 500) // Log a sample of the error body
-  });
+  // Add JSON error details if available
+  if (errorJson && errorJson.error) {
+    const jsonErrorDetail = typeof errorJson.error === 'object' 
+      ? errorJson.error.message || JSON.stringify(errorJson.error)
+      : errorJson.error;
+    
+    errorMessage += `. Details: ${jsonErrorDetail}`;
+  }
   
-  throw new Error(`${errorMessage}. Details: ${errorBody.substring(0, 200)}`);
+  throw new Error(errorMessage);
 }
