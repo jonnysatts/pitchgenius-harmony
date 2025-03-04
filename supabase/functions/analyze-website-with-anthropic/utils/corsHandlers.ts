@@ -1,4 +1,8 @@
 
+/**
+ * CORS utilities for Edge Functions
+ */
+
 // CORS headers for Supabase Edge Functions
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,4 +24,14 @@ export function handleCorsPreflightRequest(req: Request): Response | null {
   
   // Not a preflight request
   return null;
+}
+
+/**
+ * Create a CORS preflight response
+ */
+export function createCorsPreflightResponse(): Response {
+  return new Response(null, { 
+    headers: corsHeaders,
+    status: 204 
+  });
 }
