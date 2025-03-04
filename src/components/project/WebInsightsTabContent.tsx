@@ -4,13 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Box } from "lucide-react";
 import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import ApiConnectionTest from "@/components/project/ApiConnectionTest";
-import ClaudeApiTester from "@/components/project/ClaudeApiTester";
 import WebsiteUrlCard from "@/components/project/web-insights/WebsiteUrlCard";
 import NoWebsiteCard from "@/components/project/web-insights/NoWebsiteCard";
 import WebInsightsTabs from "@/components/project/web-insights/WebInsightsTabs";
 import { WebsiteAnalysisControls } from "@/components/project/web-insights/WebsiteAnalysisControls";
 import { useWebsiteAnalysisState } from "@/hooks/ai/website";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
+import DiagnosticsPanel from "@/components/project/DiagnosticsPanel";
 
 interface WebInsightsTabContentProps {
   project: Project;
@@ -94,8 +94,8 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             Website Analysis
           </h2>
           
-          {/* Added Claude API Tester component */}
-          <ClaudeApiTester />
+          {/* New DiagnosticsPanel component replacing ClaudeApiTester */}
+          <DiagnosticsPanel />
           
           {hasWebsiteUrl ? (
             <WebsiteUrlCard websiteUrl={websiteUrl} />
