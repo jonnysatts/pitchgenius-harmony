@@ -6,9 +6,13 @@ export {
   generateWebsiteContext 
 } from './apiClient';
 
+// Export document analysis functions
+export { analyzeDocuments } from './document/documentAnalyzer';
+export { extractInsightsFromAnalysis } from './insights/insightsExtractor';
+
 // Export other AI-related functions and utilities
 export * from './promptUtils';
-export * from './insightGenerator';
+export * from './insightAnalytics';
 export * from './statusTracking';
 export * from './insightAnalytics';
 export * from './mockGenerators/contentTemplates';
