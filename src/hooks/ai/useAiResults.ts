@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { Project, StrategicInsight } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryInsights } from "./useQueryInsights";
+import { useQueryInsights } from "./insights";
 import { useErrorHandler } from "@/hooks/error/useErrorHandler";
 
 export const useAiResults = (project: Project) => {

@@ -1,75 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Project, StrategicInsight, StoredInsightData } from "@/lib/types";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { StrategicInsight } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useErrorHandler } from "@/hooks/error/useErrorHandler";
+import { useInsightsPersistence } from "./useInsightsPersistence";
 
 /**
- * Provides query and mutation functions for managing insights
+ * Hook for all insight-related mutations
  */
-export const useQueryInsights = (project: Project) => {
+export const useInsightsMutations = (projectId: string, insightsQueryKey: string[]) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
-  
-  // Query key for this project's insights
-  const insightsQueryKey = ['project', project.id, 'insights'];
-
-  // Load insights from localStorage
-  const fetchInsights = async (): Promise<StrategicInsight[]> => {
-    if (!project?.id) return [];
-    
-    try {
-      const storedData = localStorage.getItem(`project_insights_${project.id}`);
-      if (storedData) {
-        const parsedData: StoredInsightData = JSON.parse(storedData);
-        console.log(`Loaded ${parsedData.insights.length} insights from storage for project ${project.id}`);
-        return parsedData.insights;
-      }
-      return [];
-    } catch (err) {
-      const errorDetails = handleError(err, { context: 'loading-insights', projectId: project.id });
-      throw new Error(errorDetails.message);
-    }
-  };
-
-  // Save insights to localStorage
-  const persistInsights = async (insightData: {
-    insights: StrategicInsight[],
-    usingFallback?: boolean
-  }): Promise<void> => {
-    if (!project?.id || !insightData.insights.length) return;
-    
-    try {
-      const storageData: StoredInsightData = {
-        projectId: project.id,
-        insights: insightData.insights,
-        generationTimestamp: Date.now(),
-        usingFallbackData: !!insightData.usingFallback,
-        timestamp: new Date().toISOString(),
-        usingFallbackInsights: !!insightData.usingFallback
-      };
-      
-      localStorage.setItem(`project_insights_${project.id}`, JSON.stringify(storageData));
-      console.log(`Stored ${insightData.insights.length} insights for project ${project.id}`);
-    } catch (err) {
-      handleError(err, { context: 'persisting-insights', projectId: project.id });
-      console.error('Error storing insights:', err);
-      
-      toast({
-        title: "Failed to save insights",
-        description: "Your insights couldn't be saved to local storage",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Query hook for insights
-  const insightsQuery = useQuery({
-    queryKey: insightsQueryKey,
-    queryFn: fetchInsights,
-    refetchOnMount: false,
-    refetchOnReconnect: false
-  });
+  const { persistInsights } = useInsightsPersistence(projectId);
 
   // Mutation for adding new insights
   const addInsightsMutation = useMutation({
@@ -81,10 +24,10 @@ export const useQueryInsights = (project: Project) => {
           description: "The analysis completed but no insights were generated.",
           variant: "destructive"
         });
-        return insightsQuery.data || [];
+        return queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || [];
       }
       
-      const currentInsights = insightsQuery.data || [];
+      const currentInsights = queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || [];
       let updatedInsights: StrategicInsight[] = [];
       
       // For website insights, remove existing website insights
@@ -147,7 +90,7 @@ export const useQueryInsights = (project: Project) => {
       queryClient.setQueryData(insightsQueryKey, updatedInsights);
     },
     onError: (error) => {
-      handleError(error, { context: 'adding-insights', projectId: project.id });
+      handleError(error, { context: 'adding-insights', projectId: projectId });
       toast({
         title: "Failed to add insights",
         description: "There was an error adding new insights",
@@ -181,7 +124,7 @@ export const useQueryInsights = (project: Project) => {
       }
     },
     onError: (error) => {
-      handleError(error, { context: 'setting-insights', projectId: project.id });
+      handleError(error, { context: 'setting-insights', projectId: projectId });
       toast({
         title: "Failed to update insights",
         description: "There was an error updating insights",
@@ -215,7 +158,7 @@ export const useQueryInsights = (project: Project) => {
       queryClient.setQueryData(insightsQueryKey, updatedInsights);
     },
     onError: (error) => {
-      handleError(error, { context: 'updating-insight', projectId: project.id });
+      handleError(error, { context: 'updating-insight', projectId: projectId });
       toast({
         title: "Failed to update insight",
         description: "There was an error updating the insight",
@@ -225,22 +168,8 @@ export const useQueryInsights = (project: Project) => {
   });
 
   return {
-    // Queries
-    insights: insightsQuery.data || [],
-    isLoading: insightsQuery.isLoading,
-    error: insightsQuery.error,
-    
-    // Mutations
-    addInsights: (newInsights: StrategicInsight[]) => 
-      addInsightsMutation.mutate(newInsights),
-    setInsights: (insights: StrategicInsight[], usingFallback = false) => 
-      setInsightsMutation.mutate({ insights, usingFallback }),
-    updateInsight: (insightId: string, updates: Partial<StrategicInsight>) => 
-      updateInsightMutation.mutate({ insightId, updates }),
-      
-    // Status
-    isAddingInsights: addInsightsMutation.isPending,
-    isSettingInsights: setInsightsMutation.isPending,
-    isUpdatingInsight: updateInsightMutation.isPending
+    addInsightsMutation,
+    setInsightsMutation,
+    updateInsightMutation
   };
 };
