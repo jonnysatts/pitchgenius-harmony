@@ -52,6 +52,16 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
                             aiStatus.progress >= 30 && 
                             aiStatus.progress < 60;
   
+  // Handle the analyze button click with visual feedback
+  const handleAnalyzeClick = () => {
+    if (!analyzeButtonDisabled) {
+      console.log("Analyze button clicked, triggering document analysis");
+      onAnalyzeDocuments();
+    } else {
+      console.log("Analyze button is disabled, ignoring click");
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg border">
@@ -92,11 +102,16 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Project Documents</h2>
           <Button 
-            onClick={onAnalyzeDocuments}
+            onClick={handleAnalyzeClick}
             disabled={analyzeButtonDisabled}
             className="flex items-center gap-2"
+            aria-label="Analyze documents with AI"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain size={16} />}
+            {aiStatus && aiStatus.status === 'processing' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Brain size={16} />
+            )}
             {aiStatus && aiStatus.status === 'processing' ? 'Analyzing...' : 'Analyze with AI'}
           </Button>
         </div>

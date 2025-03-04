@@ -1,6 +1,7 @@
 
 import { Document } from "@/lib/types";
 import { prepareDocumentContents } from '../promptUtils';
+import { callClaudeApi } from '../apiClient';
 
 /**
  * Analyzes documents to generate strategic insights
@@ -8,7 +9,7 @@ import { prepareDocumentContents } from '../promptUtils';
 export const analyzeDocuments = async (
   documents: Document[],
   projectId: string
-): Promise<{ success: boolean; message?: string }> => {
+): Promise<{ success: boolean; message?: string; analysisResults?: any[] }> => {
   try {
     console.log(`Analyzing ${documents.length} documents for project ${projectId}`);
     
@@ -26,8 +27,31 @@ export const analyzeDocuments = async (
     const totalContentSize = documentsContent.reduce((total, doc) => total + (doc.content?.length || 0), 0);
     console.log(`Prepared ${documentsContent.length} documents with total content size: ${totalContentSize} characters`);
     
-    // In a real implementation, here we would call the API with documentsContent
-    // We'll mark it as successful for now since the actual API call happens elsewhere
+    // Create a mock project object for the API call
+    const mockProject = {
+      id: projectId,
+      title: "Document Analysis",
+      clientIndustry: "technology", // Default value
+      clientWebsite: ""
+    };
+    
+    // Actually call the API to analyze the documents
+    const apiResult = await callClaudeApi(mockProject, documents, documentsContent);
+    
+    // Check if we got valid insights
+    if (apiResult.insights && apiResult.insights.length > 0) {
+      return {
+        success: true,
+        message: `Successfully analyzed ${documents.length} documents.`,
+        analysisResults: apiResult.insights
+      };
+    } else if (apiResult.error) {
+      return {
+        success: false,
+        message: apiResult.error
+      };
+    }
+    
     return {
       success: true,
       message: `Successfully prepared ${documents.length} documents for analysis.`

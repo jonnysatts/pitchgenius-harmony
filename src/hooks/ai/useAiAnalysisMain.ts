@@ -1,6 +1,7 @@
 
 import { useCallback } from "react";
 import { Project, Document, StrategicInsight } from "@/lib/types";
+import { analyzeDocuments, extractInsightsFromAnalysis } from "@/services/ai";
 
 /**
  * Main hook for executing document analysis
@@ -22,15 +23,38 @@ export const useAiAnalysisMain = (
     
     console.log("Starting document analysis with useRealAI set to:", true);
     
-    // Try to generate insights
-    const success = await generateProjectInsights(documents);
-    
-    // If generation failed, use fallback insights
-    if (!success) {
-      console.log("No insights returned, using mock generator as fallback");
+    try {
+      // First attempt to directly analyze the documents
+      const analysisResult = await analyzeDocuments(documents, project.id);
+      console.log("Document analysis result:", analysisResult);
+      
+      if (analysisResult.success && analysisResult.analysisResults) {
+        // If we have analysis results, convert them to insights
+        const extractedInsights = extractInsightsFromAnalysis(analysisResult.analysisResults);
+        if (extractedInsights && extractedInsights.length > 0) {
+          // We have successfully generated insights directly
+          console.log(`Generated ${extractedInsights.length} insights directly from document analysis`);
+          return true;
+        }
+      }
+      
+      // If direct analysis failed or returned no insights, try the previous method
+      const success = await generateProjectInsights(documents);
+      
+      // If generation failed, use fallback insights
+      if (!success) {
+        console.log("No insights returned, using mock generator as fallback");
+        generateFallbackInsights(documents);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error in document analysis:", error);
+      // If anything fails, try to generate fallback insights
       generateFallbackInsights(documents);
+      return false;
     }
-  }, [generateProjectInsights, generateFallbackInsights, startProcessing, handleProcessingComplete]);
+  }, [generateProjectInsights, generateFallbackInsights, startProcessing, handleProcessingComplete, project.id]);
 
   return {
     handleAnalyzeDocuments
