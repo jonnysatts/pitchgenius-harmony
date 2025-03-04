@@ -34,6 +34,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/new-project" element={<NewProject />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} /> {/* Add this route to support both formats temporarily */}
               <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

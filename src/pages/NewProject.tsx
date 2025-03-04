@@ -52,7 +52,7 @@ const NewProject: React.FC = () => {
     addNewProject(newProject);
     
     // Navigate to the project detail page with state to show the new project info
-    navigate(`/projects/${newProject.id}`, {
+    navigate(`/project/${newProject.id}`, {
       state: {
         newProjectTitle: projectTitle,
         newProjectClient: clientName,
