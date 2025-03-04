@@ -1,4 +1,3 @@
-
 /**
  * Error handling service for the website analysis function
  */
