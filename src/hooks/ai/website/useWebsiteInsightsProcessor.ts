@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { FirecrawlService } from '@/utils/FirecrawlService';
@@ -17,8 +16,8 @@ export const useWebsiteInsightsProcessor = (
     setIsAnalyzing: (analyzing: boolean) => void
   ) => {
     const progressInterval = setInterval(() => {
-      // Fix: Pass a direct number instead of a function
-      setAnalysisProgress(prev => {
+      const currentProgress = setAnalysisProgress as unknown as (progress: number | ((prev: number) => number)) => void;
+      currentProgress((prev: number) => {
         const newValue = prev < 10 ? prev + 5 : 
                          prev < 20 ? prev + 2 : 
                          prev < 30 ? prev + 0.5 : 
