@@ -1,24 +1,56 @@
 
 /**
- * Types for the Anthropic API
+ * Type definitions for Anthropic API integration
  */
-export interface AnthropicRequestParams {
-  projectId: string;
-  documentContents: any[];
-  clientIndustry?: string;
-  clientWebsite?: string; 
-  projectTitle?: string;
-  processingMode?: string;
-  includeComprehensiveDetails?: boolean;
-  maximumResponseTime?: number;
-  systemPrompt?: string;
+
+export interface AnthropicApiOptions {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
 }
 
 export interface DocumentContent {
-  name: string;
-  type: string;
-  size: string;
-  priority: number;
+  id?: string;
+  title?: string;
   content: string;
-  index: number;
+  type?: string;
+  fileName?: string;
+}
+
+export interface InsightContent {
+  title: string;
+  summary: string;
+  details?: string;
+  recommendations?: string;
+  evidence?: string;
+  impact?: string;
+  dataPoints?: string[];
+  sources?: string[];
+}
+
+export interface StrategicInsight {
+  id: string;
+  category: string;
+  confidence: number;
+  needsReview: boolean;
+  content: InsightContent;
+}
+
+export interface GenerateInsightsRequest {
+  projectId: string;
+  documentIds?: string[];
+  documentContents?: DocumentContent[];
+  clientIndustry?: string;
+  clientWebsite?: string;
+  projectTitle?: string;
+  processingMode?: 'comprehensive' | 'focused' | 'quick';
+  systemPrompt?: string;
+  includeComprehensiveDetails?: boolean;
+  maximumResponseTime?: number;
+}
+
+export interface GenerateInsightsResponse {
+  insights: StrategicInsight[];
+  error?: string;
+  insufficientContent?: boolean;
 }

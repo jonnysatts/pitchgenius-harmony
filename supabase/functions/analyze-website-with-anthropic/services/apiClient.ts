@@ -57,9 +57,18 @@ export async function callClaudeAPI(
       })
     });
     
+    // Enhanced error handling
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error:', errorText);
+      let errorText = '';
+      try {
+        errorText = await response.text();
+        console.error('Claude API error:', errorText);
+      } catch (textError) {
+        console.error('Could not extract error text from response:', textError);
+        errorText = 'Unknown error';
+      }
+      
+      // Create a detailed error message with status code
       throw new Error(`Claude API HTTP error: ${response.status} - ${errorText}`);
     }
     
@@ -68,7 +77,7 @@ export async function callClaudeAPI(
     
     // Check if we got a valid response
     if (!data || !data.content || data.content.length === 0) {
-      console.error('Claude response was empty or invalid');
+      console.error('Claude response was empty or invalid', data);
       throw new Error('Claude API returned an empty response');
     }
     

@@ -1,13 +1,5 @@
 
 /**
- * Module for handling AI API interactions
- */
-import { supabase } from "@/integrations/supabase/client";
-import { Document, Project, StrategicInsight } from "@/lib/types";
-import { generateComprehensiveInsights } from "./mockGenerators/insightFactory";
-import { GAMING_SPECIALIST_PROMPT, generateWebsiteContext } from "./promptEngineering";
-
-/**
  * Call the Supabase Edge Function that uses Anthropic API
  */
 export const callClaudeApi = async (
@@ -79,58 +71,5 @@ export const callClaudeApi = async (
   } catch (apiError: any) {
     console.error('Error calling Anthropic API:', apiError);
     throw new Error(`Claude AI error: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
-  }
-};
-
-/**
- * Create a timeout promise that resolves with fallback insights after the specified time
- */
-export const createTimeoutPromise = (
-  project: Project, 
-  documents: Document[],
-  timeoutMs: number = 120000 // 2 minutes default
-): Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }> => {
-  return new Promise<{ insights: StrategicInsight[], error?: string, insufficientContent?: boolean }>((resolve) => {
-    setTimeout(() => {
-      console.log('API request taking too long, falling back to mock insights');
-      const mockInsights = generateComprehensiveInsights(project, documents);
-      
-      // Ensure all mock insights are marked as document-derived with proper typing
-      const markedInsights = mockInsights.map(insight => ({
-        ...insight,
-        source: 'document' as 'document'  // Explicitly cast to the literal type
-      }));
-      
-      resolve({ 
-        insights: markedInsights, 
-        error: "Claude AI timeout - using generated sample insights instead. If you want to try again with Claude AI, please use the Retry Analysis button.",
-        insufficientContent: false
-      });
-    }, timeoutMs); // timeout in milliseconds
-  });
-};
-
-/**
- * Checks connection to Supabase functions
- */
-export const checkSupabaseConnection = async () => {
-  try {
-    // Check if Anthropic API key exists
-    const { data, error } = await supabase.functions.invoke('test-connection', {
-      body: { checkAnthropicKey: true }
-    });
-    
-    if (error) {
-      console.error('Error checking Supabase connection:', error);
-      return { success: false, message: `Connection failed: ${error.message}` };
-    }
-    
-    return { 
-      success: data?.keyExists === true, 
-      message: data?.keyExists ? 'Anthropic API key verified' : 'Anthropic API key not found'
-    };
-  } catch (error) {
-    console.error('Error checking Supabase connection:', error);
-    return { success: false, message: 'Connection failed' };
   }
 };

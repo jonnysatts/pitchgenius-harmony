@@ -1,57 +1,95 @@
 
-import { AnthropicRequestParams } from "../types/anthropicTypes.ts";
+/**
+ * Service for interacting with Anthropic Claude API
+ */
+import { corsHeaders } from '../utils/corsUtils.ts';
+import { handleApiResponseError } from './errorHandler.ts';
+import { AnthropicApiOptions } from '../types/anthropicTypes.ts';
 
 /**
- * Call the Anthropic API (Claude) to generate insights
+ * Call the Anthropic Claude API with proper error handling
  */
 export async function callAnthropicAPI(
-  systemPrompt: string,
-  userPrompt: string,
-  model: string = "claude-3-sonnet-20240229",
-  maxTokens: number = 4000
-): Promise<Response> {
-  console.log("Connecting to Anthropic API");
+  content: string, 
+  systemPrompt: string, 
+  options: AnthropicApiOptions = {}
+): Promise<string> {
+  const {
+    model = 'claude-3-sonnet-20240229',
+    temperature = 0.3,
+    maxTokens = 4000
+  } = options;
+
+  const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
   
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY not found in environment variables");
+  if (!ANTHROPIC_API_KEY) {
+    console.error('ANTHROPIC_API_KEY not found in environment');
+    throw new Error('ANTHROPIC_API_KEY not found. Please add it to your Supabase secrets.');
   }
   
-  // Call the Anthropic API (Claude) to generate insights
-  return await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01"
-    },
-    body: JSON.stringify({
-      model: model,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [
-        { role: "user", content: userPrompt }
-      ]
-    })
-  });
+  try {
+    console.log(`Calling Anthropic API with model: ${model}, content length: ${content.length} chars`);
+    console.log(`System prompt length: ${systemPrompt.length} chars`);
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content }],
+        system: systemPrompt,
+        temperature
+      })
+    });
+    
+    if (!response.ok) {
+      return await handleApiResponseError(response);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.content || data.content.length === 0 || !data.content[0].text) {
+      console.error('Empty or invalid response from Anthropic API:', data);
+      throw new Error('Received empty or invalid response from Anthropic API');
+    }
+    
+    console.log('Successfully received response from Anthropic API');
+    return data.content[0].text;
+    
+  } catch (error) {
+    console.error('Error calling Anthropic API:', error);
+    
+    // Provide detailed error information
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Unknown error calling Anthropic API';
+      
+    throw new Error(`Anthropic API error: ${errorMessage}`);
+  }
 }
 
 /**
- * Verify the Anthropic API key exists
+ * Verify if the Anthropic API key is valid
  */
 export function verifyAnthropicApiKey(): boolean {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   
   if (!apiKey) {
-    console.error("ANTHROPIC_API_KEY environment variable is not set");
+    console.error('ANTHROPIC_API_KEY not found in environment');
     return false;
   }
   
-  if (!apiKey.startsWith("sk-ant-")) {
-    console.error("ANTHROPIC_API_KEY does not have the expected format (should start with sk-ant-)");
-    return false;
+  // Basic validation: Claude API keys should start with "sk-ant-" and be reasonably long
+  const isValid = apiKey.startsWith('sk-ant-') && apiKey.length > 20;
+  
+  if (!isValid) {
+    console.error('ANTHROPIC_API_KEY format appears invalid');
   }
   
-  console.log("API key verification passed");
-  return true;
+  return isValid;
 }
