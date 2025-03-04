@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
@@ -91,4 +91,4 @@ const WebInsightsTabs: React.FC<WebInsightsTabsProps> = ({
   );
 };
 
-export default WebInsightsTabs;
+export default memo(WebInsightsTabs);

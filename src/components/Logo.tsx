@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { cn } from "@/lib/utils";
 
 interface LogoProps {
@@ -28,4 +28,4 @@ export const Logo: React.FC<LogoProps> = ({
   );
 };
 
-export default Logo;
+export default memo(Logo);

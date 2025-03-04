@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Project } from "@/lib/types";
 import { ProjectCard } from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
@@ -49,4 +49,4 @@ const ProjectList: React.FC<ProjectListProps> = ({
   );
 };
 
-export default ProjectList;
+export default memo(ProjectList);

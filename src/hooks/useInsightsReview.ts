@@ -28,7 +28,9 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
   }, [insights]);
   
   // Count how many insights still need review
-  const needsReviewCount = Object.values(reviewedInsights).filter(status => status === 'pending').length;
+  const needsReviewCount = useMemo(() => {
+    return Object.values(reviewedInsights).filter(status => status === 'pending').length;
+  }, [reviewedInsights]);
   
   // Get overall confidence based on accepted insights
   const overallConfidence = useMemo(() => {

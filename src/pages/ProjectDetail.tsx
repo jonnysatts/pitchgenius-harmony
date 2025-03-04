@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { findProjectById } from "@/data/mockProjects";
@@ -21,7 +21,7 @@ const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
   
-  const project = findProjectById(projectId || '');
+  const project = useMemo(() => findProjectById(projectId || ''), [projectId]);
   
   // Use the useProjectDetail hook
   const {
@@ -74,8 +74,12 @@ const ProjectDetail = () => {
   }, [setUseRealAI]);
   
   // Ensure we always have a valid confidence value
-  const calculatedConfidence = calculateOverallConfidence(insights);
-  const confidenceToUse = overallConfidence || calculatedConfidence || 0;
+  const calculatedConfidence = useMemo(() => 
+    calculateOverallConfidence(insights), [insights]);
+    
+  const confidenceToUse = useMemo(() => 
+    overallConfidence || calculatedConfidence || 0, 
+    [overallConfidence, calculatedConfidence]);
   
   if (!project) {
     return (
@@ -120,4 +124,4 @@ const ProjectDetail = () => {
   );
 };
 
-export default ProjectDetail;
+export default React.memo(ProjectDetail);

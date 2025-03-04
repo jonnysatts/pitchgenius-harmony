@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { memo } from "react";
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
 import StrategicInsightCard from "@/components/project/StrategicInsightCard";
 
@@ -56,4 +57,4 @@ const InsightCategoryTab: React.FC<InsightCategoryTabProps> = ({
   );
 };
 
-export default InsightCategoryTab;
+export default memo(InsightCategoryTab);

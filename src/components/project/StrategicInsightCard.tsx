@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { StrategicInsight } from "@/lib/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import InsightCardHeader from "@/components/project/insights/InsightCardHeader";
@@ -58,4 +58,5 @@ const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({
   );
 };
 
-export default StrategicInsightCard;
+// Apply React.memo to prevent unnecessary re-renders
+export default memo(StrategicInsightCard);
