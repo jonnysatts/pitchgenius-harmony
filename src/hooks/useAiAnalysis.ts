@@ -1,8 +1,7 @@
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
-import { useToast, toast } from "@/hooks/use-toast";
 
 // Import the new smaller hooks
 import { useAiStatus } from "./ai/useAiStatus";
@@ -10,6 +9,8 @@ import { useAiGeneration } from "./ai/useAiGeneration";
 import { useAiResults } from "./ai/useAiResults";
 import { useFallbackInsights } from "./ai/useFallbackInsights";
 import { useWebsiteAnalysis } from "./ai/useWebsiteAnalysis";
+import { useAiInsights } from "./ai/useAiInsights";
+import { useAiAnalysisMain } from "./ai/useAiAnalysisMain";
 
 export const useAiAnalysis = (project: Project) => {
   // Initialize all the smaller hooks
@@ -18,7 +19,6 @@ export const useAiAnalysis = (project: Project) => {
     setInsights,
     error,
     setError,
-    handleCompletionToast,
     persistInsights,
     addInsights
   } = useAiResults(project);
@@ -52,56 +52,17 @@ export const useAiAnalysis = (project: Project) => {
     setUsingFallbackInsights
   );
   
-  // Add the new website analysis hook
+  // Add the hooks for insights and main analysis
   const {
-    isAnalyzing,
-    websiteInsights,
-    analyzeWebsite
-  } = useWebsiteAnalysis(project, addInsights, setError);
-
-  // Check for stored insights & setup processing status
-  useEffect(() => {
-    if (project?.id) {
-      const storedData = localStorage.getItem(`project_insights_${project.id}`);
-      if (storedData) {
-        try {
-          const parsedData: StoredInsightData = JSON.parse(storedData);
-          
-          // If we have insights stored, mark processing as complete
-          if (parsedData.insights.length > 0) {
-            completeProcessing('Loaded previous insights');
-            setUsingFallbackInsights(parsedData.usingFallbackInsights);
-          }
-        } catch (err) {
-          console.error('Error parsing stored insights status:', err);
-        }
-      }
-    }
-  }, [project.id, completeProcessing, setUsingFallbackInsights]);
-
-  // Check for Anthropic API key on load
-  useEffect(() => {
-    const checkAiAvailability = async () => {
-      try {
-        const anthropicKeyExists = await checkSupabaseConnection();
-        console.log("Anthropic API key check result:", anthropicKeyExists);
-        
-        if (anthropicKeyExists) {
-          setUseRealAI(true);
-          console.log("Anthropic API key detected - will use real AI");
-        } else {
-          console.log("Anthropic API key not detected - will use mock AI");
-          setUseRealAI(false);
-        }
-      } catch (err) {
-        console.error('Error checking Supabase connection:', err);
-        setUseRealAI(false);
-      }
-    };
-    
-    checkAiAvailability();
-  }, [setUseRealAI]);
-
+    handleCompletionToast
+  } = useAiInsights(
+    project,
+    insights,
+    setInsights,
+    persistInsights,
+    usingFallbackInsights
+  );
+  
   // Define the completion callback
   const handleProcessingComplete = useCallback((setActiveTab: (tab: string) => void) => {
     // If there's insufficient content and no insights, offer to do website analysis
@@ -125,80 +86,57 @@ export const useAiAnalysis = (project: Project) => {
     // Navigate to insights tab
     setActiveTab("insights");
   }, [handleCompletionToast, usingFallbackInsights, persistInsights, insights, insufficientContent]);
-
-  // Main function to analyze documents
-  const handleAnalyzeDocuments = async (documents: Document[], setActiveTab: (tab: string) => void) => {
-    // Reset any previous errors, status, and fallback state
-    setError(null);
-    setUsingFallbackInsights(false);
-    
-    // Clear any existing insights from storage to force fresh analysis
-    if (project?.id) {
-      localStorage.removeItem(`project_insights_${project.id}`);
-      console.log("Cleared previous insights from storage for project", project.id);
-    }
-    
-    // Start processing and get monitoring function
-    const monitorProgress = startProcessing(handleProcessingComplete);
-    
-    // Start monitoring
-    monitorProgress(setActiveTab);
-    
-    console.log("Starting document analysis with useRealAI set to:", useRealAI);
-    
-    // Try to generate insights
-    const success = await generateProjectInsights(documents);
-    
-    // If generation failed, use fallback insights
-    if (!success) {
-      console.log("No insights returned, using mock generator as fallback");
-      generateFallbackInsights(documents);
-    }
-  };
-
-  // Add a retry analysis function
+  
+  const { handleAnalyzeDocuments } = useAiAnalysisMain(
+    project,
+    generateProjectInsights,
+    generateFallbackInsights,
+    startProcessing,
+    handleProcessingComplete
+  );
+  
+  // Add the website analysis hook
+  const {
+    isAnalyzing,
+    websiteInsights,
+    analyzeWebsite
+  } = useWebsiteAnalysis(project, addInsights, setError);
+  
+  // Use the retryAnalysis function from useAiInsights
+  const { retryAnalysis: retryAnalysisFactory } = useAiInsights(
+    project,
+    insights,
+    setInsights,
+    persistInsights,
+    usingFallbackInsights
+  );
+  
+  // Create the retryAnalysis function with all dependencies
   const retryAnalysis = useCallback((setActiveTab: (tab: string) => void) => {
-    // Reset states
-    setError(null);
-    setUsingFallbackInsights(false);
+    const retryHandler = retryAnalysisFactory(
+      setActiveTab,
+      startProcessing,
+      handleProcessingComplete,
+      generateProjectInsights,
+      generateFallbackInsights,
+      setAiStatus,
+      setError,
+      setUsingFallbackInsights,
+      useRealAI
+    );
     
-    // Clear any existing insights from storage to force fresh analysis
-    if (project?.id) {
-      localStorage.removeItem(`project_insights_${project.id}`);
-      console.log("Cleared previous insights from storage for project", project.id);
-    }
-    
-    // Update status to processing
-    setAiStatus({
-      status: 'processing',
-      progress: 0,
-      message: 'Retrying document analysis with Claude AI...'
-    });
-    
-    // Start processing and get monitoring function
-    const monitorProgress = startProcessing(handleProcessingComplete);
-    
-    return async (documents: Document[]) => {
-      // Start monitoring
-      monitorProgress(setActiveTab);
-      
-      // Add a toast notification for retry attempt
-      toast({
-        title: "Retrying Claude AI Analysis",
-        description: `Analyzing ${documents.length} documents again with Claude AI...`,
-      });
-      
-      console.log("Retrying document analysis with useRealAI set to:", useRealAI);
-      
-      // Try to generate insights with retry flag
-      const success = await generateProjectInsights(documents, true);
-      
-      // If generation failed, use fallback insights
-      if (!success) {
-        generateFallbackInsights(documents);
-      }
-    };
-  }, [setError, setUsingFallbackInsights, setAiStatus, startProcessing, handleProcessingComplete, generateProjectInsights, generateFallbackInsights, toast, project.id, useRealAI]);
+    return retryHandler;
+  }, [
+    retryAnalysisFactory,
+    startProcessing,
+    handleProcessingComplete,
+    generateProjectInsights,
+    generateFallbackInsights,
+    setAiStatus,
+    setError,
+    setUsingFallbackInsights,
+    useRealAI
+  ]);
 
   return {
     insights,
@@ -213,7 +151,7 @@ export const useAiAnalysis = (project: Project) => {
     retryAnalysis,
     setInsights,
     setError,
-    // Export the new website analysis functionality
+    // Export the website analysis functionality
     isAnalyzingWebsite: isAnalyzing,
     websiteInsights,
     analyzeWebsite
