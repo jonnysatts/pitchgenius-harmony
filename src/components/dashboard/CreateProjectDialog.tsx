@@ -64,7 +64,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
       // Close the dialog
       setIsOpen(false);
       
-      // Navigate to the new project page with params including the website URL
+      // Navigate to the new project page with params - using consistent route
       navigate(`/new-project?title=${encodeURIComponent(projectData.title)}&client=${encodeURIComponent(projectData.clientName)}&industry=${projectData.clientIndustry}${projectData.clientWebsite ? `&website=${encodeURIComponent(projectData.clientWebsite)}` : ''}`);
       
       // Call the parent function to reset the form

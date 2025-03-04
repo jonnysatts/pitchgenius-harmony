@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/context/AuthContext';
 import { addNewProject } from '@/data/mockProjects';
 import { Project } from '@/lib/types';
+import { toast } from 'sonner';
 
 // Imports from UI components
 import AppLayout from '@/components/layout/AppLayout';
@@ -18,6 +19,7 @@ import { Card, CardContent } from '@/components/ui/card';
 const NewProject: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [projectTitle, setProjectTitle] = useState('');
   const [clientName, setClientName] = useState('');
@@ -25,12 +27,22 @@ const NewProject: React.FC = () => {
   const [clientWebsite, setClientWebsite] = useState('');
   const [description, setDescription] = useState('');
   
+  // Parse URL parameters if they exist
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.has('title')) setProjectTitle(params.get('title') || '');
+    if (params.has('client')) setClientName(params.get('client') || '');
+    if (params.has('industry')) setClientIndustry(params.get('industry') || 'retail');
+    if (params.has('website')) setClientWebsite(params.get('website') || '');
+  }, [location]);
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!projectTitle || !clientName || !clientIndustry) {
-      // You should add better validation and user feedback
-      alert('Please fill out all required fields');
+      toast.error('Missing information', {
+        description: 'Please fill out all required fields'
+      });
       return;
     }
     
@@ -51,7 +63,12 @@ const NewProject: React.FC = () => {
     // Save to mock data store
     addNewProject(newProject);
     
-    // Navigate to the project detail page with state to show the new project info
+    // Show success message
+    toast.success('Project created', {
+      description: `${projectTitle} has been created successfully`
+    });
+    
+    // Navigate to the project detail page with state (using the consistent route)
     navigate(`/project/${newProject.id}`, {
       state: {
         newProjectTitle: projectTitle,
@@ -136,7 +153,7 @@ const NewProject: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate('/dashboard')}
                 >
                   Cancel
                 </Button>

@@ -60,7 +60,9 @@ const BASE_MOCK_PROJECTS: Project[] = [
 
 // Helper function to get all projects (including new ones)
 export const getAllProjects = (): Project[] => {
-  return [...getNewProjects(), ...BASE_MOCK_PROJECTS];
+  const newProjects = getNewProjects();
+  console.log(`Retrieved ${newProjects.length} new projects from localStorage`);
+  return [...newProjects, ...BASE_MOCK_PROJECTS];
 };
 
 // Combine base mock projects with any new projects
@@ -76,13 +78,15 @@ export const addNewProject = (project: Project): void => {
     if (existingIndex >= 0) {
       // Update existing project
       newProjects[existingIndex] = project;
+      console.log(`Updated existing project in localStorage: ${project.id}`);
     } else {
       // Add new project to beginning
       newProjects.unshift(project);
+      console.log(`Added new project to localStorage: ${project.id}`);
     }
     
     localStorage.setItem('newProjects', JSON.stringify(newProjects));
-    console.log("Project saved to localStorage:", project.id);
+    console.log(`Saved ${newProjects.length} projects to localStorage`);
   } catch (e) {
     console.error("Error saving project to localStorage:", e);
   }
@@ -90,9 +94,31 @@ export const addNewProject = (project: Project): void => {
 
 // Helper to find a project by ID
 export const findProjectById = (id: string): Project | undefined => {
+  if (!id) {
+    console.error("findProjectById called with empty ID");
+    return undefined;
+  }
+  
   // Get all projects including new ones from storage
   const allProjects = getAllProjects();
-  const foundProject = allProjects.find(p => p.id === id);
-  console.log("Finding project by ID:", id, "Found:", !!foundProject);
-  return foundProject;
+  
+  // First check projects from localStorage
+  const localProject = allProjects.find(p => p.id === id);
+  if (localProject) {
+    console.log(`Found project in combined projects: ${id}`);
+    return localProject;
+  }
+  
+  // If not found, try to find in BASE_MOCK_PROJECTS
+  const baseProject = BASE_MOCK_PROJECTS.find(p => p.id === id);
+  if (baseProject) {
+    console.log(`Found project in base mock projects: ${id}`);
+    return baseProject;
+  }
+  
+  // Still not found, log debug info
+  console.error(`Project not found with ID: ${id}`);
+  console.log(`Available project IDs:`, allProjects.map(p => p.id));
+  
+  return undefined;
 };
