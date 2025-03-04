@@ -17,15 +17,13 @@ export const useWebsiteInsightsProcessor = (
     setIsAnalyzing: (analyzing: boolean) => void
   ) => {
     const progressInterval = setInterval(() => {
+      // Fix: Pass a direct number instead of a function
       setAnalysisProgress(prev => {
-        if (prev < 10) {
-          return prev + 5;
-        } else if (prev < 20) {
-          return prev + 2;
-        } else if (prev < 30) {
-          return prev + 0.5;
-        }
-        return Math.min(prev + 0.1, 95);
+        const newValue = prev < 10 ? prev + 5 : 
+                         prev < 20 ? prev + 2 : 
+                         prev < 30 ? prev + 0.5 : 
+                         Math.min(prev + 0.1, 95);
+        return newValue;
       });
     }, 200);
 

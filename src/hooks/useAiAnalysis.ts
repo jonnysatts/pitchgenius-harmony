@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
@@ -12,7 +11,7 @@ import { useAiResults } from "./ai/useAiResults";
 import { useFallbackInsights } from "./ai/useFallbackInsights";
 import { useWebsiteAnalysis } from "./ai/useWebsiteAnalysis";
 import { useAiInsights } from "./ai/useAiInsights";
-import { useAiAnalysisMain } from "./ai/useAiAnalysisMain";
+import { useAiAnalysisMain } from "./ai/analysis"; // Updated import
 
 export const useAiAnalysis = (project: Project) => {
   // Get toast for notifications
