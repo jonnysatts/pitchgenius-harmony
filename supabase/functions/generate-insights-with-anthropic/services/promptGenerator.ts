@@ -1,7 +1,14 @@
-
 /**
  * Service for generating prompts for Claude AI
  */
+
+/**
+ * Interface for document content
+ */
+interface DocumentContent {
+  name?: string;
+  content?: string;
+}
 
 /**
  * Generate the system prompt for Claude
@@ -22,32 +29,37 @@ Avoid generic advice - all insights should be directly tied to specific content 
  * Generate the main prompt for Claude based on document contents
  */
 export function generatePrompt(
-  documentContents: any[],
+  documentContents: DocumentContent[],
   clientIndustry: string = 'technology',
   clientWebsite: string = '',
   projectTitle: string = 'Document Analysis',
   processingMode: 'comprehensive' | 'focused' = 'comprehensive'
 ): string {
+  if (!documentContents || documentContents.length === 0) {
+    throw new Error('No document contents provided for analysis.');
+  }
+
   // Create a header for the prompt
   let prompt = `I need you to analyze documents for a project titled "${projectTitle}" in the ${clientIndustry} industry.\n\n`;
-  
+
   // Add context about the client's website if available
   if (clientWebsite) {
     prompt += `The client's website is ${clientWebsite}. Please consider this when generating insights.\n\n`;
   }
-  
+
   // Add the document contents
   prompt += `DOCUMENT CONTENTS:\n\n`;
-  
+
   // Include each document with clear separation
   documentContents.forEach((doc, index) => {
-    prompt += `DOCUMENT ${index + 1}: ${doc.name || 'Untitled Document'}\n`;
-    prompt += `${doc.content || 'No content available'}\n\n`;
-    prompt += `---- END OF DOCUMENT ${index + 1} ----\n\n`;
+    const docName = doc.name || 'Untitled Document';
+    const docContent = doc.content || 'No content available';
+    prompt += `DOCUMENT ${index + 1}: ${docName}\n${docContent}\n\n---- END OF DOCUMENT ${index + 1} ----\n\n`;
   });
-  
+
   // Specify the required JSON output format
-  prompt += `Based on these documents, generate strategic insights structured as JSON in the following format:
+  const jsonFormat = `
+Based on these documents, generate strategic insights structured as JSON in the following format:
 \`\`\`json
 {
   "insights": [
@@ -95,6 +107,8 @@ For each insight:
 
 Your insights must be specific to the document content provided, not generic advice.
 ONLY output the JSON, nothing else.`;
+
+  prompt += jsonFormat;
 
   return prompt;
 }
