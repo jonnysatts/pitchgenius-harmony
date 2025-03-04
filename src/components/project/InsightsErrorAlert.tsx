@@ -2,7 +2,7 @@
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw, LoaderCircle, ServerCrash } from "lucide-react";
+import { AlertTriangle, RefreshCw, LoaderCircle, ServerCrash, XCircle } from "lucide-react";
 
 interface InsightsErrorAlertProps {
   error?: string | null;
@@ -26,6 +26,13 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
   // Determine if this is an Edge Function error
   const isEdgeFunctionError = error?.includes('Edge Function') || error?.includes('non-2xx status code');
   
+  // Determine if this is a Claude API error
+  const isClaudeApiError = error?.includes('Claude API') || error?.includes('invalid_request_error');
+  
+  // Determine if this is a content error
+  const isContentError = error?.includes('insufficient') || error?.includes('content too short') || 
+                         error?.includes('Failed to fetch website content');
+  
   if (isClaudeProcessing) {
     return (
       <Alert variant="default" className="mb-4 border-blue-300 bg-blue-50">
@@ -40,19 +47,36 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
   }
   
   return (
-    <Alert variant={isEdgeFunctionError ? "destructive" : "default"} 
-           className={`mb-4 ${isEdgeFunctionError ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'}`}>
-      {isEdgeFunctionError ? 
-        <ServerCrash className="h-4 w-4 text-red-500" /> : 
+    <Alert 
+      variant={isEdgeFunctionError || isClaudeApiError ? "destructive" : "default"} 
+      className={`mb-4 ${isEdgeFunctionError || isClaudeApiError ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'}`}
+    >
+      {isEdgeFunctionError ? (
+        <ServerCrash className="h-4 w-4 text-red-500" />
+      ) : isClaudeApiError ? (
+        <XCircle className="h-4 w-4 text-red-500" /> 
+      ) : (
         <AlertTriangle className="h-4 w-4 text-amber-500" />
-      }
+      )}
+      
       <div className="w-full">
+        {/* Error Title */}
         {isEdgeFunctionError && <AlertTitle className="text-red-700">Supabase Edge Function Error</AlertTitle>}
         {isApiKeyMissing && <AlertTitle className="text-red-700">Anthropic API Key Missing</AlertTitle>}
-        <AlertDescription className={`flex justify-between items-center ${isEdgeFunctionError ? 'text-red-700' : 'text-amber-800'}`}>
+        {isClaudeApiError && <AlertTitle className="text-red-700">Claude AI API Error</AlertTitle>}
+        {isContentError && <AlertTitle className="text-amber-700">Website Content Issue</AlertTitle>}
+        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && 
+          <AlertTitle className="text-amber-700">Analysis Issue</AlertTitle>}
+        
+        <AlertDescription 
+          className={`flex justify-between items-center ${
+            isEdgeFunctionError || isClaudeApiError ? 'text-red-700' : 'text-amber-800'
+          }`}
+        >
           <div>
             {error || "Using sample insights due to API timeout. Please try again later for Claude AI analysis."}
             
+            {/* Specific additional content based on error type */}
             {isApiKeyMissing && (
               <div className="mt-2 text-sm">
                 <p>The ANTHROPIC_API_KEY is missing from your Supabase secrets.</p>
@@ -76,13 +100,37 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
                 </ul>
               </div>
             )}
+            
+            {isClaudeApiError && (
+              <div className="mt-2 text-sm">
+                <p>There was a problem calling the Claude AI API:</p>
+                <ul className="list-disc pl-5 mt-1">
+                  <li>The API key might be incorrect or expired</li>
+                  <li>The request may have exceeded Claude's token limits</li>
+                  <li>There may be temporary service issues with Anthropic's API</li>
+                </ul>
+              </div>
+            )}
+            
+            {isContentError && (
+              <div className="mt-2 text-sm">
+                <p>There was an issue with the website content:</p>
+                <ul className="list-disc pl-5 mt-1">
+                  <li>The website might block automated scraping</li>
+                  <li>The content might be loaded dynamically via JavaScript</li>
+                  <li>The website might be temporarily down or have minimal content</li>
+                  <li>Try analyzing a different website with more accessible content</li>
+                </ul>
+              </div>
+            )}
           </div>
+          
           {onRetryAnalysis && (
             <Button 
               size="sm" 
               variant="outline" 
               className={`flex items-center gap-1 ml-4 ${
-                isEdgeFunctionError 
+                isEdgeFunctionError || isClaudeApiError
                   ? 'border-red-500 text-red-700 hover:bg-red-100' 
                   : 'border-amber-500 text-amber-700 hover:bg-amber-100'
               }`}

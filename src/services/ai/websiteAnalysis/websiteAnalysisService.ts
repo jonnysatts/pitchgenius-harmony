@@ -62,7 +62,7 @@ export const analyzeClientWebsite = async (
       
       toast({
         title: "Using Sample Analysis",
-        description: "Could not connect to AI service. Using sample insights instead.",
+        description: "Could not connect to Supabase. Using sample insights instead.",
         variant: "destructive",
         duration: 5000,
       });
@@ -93,14 +93,19 @@ export const analyzeClientWebsite = async (
       
       console.log('Edge function payload:', JSON.stringify(payload));
       
-      // Call the enhanced website analysis
-      const result = await Promise.race([
-        (async () => {
+      // Direct call to edge function with better error handling
+      try {
+        console.log('Invoking analyze-website-with-anthropic edge function...');
+        
+        // Log complete function invocation details including URL construction
+        const functionUrl = 'analyze-website-with-anthropic';
+        console.log(`Invoking edge function at URL: ${functionUrl}`);
+        console.log(`Payload size: ${JSON.stringify(payload).length} characters`);
+
+        // Call the enhanced website analysis 
+        const apiPromise = (async () => {
           try {
-            console.log('Invoking analyze-website-with-anthropic edge function...');
-            
-            // Direct call to edge function with better error handling
-            const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+            const { data, error } = await supabase.functions.invoke(functionUrl, {
               body: payload
             });
             
@@ -138,7 +143,9 @@ export const analyzeClientWebsite = async (
             
             // Success - log the insights
             console.log(`Received ${data.insights.length} insights from Edge Function`);
-            console.log('First insight sample:', JSON.stringify(data.insights[0]));
+            if (data.insights.length > 0) {
+              console.log('First insight sample:', JSON.stringify(data.insights[0]));
+            }
             
             toast({
               title: "Analysis Complete",
@@ -147,16 +154,36 @@ export const analyzeClientWebsite = async (
             });
             
             return { insights: data.insights };
-          } catch (error) {
-            console.error('Error in website analysis:', error);
-            console.error('Stack trace if available:', error instanceof Error ? error.stack : 'No stack available');
-            throw error;
+          } catch (innerError) {
+            console.error('Inner error in website analysis:', innerError);
+            throw innerError;
           }
-        })(),
-        timeoutPromise
-      ]);
-      
-      return result;
+        })();
+        
+        // Race between the API call and timeout
+        const result = await Promise.race([apiPromise, timeoutPromise]);
+        return result;
+      } catch (apiError) {
+        // Handle different error types
+        console.error('Edge function error details:', apiError);
+        
+        // Try to get more specific error information
+        let errorMessage = 'Edge Function returned a non-2xx status code';
+        if (apiError instanceof Error) {
+          errorMessage = apiError.message;
+        } else if (typeof apiError === 'object' && apiError !== null) {
+          errorMessage = JSON.stringify(apiError);
+        }
+        
+        toast({
+          title: "Analysis Error",
+          description: "Error connecting to edge function. Trying alternative approach...",
+          variant: "destructive",
+          duration: 5000,
+        });
+        
+        throw new Error(errorMessage);
+      }
     } catch (apiError) {
       console.log('Error during website analysis, trying fallback approach');
       console.error('API error details:', apiError);

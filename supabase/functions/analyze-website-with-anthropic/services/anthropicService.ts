@@ -33,6 +33,8 @@ export function generateOutputFormat(): string {
       }
     }
     
+    If a website has minimal content, still provide insights based on what's available. If content is sparse, focus on the most promising categories and note the limited information.
+    
     CRITICAL INSTRUCTIONS:
     1. ONLY include information actually present on the website - DO NOT HALLUCINATE or INVENT details
     2. If you cannot find specific information for a category, explicitly note this in the details
@@ -52,17 +54,67 @@ export async function analyzeWebsiteWithAnthropic(
   clientName: string,
   clientIndustry: string
 ): Promise<string> {
-  // Combine the system prompt with the output format
-  const fullSystemPrompt = `${systemPrompt}\n\n${generateOutputFormat()}`;
-  
-  // Call Claude API with the prepared content and prompt
-  const completion = await anthropic.completions.create({
-    model: 'claude-2.1',
-    max_tokens_to_sample: 4000,
-    system: fullSystemPrompt,
-    prompt: `\n\nHuman: I need to analyze this website for a gaming strategy project. The website belongs to ${clientName || "a company"} in the ${clientIndustry} industry. Here's the website content:\n\n${websiteContent}\n\nPlease analyze this content and generate strategic insights that would be valuable for a gaming company considering a potential partnership. Focus on identifying specific opportunities, challenges, and unique strategic positions.\n\nAssistant: I'll analyze this website content and generate strategic insights with specific details for your gaming client.`,
-    temperature: 0.3
-  });
-  
-  return completion.completion;
+  try {
+    // Verify we have minimum content
+    if (!websiteContent || websiteContent.length < 50) {
+      console.error('Website content is too short for analysis:', websiteContent.length);
+      throw new Error('Website content is too short or empty for meaningful analysis');
+    }
+
+    // Check content size and truncate if needed to avoid API limits
+    const maxContentSize = 25000; // Reduce from previous 50k to ensure we don't hit token limits
+    const truncatedContent = websiteContent.length > maxContentSize 
+      ? websiteContent.substring(0, maxContentSize) + "\n[Content truncated due to size limits]" 
+      : websiteContent;
+
+    console.log(`Content prepared for Claude: ${truncatedContent.length} chars`);
+    
+    // Log a sample of the content
+    console.log(`Content sample: ${truncatedContent.substring(0, 200)}...`);
+
+    // Combine the system prompt with the output format
+    const fullSystemPrompt = `${systemPrompt}\n\n${generateOutputFormat()}`;
+    
+    // Call Claude API with improved error handling and logging
+    console.log('Making API call to Claude with model: claude-2.1');
+    
+    // Use a more structured prompt format
+    const prompt = `\n\nHuman: I need to analyze this website for a gaming strategy project. The website belongs to ${clientName || "a company"} in the ${clientIndustry} industry. Here's the website content:\n\n${truncatedContent}\n\nPlease analyze this content and generate strategic insights that would be valuable for a gaming company considering a potential partnership. Focus on identifying specific opportunities, challenges, and unique strategic positions.\n\nAssistant:`;
+    
+    console.log('Prompt structure created, about to make API call');
+    
+    try {
+      const completion = await anthropic.completions.create({
+        model: 'claude-2.1',
+        max_tokens_to_sample: 4000,
+        system: fullSystemPrompt,
+        prompt: prompt,
+        temperature: 0.3
+      });
+      
+      console.log('Claude API call successful, received response');
+      
+      // Check if we got a valid response
+      if (!completion || !completion.completion) {
+        console.error('Claude response was empty or invalid');
+        throw new Error('Claude API returned an empty response');
+      }
+      
+      console.log(`Claude response length: ${completion.completion.length} chars`);
+      return completion.completion;
+    } catch (apiError) {
+      console.error('Claude API error details:', JSON.stringify(apiError));
+      
+      // Check for specific API error types
+      if (apiError.toString().includes('invalid_request_error')) {
+        throw new Error(`Claude API invalid request: ${apiError.message || 'Check API format and parameters'}`);
+      }
+      
+      // Regular error handling
+      throw new Error(`Claude API error: ${apiError.message || apiError.toString()}`);
+    }
+  } catch (error) {
+    console.error('Error in analyzeWebsiteWithAnthropic:', error);
+    throw error;
+  }
 }

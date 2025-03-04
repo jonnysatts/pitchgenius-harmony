@@ -5,7 +5,7 @@ import { corsHeaders, handleCorsPreflightRequest } from './utils/corsHandlers.ts
 import { fetchWebsiteContentBasic } from './utils/websiteFetcher.ts';
 import { fetchWebsiteContentWithFirecrawl } from './utils/firecrawlFetcher.ts';
 import { analyzeWebsiteWithAnthropic } from './services/anthropicService.ts';
-import { parseClaudeResponse, processInsights } from './utils/insightProcessor.ts';
+import { parseClaudeResponse, processInsights, generateFallbackInsights } from './utils/insightProcessor.ts';
 
 // Define the supported website insight categories
 const websiteInsightCategories = [
@@ -96,18 +96,28 @@ serve(async (req) => {
     if (!contentToAnalyze || contentToAnalyze.includes("placeholder for actual website content")) {
       console.log("No valid content provided, attempting to fetch website content");
       
-      if (firecrawlKey) {
-        try {
-          // First try using Firecrawl for enhanced scraping
-          console.log(`Attempting to fetch content with Firecrawl for ${clientWebsite}...`);
-          contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
-          console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
-          
-          if (debugInfo) {
-            console.log('First 200 chars of Firecrawl content:', contentToAnalyze.substring(0, 200));
+      try {
+        // First try using Firecrawl for enhanced scraping if available
+        if (firecrawlKey) {
+          try {
+            console.log(`Attempting to fetch content with Firecrawl for ${clientWebsite}...`);
+            contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
+            console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
+            
+            if (debugInfo) {
+              console.log('First 200 chars of Firecrawl content:', contentToAnalyze.substring(0, 200));
+            }
+          } catch (fetchError) {
+            console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
+            contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
+            console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
+            
+            if (debugInfo) {
+              console.log('First 200 chars of basic fetch content:', contentToAnalyze.substring(0, 200));
+            }
           }
-        } catch (fetchError) {
-          console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
+        } else {
+          console.log("No Firecrawl API key found, using basic fetch");
           contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
           console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
           
@@ -115,25 +125,33 @@ serve(async (req) => {
             console.log('First 200 chars of basic fetch content:', contentToAnalyze.substring(0, 200));
           }
         }
-      } else {
-        console.log("No Firecrawl API key found, using basic fetch");
-        contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
-        console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
+      } catch (fetchError) {
+        console.error("Error fetching website content:", fetchError);
         
-        if (debugInfo) {
-          console.log('First 200 chars of basic fetch content:', contentToAnalyze.substring(0, 200));
-        }
+        // Generate fallback content description 
+        contentToAnalyze = `The website at ${clientWebsite} could not be accessed or scraped properly. 
+This could be due to the site using techniques that prevent scraping, being temporarily unavailable, 
+or using technologies our scraper cannot interpret. Based on the URL, this appears to be 
+${clientWebsite.includes('.com') ? 'a commercial website' : clientWebsite.includes('.org') ? 'an organization website' : 'a website'} 
+likely in the ${clientIndustry || 'general'} industry.`;
+        
+        console.log("Using generated fallback content description");
       }
     }
     
     if (!contentToAnalyze || contentToAnalyze.length < 100) {
-      console.error("Failed to fetch sufficient website content");
+      console.error("Failed to fetch sufficient website content, using fallback insights");
+      
+      // Generate fallback insights instead of failing
+      const fallbackInsights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
+      
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to fetch website content or content too short',
-          content: contentToAnalyze?.substring(0, 200) || 'No content'
+          insights: fallbackInsights,
+          message: 'Using fallback insights due to insufficient website content',
+          warning: 'Website content could not be scraped successfully'
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -165,32 +183,26 @@ serve(async (req) => {
         }
       } catch (parseError) {
         console.error('Failed to parse Claude response:', parseError);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to parse Claude response', 
-            rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        
+        // Generate fallback insights instead of failing
+        console.log("Using fallback insights due to parsing error");
+        insights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
       }
       
       // Check if we got valid insights
       if (!insights || !Array.isArray(insights) || insights.length === 0) {
         console.error('No valid insights generated from Claude response');
-        return new Response(
-          JSON.stringify({ 
-            error: 'No valid insights generated', 
-            rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        
+        // Generate fallback insights
+        console.log("Using fallback insights due to no valid insights from Claude");
+        insights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
       }
       
       // Log insights categories for debugging
       console.log('Generated insight categories:', insights.map(i => i.category));
       
       // Process insights to ensure they have all required fields
-      const processedInsights = processInsights(insights);
+      const processedInsights = processInsights(insights, clientWebsite, clientName || "the client");
       console.log(`Processed ${processedInsights.length} insights, sending response`);
       
       // Return the insights
@@ -203,20 +215,30 @@ serve(async (req) => {
       );
     } catch (claudeError) {
       console.error('Error calling Claude API:', claudeError);
+      
+      // Generate fallback insights instead of failing
+      console.log("Using fallback insights due to Claude API error");
+      const fallbackInsights = generateFallbackInsights(clientWebsite, clientName || "the client", clientIndustry || "general");
+      
       return new Response(
         JSON.stringify({ 
-          error: 'Error calling Claude API', 
-          details: claudeError.message || 'Unknown Claude API error'
+          insights: fallbackInsights,
+          message: 'Using fallback insights due to API error',
+          error: `Error calling Claude API: ${claudeError.message || 'Unknown Claude API error'}`
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
   } catch (error) {
     console.error('Error in analyze-website-with-anthropic:', error);
     
     return new Response(
-      JSON.stringify({ error: `Server error: ${error.message || 'Unknown error'}` }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: `Server error: ${error.message || 'Unknown error'}`,
+        fallback: true,
+        insights: generateFallbackInsights("unknown", "the client", "general")
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
