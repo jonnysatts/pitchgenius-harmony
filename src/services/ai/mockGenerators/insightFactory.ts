@@ -1,37 +1,25 @@
-
 /**
- * Factory function for generating comprehensive mock insights
+ * Factory for generating comprehensive mock insights
  */
-import { Document, StrategicInsight, Project } from "@/lib/types";
+import { Document, Project, StrategicInsight } from "@/lib/types";
 import { generateDetailedInsight } from "./insightGenerator";
 
 /**
- * Generate comprehensive mock insights for development/demo purposes
+ * Generate a comprehensive set of strategic insights
  */
-export const generateComprehensiveInsights = (project: Project, documents: Document[]): StrategicInsight[] => {
-  // Categories for insights
-  const categories: Array<StrategicInsight['category']> = [
-    "business_challenges",
-    "audience_gaps",
-    "competitive_threats",
-    "gaming_opportunities",
-    "strategic_recommendations",
-    "key_narratives"
-  ];
-  
-  // Generate 2-3 detailed insights per category (more comprehensive)
+export const generateComprehensiveInsights = (
+  project: Project,
+  documents: Document[]
+): StrategicInsight[] => {
   const insights: StrategicInsight[] = [];
   
-  categories.forEach(category => {
-    // Increase to 3-4 insights per category for more comprehensive analysis
-    const insightsCount = Math.floor(Math.random() * 2) + 3; // 3-4 insights per category
-    
-    for (let i = 0; i < insightsCount; i++) {
-      insights.push(generateDetailedInsight(category, project, documents));
-    }
-  });
+  // Generate a variety of insights across categories
+  insights.push(generateDetailedInsight('business_challenges', project, documents));
+  insights.push(generateDetailedInsight('audience_gaps', project, documents));
+  insights.push(generateDetailedInsight('competitive_threats', project, documents));
+  insights.push(generateDetailedInsight('gaming_opportunities', project, documents));
+  insights.push(generateDetailedInsight('strategic_recommendations', project, documents));
+  insights.push(generateDetailedInsight('key_narratives', project, documents));
   
-  console.log(`Generated ${insights.length} mock insights across ${categories.length} categories`);
   return insights;
 };
-

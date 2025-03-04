@@ -30,6 +30,8 @@ export const useAiResults = (project: Project) => {
       const storageData: StoredInsightData = {
         projectId: project.id,
         insights: newInsights,
+        generationTimestamp: Date.now(),
+        usingFallbackData: usingFallback,
         timestamp: new Date().toISOString(),
         usingFallbackInsights: usingFallback
       };

@@ -37,19 +37,25 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
     
     if (storedDocuments) {
       console.log(`Found documents in localStorage for project ${projectId}`);
-      const documents = JSON.parse(storedDocuments);
+      const parsedDocs = JSON.parse(storedDocuments);
+      
+      // Convert to proper Document type with required fields
+      const documents: Document[] = parsedDocs.map((doc: any) => ({
+        ...doc,
+        projectId: doc.projectId || projectId,
+        createdAt: doc.createdAt || new Date()
+      }));
       
       // Update cache
       documentCache.set(projectId, {
         documents,
-        timestamp: now
+        timestamp: Date.now()
       });
       
       return documents;
     }
     
     // Try to get from Supabase if not in localStorage
-    // This will likely fail in mock/development environment without auth
     try {
       const { data, error } = await supabase
         .from('documents')
@@ -67,11 +73,13 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
       console.log(`Found ${data.length} documents in Supabase for project ${projectId}`);
       
       // Convert retrieved documents to our Document type
-      const documents = data.map(doc => ({
+      const documents: Document[] = data.map(doc => ({
         id: doc.id,
         name: doc.name,
         size: doc.size,
         type: doc.type,
+        projectId: projectId,
+        createdAt: new Date(doc.created_at || Date.now()),
         uploadedAt: doc.uploaded_at,
         uploadedBy: doc.user_id,
         url: doc.url,
@@ -84,7 +92,7 @@ export const fetchProjectDocuments = async (projectId: string): Promise<Document
       // Update cache
       documentCache.set(projectId, {
         documents,
-        timestamp: now
+        timestamp: Date.now()
       });
       
       return documents;

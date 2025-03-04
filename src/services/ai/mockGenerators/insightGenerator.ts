@@ -20,10 +20,10 @@ export const generateDetailedInsight = (
   // Determine industry-specific content
   const industrySpecificContent = getIndustrySpecificContent(project.clientIndustry, category);
   
-  // Create a detailed content structure
-  const content: Record<string, any> = {
-    title: industrySpecificContent.title,
-    summary: industrySpecificContent.summary,
+  // Create a detailed content structure with required title and summary
+  const content = {
+    title: industrySpecificContent.title || "Strategic insight",
+    summary: industrySpecificContent.summary || "Key strategic finding from document analysis",
     details: industrySpecificContent.details,
     evidence: industrySpecificContent.evidence,
     impact: industrySpecificContent.impact,
@@ -36,9 +36,7 @@ export const generateDetailedInsight = (
           relevance: "high"
         }))
       : undefined,
-    dataPoints: industrySpecificContent.dataPoints,
-    // Add explicit source for document-based insights
-    source: 'document_analysis'
+    dataPoints: industrySpecificContent.dataPoints
   };
   
   return {
@@ -51,4 +49,3 @@ export const generateDetailedInsight = (
     source: 'document'
   };
 };
-

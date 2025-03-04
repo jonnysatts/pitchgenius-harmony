@@ -89,6 +89,8 @@ export interface StoredInsightData {
   usingFallbackData: boolean;
   generationTimestamp: number;
   projectId?: string;
+  timestamp?: string;
+  usingFallbackInsights?: boolean;
 }
 
 export interface NarrativeSection {
@@ -102,6 +104,7 @@ export interface User {
   email: string;
   name?: string;
   role?: UserRole;
+  avatar?: string;
 }
 
-export type UserRole = 'admin' | 'user' | 'guest';
+export type UserRole = 'admin' | 'user' | 'guest' | 'standard';

@@ -3,6 +3,6 @@
  * Export all website analysis services
  */
 export { analyzeClientWebsite } from './websiteAnalysisService';
-export { callWebsiteAnalysisApi } from './claudeApiService';
+export { analyzeWebsiteWithAnthropic } from './claudeApiService';
 export { processWebsiteInsights } from './websiteInsightProcessor';
-export { generateWebsiteMockInsights } from './mockGenerator';
+export { generateMockWebsiteInsights } from './mockGenerator';

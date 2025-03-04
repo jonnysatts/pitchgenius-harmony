@@ -1,11 +1,10 @@
-
 /**
  * Service for analyzing client websites and generating insights
  */
 import { Project, StrategicInsight } from "@/lib/types";
 import { checkSupabaseConnection, verifyAnthropicApiKey } from "../config";
 import { createTimeoutPromise } from "../apiClient";
-import { generateWebsiteMockInsights } from "./mockGenerator";
+import { generateMockWebsiteInsights } from "./mockGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -38,7 +37,7 @@ export const analyzeClientWebsite = async (
         duration: 5000,
       });
       
-      const mockInsights = generateWebsiteMockInsights(project);
+      const mockInsights = generateMockWebsiteInsights(project);
       return { 
         insights: mockInsights,
         error: "ANTHROPIC_API_KEY not found in Supabase secrets. Please add it to use Claude AI features."
@@ -66,7 +65,7 @@ export const analyzeClientWebsite = async (
         duration: 5000,
       });
       
-      const websiteMockInsights = generateWebsiteMockInsights(project);
+      const websiteMockInsights = generateMockWebsiteInsights(project);
       return { 
         insights: websiteMockInsights,
         error: "Using sample website insights - no Supabase connection available"
@@ -165,7 +164,7 @@ export const analyzeClientWebsite = async (
         duration: 5000,
       });
       
-      const mockInsights = generateWebsiteMockInsights(project);
+      const mockInsights = generateMockWebsiteInsights(project);
       return { 
         insights: mockInsights,
         error: "API errors during website analysis - using generated sample insights instead. Error: " + (apiError instanceof Error ? apiError.message : String(apiError))
@@ -182,7 +181,7 @@ export const analyzeClientWebsite = async (
       duration: 7000,
     });
     
-    const mockInsights = generateWebsiteMockInsights(project);
+    const mockInsights = generateMockWebsiteInsights(project);
     return { 
       insights: mockInsights,
       error: "Using generated sample website insights due to an error: " + errorMessage

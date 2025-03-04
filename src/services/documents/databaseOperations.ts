@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Document } from "@/lib/types";
 import { DatabaseError, DocumentNotFoundError } from "./errors";
@@ -29,6 +28,8 @@ export const insertDocumentRecord = async (
       name: fileName,
       size: fileSize,
       type: fileType,
+      projectId: projectId,
+      createdAt: new Date(),
       uploadedAt: new Date().toISOString(),
       uploadedBy: userId,
       url,

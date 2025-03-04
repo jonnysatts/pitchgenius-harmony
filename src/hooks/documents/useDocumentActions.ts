@@ -145,12 +145,14 @@ export const useDocumentActions = (
           const uploadResult = await uploadDocumentToStorage(file, userId, projectId);
           const { storagePath, publicUrl } = uploadResult;
           
-          // Create new document entry
+          // Create new document entry with required fields
           const newDoc: Document = {
             id: `temp_${Math.random().toString(36).substr(2, 9)}`, // Temporary ID before insertion
             name: file.name,
             size: file.size,
             type: file.type,
+            projectId: projectId,
+            createdAt: new Date(),
             uploadedAt: timestamp,
             uploadedBy: userId,
             url: publicUrl,

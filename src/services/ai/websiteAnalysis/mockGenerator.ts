@@ -1,7 +1,7 @@
 
 // This file contains mock generators for website insights
 import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Generate a mock website insight with the given category
@@ -64,7 +64,8 @@ export function generateMockWebsiteInsight(category: WebsiteInsightCategory, con
 /**
  * Generate a set of mock website insights
  */
-export function generateMockWebsiteInsights(websiteUrl: string): StrategicInsight[] {
+export function generateMockWebsiteInsights(project: any): StrategicInsight[] {
+  const websiteUrl = project.clientWebsite || "unknown.com";
   // Generate insights for each category
   const insights: StrategicInsight[] = [
     generateMockWebsiteInsight("business_imperatives", 87),

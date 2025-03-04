@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { generateComprehensiveInsights } from "@/services/ai";
+import { generateComprehensiveInsights } from "@/services/ai/mockGenerators/insightFactory";
 
 export const useFallbackInsights = (
   project: Project,

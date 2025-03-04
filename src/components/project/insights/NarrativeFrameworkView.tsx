@@ -1,107 +1,116 @@
 
-import React from "react";
-import { StrategicInsight, InsightCategory, NarrativeSection } from "@/lib/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import InsightsCategoryGroup from "@/components/project/InsightsCategoryGroup";
-import { groupInsightsByCategory, groupInsightsByNarrativeSection } from "@/utils/insightUtils";
-
-interface NarrativeSectionDefinition {
-  id: NarrativeSection;
-  label: string;
-  description: string;
-  sourceCategories: InsightCategory[];
-}
-
-interface StrategicCategoryDefinition {
-  id: InsightCategory;
-  label: string;
-  description?: string;
-  icon?: React.ElementType;
-}
+import { NarrativeSection, StrategicInsight } from "@/lib/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface NarrativeFrameworkViewProps {
   insights: StrategicInsight[];
-  reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
-  narrativeSections: NarrativeSectionDefinition[];
-  strategicCategories: StrategicCategoryDefinition[];
-  onAcceptInsight: (insightId: string) => void;
-  onRejectInsight: (insightId: string) => void;
-  onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
 }
 
-const NarrativeFrameworkView: React.FC<NarrativeFrameworkViewProps> = ({
-  insights,
-  reviewedInsights,
-  narrativeSections,
-  strategicCategories,
-  onAcceptInsight,
-  onRejectInsight,
-  onUpdateInsight
-}) => {
-  const insightsByNarrativeSection = groupInsightsByNarrativeSection(insights, narrativeSections);
+const NarrativeFrameworkView: React.FC<NarrativeFrameworkViewProps> = ({ insights }) => {
+  const [sections, setSections] = useState<NarrativeSection[]>([]);
+  const [activeSection, setActiveSection] = useState<string>("intro");
+
+  // Generate narrative sections from insights
+  useEffect(() => {
+    if (insights && insights.length > 0) {
+      // Create static sections
+      const narrativeSections: NarrativeSection[] = [
+        {
+          id: "intro",
+          title: "Introduction",
+          content: "Strategic overview of gaming audience opportunities and challenges."
+        },
+        {
+          id: "challenge",
+          title: "Core Challenges",
+          content: generateChallengesContent(insights)
+        },
+        {
+          id: "audience",
+          title: "Target Audience",
+          content: generateAudienceContent(insights)
+        },
+        {
+          id: "strategy",
+          title: "Recommended Strategy",
+          content: generateStrategyContent(insights)
+        },
+        {
+          id: "execution",
+          title: "Execution Plan",
+          content: "Phased implementation approach for the recommended strategies."
+        }
+      ];
+      
+      setSections(narrativeSections);
+    }
+  }, [insights]);
+
+  const handleSectionChange = (sectionId: string) => {
+    setActiveSection(sectionId);
+  };
+
+  // Helper functions to extract content from insights
+  const generateChallengesContent = (insights: StrategicInsight[]): string => {
+    const challengeInsights = insights.filter(i => 
+      i.category === 'business_challenges' || 
+      i.category === 'competitive_threats'
+    );
+    
+    return challengeInsights.length > 0
+      ? challengeInsights.map(i => i.content.summary).join("\n\n")
+      : "No specific challenges identified.";
+  };
+
+  const generateAudienceContent = (insights: StrategicInsight[]): string => {
+    const audienceInsights = insights.filter(i => 
+      i.category === 'audience_gaps' || 
+      i.category === 'gaming_audience_opportunity'
+    );
+    
+    return audienceInsights.length > 0
+      ? audienceInsights.map(i => i.content.summary).join("\n\n")
+      : "No specific audience insights identified.";
+  };
+
+  const generateStrategyContent = (insights: StrategicInsight[]): string => {
+    const strategyInsights = insights.filter(i => 
+      i.category === 'strategic_recommendations' || 
+      i.category === 'strategic_activation_pathways'
+    );
+    
+    return strategyInsights.length > 0
+      ? strategyInsights.map(i => i.content.summary).join("\n\n")
+      : "No specific strategy recommendations identified.";
+  };
 
   return (
     <div className="space-y-6">
-      <Card className="mb-6 p-6 border-2 border-muted bg-muted/30">
-        <h3 className="text-xl font-semibold mb-2">Narrative Framework</h3>
-        <p className="text-muted-foreground mb-4">
-          Now that you've reviewed the strategic insights, organize them into a compelling narrative framework. 
-          Each section below represents a key component of your client presentation narrative.
-        </p>
-      </Card>
-
-      <Tabs defaultValue={narrativeSections[0].id} className="space-y-4">
-        <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
-          {narrativeSections.map((section) => (
-            <TabsTrigger 
-              key={section.id} 
-              value={section.id}
-              className="whitespace-nowrap"
-            >
-              {section.label}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Narrative Framework</h2>
+      </div>
+      
+      <Tabs value={activeSection} onValueChange={handleSectionChange} className="w-full">
+        <TabsList className="grid grid-cols-5 mb-6">
+          {sections.map(section => (
+            <TabsTrigger key={section.id} value={section.id} className="text-sm">
+              {section.title}
             </TabsTrigger>
           ))}
         </TabsList>
         
-        {narrativeSections.map((section) => (
-          <TabsContent key={section.id} value={section.id} className="space-y-6">
-            <div className="mb-4 px-4 py-3 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground">
-                {section.description}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                <strong>Draws from:</strong> {section.sourceCategories.map(cat => 
-                  strategicCategories.find(c => c.id === cat)?.label
-                ).join(", ")}
-              </p>
-            </div>
-            
-            {insightsByNarrativeSection[section.id] && insightsByNarrativeSection[section.id].length > 0 ? (
-              // Group by original category within the narrative section
-              Object.entries(
-                groupInsightsByCategory(insightsByNarrativeSection[section.id])
-              ).map(([category, categoryInsights]) => (
-                <InsightsCategoryGroup
-                  key={`${section.id}-${category}`}
-                  category={category}
-                  insights={categoryInsights}
-                  reviewedInsights={reviewedInsights}
-                  onAcceptInsight={onAcceptInsight}
-                  onRejectInsight={onRejectInsight}
-                  onUpdateInsight={onUpdateInsight}
-                  section={section.label}
-                />
-              ))
-            ) : (
-              <div className="text-center py-6 border-2 border-dashed border-muted rounded-md p-6">
-                <p className="text-muted-foreground">No insights mapped to this narrative section yet.</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  This section is critical for building a compelling story. Review your accepted strategic insights 
-                  or engage with Claude AI to generate more insights for this section.
-                </p>
-              </div>
-            )}
+        {sections.map(section => (
+          <TabsContent key={section.id} value={section.id}>
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="text-lg font-medium mb-3">{section.title}</h3>
+                <div className="whitespace-pre-line text-slate-700">
+                  {section.content}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         ))}
       </Tabs>
