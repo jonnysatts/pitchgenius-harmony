@@ -14,11 +14,14 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   isRunningTests,
   testResults
 }) => {
+  // Total number of tests we're running
+  const totalTests = 5;
+  
   return (
     <Card className="p-4 bg-blue-50">
       <h2 className="text-lg font-medium mb-2">Current Test Progress</h2>
       <div className="flex space-x-2 mb-4">
-        {[1, 2, 3, 4].map((step) => (
+        {Array.from({ length: totalTests }, (_, i) => i + 1).map((step) => (
           <div 
             key={step}
             className={`flex-1 h-2 rounded ${
@@ -33,10 +36,11 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
       </div>
       <div className="text-sm text-gray-600">
         {isRunningTests 
-          ? `Running test ${testStep}/4: ${
+          ? `Running test ${testStep}/${totalTests}: ${
               testStep === 1 ? 'Supabase Connection' : 
-              testStep === 2 ? 'Claude API' : 
-              testStep === 3 ? 'Website Analysis' : 
+              testStep === 2 ? 'Firecrawl API' :
+              testStep === 3 ? 'Claude API' : 
+              testStep === 4 ? 'Website Analysis' : 
               'Document Analysis'
             }`
           : testStep > 0 

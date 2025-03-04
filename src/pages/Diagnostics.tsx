@@ -7,6 +7,7 @@ import {
   ProgressIndicator,
   DiagnosticsHeader,
   testSupabaseConnection,
+  testFirecrawlAPI,
   testClaudeDirectAPI,
   testWebsiteAnalysis,
   testDocumentAnalysis
@@ -42,18 +43,23 @@ const Diagnostics = () => {
       const connectionResult = await testSupabaseConnection();
       setTestResults(prev => ({ ...prev, supabaseConnection: connectionResult }));
       
-      // Test 2: Direct Claude API Test
+      // Test 2: Firecrawl API Test
       setTestStep(2);
+      const firecrawlResult = await testFirecrawlAPI();
+      setTestResults(prev => ({ ...prev, firecrawlAPI: firecrawlResult }));
+      
+      // Test 3: Direct Claude API Test
+      setTestStep(3);
       const claudeResult = await testClaudeDirectAPI();
       setTestResults(prev => ({ ...prev, claudeAPI: claudeResult }));
       
-      // Test 3: Website Analysis Test with a test URL
-      setTestStep(3);
+      // Test 4: Website Analysis Test with a test URL
+      setTestStep(4);
       const websiteAnalysisResult = await testWebsiteAnalysis();
       setTestResults(prev => ({ ...prev, websiteAnalysis: websiteAnalysisResult }));
 
-      // Test 4: Document Analysis Test
-      setTestStep(4);
+      // Test 5: Document Analysis Test
+      setTestStep(5);
       const documentAnalysisResult = await testDocumentAnalysis();
       setTestResults(prev => ({ ...prev, documentAnalysis: documentAnalysisResult }));
       
@@ -96,6 +102,14 @@ const Diagnostics = () => {
               result={testResults.supabaseConnection} 
               sectionKey="supabase"
               isExpanded={expandedSections.supabase || false}
+              toggleSection={toggleSection}
+            />
+            
+            <TestResultCard 
+              title="Firecrawl API Connection" 
+              result={testResults.firecrawlAPI} 
+              sectionKey="firecrawl"
+              isExpanded={expandedSections.firecrawl || false}
               toggleSection={toggleSection}
             />
             

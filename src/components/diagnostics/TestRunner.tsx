@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { FirecrawlService } from "@/utils/FirecrawlService";
 
 // Test runners for individual test cases
 export const testSupabaseConnection = async () => {
@@ -17,6 +18,33 @@ export const testSupabaseConnection = async () => {
     };
   } catch (error) {
     console.error("Error testing Supabase connection:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
+export const testFirecrawlAPI = async () => {
+  try {
+    const { data, error } = await supabase.functions.invoke('test-connection', {
+      method: 'POST',
+      body: { 
+        testType: "firecrawl-api-check",
+        timestamp: new Date().toISOString(),
+        debugMode: true
+      }
+    });
+    
+    return {
+      success: !error && data?.firecrawlKeyExists,
+      data,
+      error: error ? error.message : data?.error || null,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error("Error testing Firecrawl API:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
