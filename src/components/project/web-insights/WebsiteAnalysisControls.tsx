@@ -1,8 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Server } from 'lucide-react';
 import { Project, AIProcessingStatus } from '@/lib/types';
-import { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
 import { toast } from "@/hooks/use-toast";
 import {
   AnalysisButton,
@@ -103,21 +101,8 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
 
   return (
     <div className="space-y-4">
-      <FirecrawlApiKeyForm />
-      
       {hasWebsiteUrl && (
         <div className="flex flex-col space-y-4">
-          <div className="flex items-start space-x-2 p-4 bg-green-50 rounded-md border border-green-100">
-            <Server className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-green-800 font-medium">Enhanced Analysis Available</p>
-              <p className="text-sm text-green-600 mt-1">
-                Firecrawl is now active via Supabase for comprehensive website analysis
-                with advanced website scraping capabilities.
-              </p>
-            </div>
-          </div>
-          
           {isAnalyzing && (
             <div className="space-y-3">
               {/* Analysis status alert */}
@@ -148,10 +133,6 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
             hasInsights={hasInsights}
             onAnalyzeWebsite={onAnalyzeWebsite}
           />
-          
-          <p className="text-sm text-gray-500">
-            Using Firecrawl via Supabase for enhanced analysis of {project.clientWebsite}
-          </p>
         </div>
       )}
     </div>

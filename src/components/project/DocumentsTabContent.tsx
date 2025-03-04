@@ -101,7 +101,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
         />
       </div>
       
-      {/* Website Analysis Card - moved to a separate component */}
+      {/* Website Analysis Card - only shown if needed */}
       {(websiteUrl || project?.clientWebsite) && onAnalyzeWebsite && (
         <WebsiteAnalysisCard
           websiteUrl={websiteUrl || project?.clientWebsite}

@@ -3,7 +3,6 @@ import React, { useMemo } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import NoWebsiteCard from "./web-insights/NoWebsiteCard";
 import WebsiteUrlCard from "./web-insights/WebsiteUrlCard";
-import { FirecrawlApiKeyForm } from "./web-insights/FirecrawlApiKeyForm";
 import { WebInsightsHeader } from "./web-insights/WebInsightsHeader";
 import WebInsightsTabs from "./web-insights/WebInsightsTabs";
 import { NoInsightsEmptyState } from "./web-insights/NoInsightsEmptyState";
@@ -86,7 +85,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
       ) : (
         <>
           <WebsiteUrlCard websiteUrl={websiteUrl} />
-          <FirecrawlApiKeyForm />
+          
           <WebsiteAnalysisControls 
             project={{
               id: '1',
