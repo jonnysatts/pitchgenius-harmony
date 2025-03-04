@@ -18,6 +18,18 @@ serve(async (req) => {
   try {
     if (DEBUG_MODE) console.log('🔍 Claude Direct Test function received request');
     
+    // Parse request options if provided
+    let requestOptions = {};
+    try {
+      requestOptions = await req.json();
+      console.log('Request options:', requestOptions);
+    } catch {
+      console.log('No valid JSON in request body, using defaults');
+    }
+    
+    // Get test mode from request if provided
+    const testMode = requestOptions.test_mode === true;
+    
     // Get Claude API key from environment
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     
@@ -26,7 +38,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'ANTHROPIC_API_KEY not found in environment'
+          error: 'ANTHROPIC_API_KEY not found in environment',
+          testMode,
+          timestamp: new Date().toISOString()
         }),
         { 
           status: 400,
@@ -48,10 +62,36 @@ serve(async (req) => {
       console.warn('⚠️ API key does not have expected format (should start with sk-ant-)');
     }
     
+    // If in test mode, skip actual API call and return validation info
+    if (testMode) {
+      console.log('🔍 Test mode detected, skipping actual API call');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Test mode - API key validated but not used",
+          apiKeyPrefix,
+          apiKeyFormatValid: isValidFormat,
+          testMode: true,
+          apiKeyLength: ANTHROPIC_API_KEY.length,
+          timestamp: new Date().toISOString()
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     // Test with a very simple prompt
     if (DEBUG_MODE) console.log('📡 Sending test request to Claude API');
     
+    // Set model from request or use default
+    const model = requestOptions.model || 'claude-3-haiku-20240307';
+    
     try {
+      // Add a timeout to the request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort('Request timed out'), 30000);
+      
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -60,7 +100,7 @@ serve(async (req) => {
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
+          model: model,
           max_tokens: 100,
           messages: [
             {
@@ -69,8 +109,12 @@ serve(async (req) => {
             }
           ],
           temperature: 0
-        })
+        }),
+        signal: controller.signal
       });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
       if (DEBUG_MODE) {
         console.log(`📡 Claude API response status: ${response.status}`);
@@ -113,7 +157,11 @@ serve(async (req) => {
             error: `Claude API returned ${response.status}: ${errorText}`,
             status: response.status,
             statusText: response.statusText,
-            errorDetails: errorJson || errorText
+            errorDetails: errorJson || errorText,
+            apiKeyPrefix,
+            apiKeyFormatValid: isValidFormat,
+            model,
+            timestamp: new Date().toISOString()
           }),
           { 
             status: 500,
@@ -133,9 +181,12 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           message: 'Successfully connected to Claude API',
+          content: data.content[0].text,
           rawContent: data,
           apiKeyPrefix,
-          apiKeyFormatValid: isValidFormat
+          apiKeyFormatValid: isValidFormat,
+          model,
+          timestamp: new Date().toISOString()
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -154,7 +205,9 @@ serve(async (req) => {
           error: `Error calling Claude API: ${errorMessage}`,
           errorStack: errorStack,
           apiKeyPrefix,
-          apiKeyFormatValid: isValidFormat
+          apiKeyFormatValid: isValidFormat,
+          model,
+          timestamp: new Date().toISOString()
         }),
         { 
           status: 500,

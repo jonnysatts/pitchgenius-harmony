@@ -16,6 +16,17 @@ serve(async (req) => {
   try {
     console.log('Test connection function received request');
     
+    // Parse request body if any
+    let reqBody = {};
+    if (req.headers.get("content-type")?.includes("application/json")) {
+      try {
+        reqBody = await req.json();
+        console.log('Request body:', reqBody);
+      } catch (e) {
+        console.log('No valid JSON in request body');
+      }
+    }
+    
     // Check for Anthropic API key and format
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     const anthropicKeyExists = !!ANTHROPIC_API_KEY;
@@ -48,7 +59,8 @@ serve(async (req) => {
         preview: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.substring(0, 5) + '...' + Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.slice(-3) : 'none'
       },
       FIRECRAWL_API_KEY: {
-        exists: !!Deno.env.get('FIRECRAWL_API_KEY')
+        exists: !!Deno.env.get('FIRECRAWL_API_KEY'),
+        preview: Deno.env.get('FIRECRAWL_API_KEY') ? Deno.env.get('FIRECRAWL_API_KEY')?.substring(0, 5) + '...' + Deno.env.get('FIRECRAWL_API_KEY')?.slice(-3) : 'none'
       },
       FIRECRAWL_API_KPI: {
         exists: !!Deno.env.get('FIRECRAWL_API_KPI'),
@@ -66,6 +78,17 @@ serve(async (req) => {
       !environmentChecks[key as keyof typeof environmentChecks].exists
     );
     
+    // Gather system info for debugging
+    const systemInfo = {
+      denoVersion: Deno.version.deno,
+      v8Version: Deno.version.v8,
+      typescriptVersion: Deno.version.typescript,
+      edgeFunction: "test-connection",
+      timestamp: new Date().toISOString(),
+      requestMethod: req.method,
+      requestUrl: req.url
+    };
+    
     return new Response(
       JSON.stringify({
         message: "Connection test successful",
@@ -76,7 +99,13 @@ serve(async (req) => {
         anthropicKeyValidFormat,
         anthropicKeyValidLength,
         keysFound,
-        keysMissing
+        keysMissing,
+        systemInfo,
+        requestDetails: {
+          method: req.method,
+          url: req.url,
+          body: reqBody
+        }
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -88,7 +117,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        stack: error instanceof Error ? error.stack : undefined
       }),
       { 
         status: 500, 

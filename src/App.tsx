@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 import NewProject from "./pages/NewProject";
+import Diagnostics from "./pages/Diagnostics";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/:projectId" element={<ProjectDetail />} />
             <Route path="/projects/new" element={<NewProject />} />
+            <Route path="/diagnostics" element={<Diagnostics />} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
             {/* Add a specific route for NotFound */}
             <Route path="/not-found" element={<NotFound />} />
