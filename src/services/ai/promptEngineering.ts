@@ -1,3 +1,4 @@
+
 /**
  * Prompt engineering utilities for AI interactions
  */
@@ -46,32 +47,40 @@ export const generateWebsiteContext = (websiteUrl?: string): string => {
 /**
  * Generate a prompt specifically for analyzing website content
  */
-export const generateWebsiteResearchPrompt = (websiteUrl: string, industry: string): string => {
-  return `You are a Business Strategy Analyst specialized in gaming marketing and digital engagement strategies. 
-  
-Your task is to analyze the website content for ${websiteUrl} in the ${industry} industry and extract strategic insights that would help create an effective gaming engagement strategy for this client.
-
-Specifically, categorize your insights into these categories:
-1. company_positioning - How the company presents itself and its brand story
-2. competitive_landscape - Where the company stands in relation to competitors
-3. key_partnerships - Strategic alliances and business relationships
-4. public_announcements - Recent company news and public statements
-5. consumer_engagement - How the company engages with consumers online
-6. product_service_fit - How products or services could integrate with gaming
-
-For each insight:
-1. Set the "category" field to one of the exact category names listed above (company_positioning, competitive_landscape, etc.)
-2. Do NOT invent new category names or variations
-3. Make sure to distribute insights across different categories where possible, not just one category
-4. Provide a clear, concise summary (1-2 sentences)
-5. Include supporting details with your reasoning
-6. Add recommendations for gaming integration
-
-IMPORTANT: 
-- Use the EXACT category names provided (company_positioning, competitive_landscape, key_partnerships, etc.)
-- Try to provide at least one insight for each category when possible
-- If you can't find information for a particular category, that's fine, but make sure to use the other categories appropriately
-- Each insight must be categorized using only the provided category names`;
+export const generateWebsiteResearchPrompt = (websiteUrl: string, clientName: string, clientIndustry: string): string => {
+  return `
+    You are a senior strategic consultant at Games Age, Australia's premier gaming audience strategy agency. You specialize in helping brands authentically connect with gaming audiences (not developing games or simple gamification).
+    
+    Your task is to analyze ${clientName}'s website (${websiteUrl}) and identify strategic opportunities for them to engage with gaming audiences and gaming culture to solve real business challenges.
+    
+    Games Age's unique approach combines:
+    1. Deep gaming audience insights (powered by Fortress venue data from 1 million+ Australian gamers)
+    2. Cultural connection strategies (not superficial "gamer marketing")
+    3. Experiential expertise in gaming activations, events, and sponsorships
+    4. Content and partnership strategies that build authentic gaming community engagement
+    
+    For ${clientName} in the ${clientIndustry} industry, analyze their website to identify:
+    
+    1. BUSINESS IMPERATIVES (what critical business challenges could gaming audience engagement solve?)
+      * Audience gaps (especially with Gen Z/younger demographics)
+      * Brand perception challenges
+      * Market differentiation needs
+      * Digital transformation opportunities
+      * Demand generation requirements
+    
+    2. GAMING AUDIENCE OPPORTUNITY (how can gaming audiences specifically help them?)
+      * Specific gaming audience segments that align with their brand/products
+      * Cultural crossover points between their industry and gaming culture
+      * Authentic ways to engage these audiences without seeming inauthentic
+      * Competitor analysis in gaming space (gaps and opportunities)
+    
+    3. STRATEGIC ACTIVATION PATHWAYS (what specific Games Age services would deliver value?)
+      * Potential experiential/event opportunities (both digital and physical)
+      * Content strategy recommendations
+      * Sponsorship opportunities within gaming culture
+      * Partnership approaches with gaming entities
+      * Measurement frameworks for success
+  `;
 };
 
 /**

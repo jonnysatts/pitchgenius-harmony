@@ -13,6 +13,9 @@ export const useWebsiteInsightsProcessor = () => {
   const processWebsiteInsights = (insights: StrategicInsight[]): StrategicInsight[] => {
     if (!insights || insights.length === 0) return [];
     
+    // Define valid categories
+    const validCategories = new Set(['business_imperatives', 'gaming_audience_opportunity', 'strategic_activation_pathways']);
+    
     // Ensure all insights are properly marked as website-derived
     return insights.map(insight => {
       // Skip any clearly malformed insights
@@ -26,6 +29,22 @@ export const useWebsiteInsightsProcessor = () => {
         return createReplacementInsight(insight.category as WebsiteInsightCategory);
       }
       
+      // Normalize category
+      let category = insight.category || 'business_imperatives';
+      if (!validCategories.has(category)) {
+        // Map to closest category
+        if (category.includes('business') || category.includes('imperative')) {
+          category = 'business_imperatives';
+        } else if (category.includes('audience') || category.includes('opportunity')) {
+          category = 'gaming_audience_opportunity';
+        } else if (category.includes('activation') || category.includes('pathway')) {
+          category = 'strategic_activation_pathways';
+        } else {
+          // Default fallback
+          category = 'business_imperatives';
+        }
+      }
+      
       // Clean up the summary to remove duplicate website-derived markers
       let summary = insight.content.summary || '';
       summary = summary.replace(/\[Website-derived\]/g, '').trim();
@@ -35,6 +54,7 @@ export const useWebsiteInsightsProcessor = () => {
       // Fix recommendations to replace "A gaming company" with "Games Age"
       let recommendations = insight.content.recommendations || '';
       recommendations = recommendations.replace(/A gaming company/g, 'Games Age');
+      recommendations = recommendations.replace(/The gaming company/g, 'Games Age');
       
       // Ensure the insight has the correct source
       return {
@@ -42,7 +62,7 @@ export const useWebsiteInsightsProcessor = () => {
         source: 'website' as 'website',  // Explicitly set source to 'website'
         // Add default values for any missing properties
         id: insight.id || `website-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        category: insight.category || 'company_positioning',
+        category: category as WebsiteInsightCategory,
         confidence: insight.confidence || 80,
         needsReview: insight.needsReview !== undefined ? insight.needsReview : true,
         content: {
@@ -70,40 +90,25 @@ export const useWebsiteInsightsProcessor = () => {
     let recommendations: string;
     
     switch(category) {
-      case 'company_positioning':
-        title = "Brand Positioning Analysis";
-        summary = "Analysis of how the company presents itself in the market";
-        recommendations = "Games Age should align gaming initiatives with the company's existing brand positioning";
+      case 'business_imperatives':
+        title = "Critical Business Challenge: Gaming Audience Connection";
+        summary = "The brand is facing significant audience engagement challenges that gaming strategy could solve";
+        recommendations = "Games Age should develop a targeted gaming audience strategy to address core business challenges";
         break;
-      case 'competitive_landscape':
-        title = "Competitive Differentiators";
-        summary = "Analysis of how the company positions against competitors";
-        recommendations = "Games Age should develop gaming experiences that emphasize competitive advantages";
+      case 'gaming_audience_opportunity':
+        title = "Untapped Gaming Audience Segment";
+        summary = "A significant gaming audience segment aligns with brand values but remains unaddressed";
+        recommendations = "Games Age should create targeted activation to engage this valuable gaming audience segment";
         break;
-      case 'key_partnerships':
-        title = "Strategic Partnership Opportunities";
-        summary = "Analysis of current and potential strategic alliances";
-        recommendations = "Games Age should explore gaming partnerships that complement existing business relationships";
-        break;
-      case 'public_announcements':
-        title = "Recent Company Developments";
-        summary = "Analysis of public announcements and company news";
-        recommendations = "Games Age should time gaming initiatives to align with planned announcements for maximum impact";
-        break;
-      case 'consumer_engagement':
-        title = "Customer Engagement Channels";
-        summary = "Analysis of how the company engages with its audience";
-        recommendations = "Games Age should implement gamification in existing customer touchpoints";
-        break;
-      case 'product_service_fit':
-        title = "Gaming Integration Opportunities";
-        summary = "Analysis of how gaming can enhance current offerings";
-        recommendations = "Games Age should create gaming experiences that showcase product benefits";
+      case 'strategic_activation_pathways':
+        title = "Multi-channel Gaming Experience Strategy";
+        summary = "A coordinated activation approach across physical and digital touchpoints would drive business results";
+        recommendations = "Games Age should implement an integrated gaming experience across Fortress venues and digital platforms";
         break;
       default:
-        title = "Website Analysis";
-        summary = "Strategic insights derived from website content";
-        recommendations = "Games Age should consider gaming initiatives that align with overall business strategy";
+        title = "Strategic Gaming Audience Opportunity";
+        summary = "Analysis has identified a strategic opportunity to engage gaming audiences";
+        recommendations = "Games Age should develop a targeted strategy to address this opportunity";
     }
     
     return {

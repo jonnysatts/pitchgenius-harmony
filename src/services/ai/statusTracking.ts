@@ -1,299 +1,179 @@
 
-/**
- * Tracking and monitoring of AI processing status
- */
-import { AIProcessingStatus } from "@/lib/types";
-import { toast } from "@/hooks/use-toast";
+import { AIProcessingStatus } from '@/lib/types';
 
 /**
- * Get the current status of AI processing
- */
-export const getAIProcessingStatus = (projectId: string): AIProcessingStatus => {
-  // This would typically be fetched from the server
-  // For now, we'll use a mock implementation
-  return {
-    status: 'idle',
-    progress: 0,
-    message: 'Ready to analyze documents'
-  };
-};
-
-/**
- * Monitor the progress of AI document processing
- * In a real implementation, this would poll a database or use websockets
+ * Monitor AI processing progress with completion callback
  */
 export const monitorAIProcessingProgress = (
   projectId: string,
   onStatusUpdate: (status: AIProcessingStatus) => void,
   onCompletionCallback?: () => void
-): () => void => {
-  let cancelled = false;
-  let progress = 0;
-  let interval: NodeJS.Timeout | null = null;
+): (() => void) => {
+  let isCancelled = false;
+  let currentStep = 0;
+  const totalSteps = 10;
+  const intervalTime = 2500; // Time between updates in ms
   
-  // Immediately update status to show we're starting
-  onStatusUpdate({
-    status: 'processing',
-    progress: 0,
-    message: 'Starting document analysis...'
-  });
+  const updateStatus = (step: number, message: string, statusType: 'processing' | 'completed' | 'error' = 'processing') => {
+    if (isCancelled) return;
+    
+    const progress = Math.min(Math.round((step / totalSteps) * 100), 100);
+    
+    onStatusUpdate({
+      status: statusType,
+      progress,
+      message
+    });
+  };
   
-  // This simulates the AI processing progress
-  // In a production app, this would connect to a real-time status endpoint
-  interval = setInterval(() => {
-    if (cancelled) {
-      if (interval) clearInterval(interval);
+  // Simulate processing steps
+  const processingInterval = setInterval(() => {
+    if (isCancelled) {
+      clearInterval(processingInterval);
       return;
     }
     
-    // Slow down the progress bar for more realistic Claude timing (up to 2 minutes)
-    // Claude needs more time, so we'll make the progress bar move slower
+    currentStep++;
     
-    // Simulate different phases of processing with appropriate messages
-    if (progress < 10) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Preparing documents for Claude AI...`
-      });
-    } else if (progress < 20) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Extracting text from all documents...`
-      });
-    } else if (progress < 30) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Sending documents to Claude AI...`
-      });
-    } else if (progress < 60) {
-      // This is the main Claude processing phase - spend most time here
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Claude AI is analyzing documents (this may take up to 2 minutes)...`
-      });
-    } else if (progress < 75) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Claude AI is generating strategic insights...`
-      });
-    } else if (progress < 90) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Processing AI-generated insights...`
-      });
-    } else if (progress < 98) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Finalizing comprehensive insights...`
-      });
-    } else if (progress < 100) {
-      onStatusUpdate({
-        status: 'finalizing',
-        progress: 99,
-        message: 'Preparing insights for display...'
-      });
-    } else {
-      // When we reach 100%, update status to completed and trigger callback
-      onStatusUpdate({
-        status: 'completed',
-        progress: 100,
-        message: 'AI analysis complete!'
-      });
-      
-      // Call the completion callback if provided
-      if (onCompletionCallback) {
-        // Add a delay to ensure the insights have been properly loaded
-        // before transitioning to the insights tab
-        setTimeout(() => {
-          onCompletionCallback();
-        }, 1500);
-      }
-      
-      // Clear the interval after sending the status update
-      if (interval) clearInterval(interval);
-      interval = null;
+    // Update the status message based on the current step
+    switch(currentStep) {
+      case 1:
+        updateStatus(currentStep, 'Initializing document analysis...');
+        break;
+      case 2:
+        updateStatus(currentStep, 'Processing document content...');
+        break;
+      case 3:
+        updateStatus(currentStep, 'Extracting key information...');
+        break;
+      case 4:
+        updateStatus(currentStep, 'Analyzing industry context...');
+        break;
+      case 5:
+        updateStatus(currentStep, 'Identifying strategic opportunities...');
+        break;
+      case 6:
+        updateStatus(currentStep, 'Developing audience insights...');
+        break;
+      case 7:
+        updateStatus(currentStep, 'Formulating recommendations...');
+        break;
+      case 8:
+        updateStatus(currentStep, 'Prioritizing actionable insights...');
+        break;
+      case 9:
+        updateStatus(currentStep, 'Finalizing analysis results...');
+        break;
+      case 10:
+        updateStatus(currentStep, 'Analysis complete!', 'completed');
+        clearInterval(processingInterval);
+        
+        // Call the completion callback after a short delay
+        if (onCompletionCallback) {
+          setTimeout(() => {
+            if (!isCancelled) {
+              onCompletionCallback();
+            }
+          }, 1000);
+        }
+        break;
+      default:
+        break;
     }
-    
-    // Make the progress much slower to accommodate the 2-minute Claude processing time
-    if (progress < 30) {
-      // Initial stages move at moderate speed
-      progress += Math.random() * 2 + 0.5;
-    } else if (progress < 60) {
-      // Claude processing stage (moves very slowly)
-      progress += Math.random() * 0.5 + 0.1;
-    } else if (progress < 90) {
-      // Processing insights (moderate speed)
-      progress += Math.random() * 1 + 0.3;
-    } else {
-      // Final stages (slow)
-      progress += Math.random() * 0.3 + 0.1;
-    }
-    
-    // Don't let progress exceed 100
-    if (progress > 100) progress = 100;
-  }, 1000); // Update every second
+  }, intervalTime);
   
   // Return a function to cancel the monitoring
   return () => {
-    cancelled = true;
-    if (interval) clearInterval(interval);
+    isCancelled = true;
+    clearInterval(processingInterval);
   };
 };
 
 /**
- * Monitor the progress of website analysis specifically
- * This provides real-time feedback during website content analysis
+ * Monitor website analysis progress with completion callback
+ * Similar to the document analysis but with website-specific steps
  */
 export const monitorWebsiteAnalysisProgress = (
   projectId: string,
   onStatusUpdate: (status: AIProcessingStatus) => void,
   onCompletionCallback?: () => void
-): () => void => {
-  let cancelled = false;
-  let progress = 0;
-  let interval: NodeJS.Timeout | null = null;
+): (() => void) => {
+  let isCancelled = false;
+  let currentStep = 0;
+  const totalSteps = 10;
+  const intervalTime = 2500; // Time between updates in ms
   
-  // Immediately show initial toast notification
-  toast({
-    title: "Website Analysis Started",
-    description: "Getting ready to analyze website content...",
-    duration: 3000,
-  });
+  const updateStatus = (step: number, message: string, statusType: 'processing' | 'completed' | 'error' = 'processing') => {
+    if (isCancelled) return;
+    
+    const progress = Math.min(Math.round((step / totalSteps) * 100), 100);
+    
+    onStatusUpdate({
+      status: statusType,
+      progress,
+      message
+    });
+  };
   
-  // Immediately update status to show we're starting
-  onStatusUpdate({
-    status: 'processing',
-    progress: 0,
-    message: 'Starting website analysis...'
-  });
-  
-  interval = setInterval(() => {
-    if (cancelled) {
-      if (interval) clearInterval(interval);
+  // Simulate processing steps with website-specific messaging
+  const processingInterval = setInterval(() => {
+    if (isCancelled) {
+      clearInterval(processingInterval);
       return;
     }
     
-    // Simulate different phases of website analysis with appropriate messages
-    if (progress < 10) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Preparing to fetch website content...`
-      });
-    } else if (progress < 25) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Crawling website pages...`
-      });
-      
-      // Show a toast at this stage to reinforce the progress
-      if (progress > 15 && progress < 16) { // Only show once in this range
-        toast({
-          title: "Website Crawling",
-          description: "Fetching content from multiple pages. This may take a minute...",
-          duration: 4000,
-        });
-      }
-    } else if (progress < 40) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Extracting website content and structure...`
-      });
-    } else if (progress < 60) {
-      // Claude processing phase
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Claude AI is analyzing website data (this may take 1-2 minutes)...`
-      });
-      
-      // Show another toast midway through Claude analysis
-      if (progress > 50 && progress < 51) { // Only show once in this range
-        toast({
-          title: "AI Analysis In Progress",
-          description: "Claude is processing your website data. This is the longest step...",
-          duration: 5000,
-        });
-      }
-    } else if (progress < 80) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Generating strategic insights for your website...`
-      });
-    } else if (progress < 95) {
-      onStatusUpdate({
-        status: 'processing',
-        progress,
-        message: `Finalizing website analysis results...`
-      });
-    } else if (progress < 100) {
-      onStatusUpdate({
-        status: 'finalizing',
-        progress: 99,
-        message: 'Preparing website insights for display...'
-      });
-    } else {
-      // When we reach 100%, update status to completed and trigger callback
-      onStatusUpdate({
-        status: 'completed',
-        progress: 100,
-        message: 'Website analysis complete!'
-      });
-      
-      // Show completion toast
-      toast({
-        title: "Analysis Complete",
-        description: "Website insights have been generated successfully!",
-        duration: 4000,
-      });
-      
-      // Call the completion callback if provided
-      if (onCompletionCallback) {
-        setTimeout(() => {
-          onCompletionCallback();
-        }, 1000);
-      }
-      
-      // Clear the interval
-      if (interval) clearInterval(interval);
-      interval = null;
-    }
+    currentStep++;
     
-    // Control the progress speed to make feedback more realistic
-    if (progress < 20) {
-      // Initial website fetching (moderate speed)
-      progress += Math.random() * 2.5 + 1;
-    } else if (progress < 40) {
-      // Content extraction (moderate speed)
-      progress += Math.random() * 1.5 + 0.5;
-    } else if (progress < 60) {
-      // Claude processing stage (very slow)
-      progress += Math.random() * 0.3 + 0.1;
-    } else if (progress < 90) {
-      // Insight generation (moderate speed)
-      progress += Math.random() * 1 + 0.3;
-    } else {
-      // Final stages (slow)
-      progress += Math.random() * 0.5 + 0.1;
+    // Update the status message based on the current step
+    switch(currentStep) {
+      case 1:
+        updateStatus(currentStep, 'Initializing website analysis...');
+        break;
+      case 2:
+        updateStatus(currentStep, 'Crawling website content...');
+        break;
+      case 3:
+        updateStatus(currentStep, 'Extracting key business information...');
+        break;
+      case 4:
+        updateStatus(currentStep, 'Analyzing industry context...');
+        break;
+      case 5:
+        updateStatus(currentStep, 'Identifying business imperatives...');
+        break;
+      case 6:
+        updateStatus(currentStep, 'Evaluating gaming audience opportunities...');
+        break;
+      case 7:
+        updateStatus(currentStep, 'Developing strategic activation pathways...');
+        break;
+      case 8:
+        updateStatus(currentStep, 'Formulating engagement recommendations...');
+        break;
+      case 9:
+        updateStatus(currentStep, 'Finalizing strategic insights...');
+        break;
+      case 10:
+        updateStatus(currentStep, 'Analysis complete!', 'completed');
+        clearInterval(processingInterval);
+        
+        // Call the completion callback after a short delay
+        if (onCompletionCallback) {
+          setTimeout(() => {
+            if (!isCancelled) {
+              onCompletionCallback();
+            }
+          }, 1000);
+        }
+        break;
+      default:
+        break;
     }
-    
-    // Cap progress at 100
-    if (progress > 100) progress = 100;
-  }, 800); // Update slightly faster than document analysis (800ms vs 1000ms)
+  }, intervalTime);
   
   // Return a function to cancel the monitoring
   return () => {
-    cancelled = true;
-    if (interval) clearInterval(interval);
+    isCancelled = true;
+    clearInterval(processingInterval);
   };
 };

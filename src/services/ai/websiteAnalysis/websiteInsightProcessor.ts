@@ -40,92 +40,73 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
     rawInsights = validInsights;
   }
   
-  // Ensure we have insights in all categories
-  const availableCategories = new Set(rawInsights.map((i: any) => 
-    normalizeWebsiteCategory(i.category || 'company_positioning')
-  ));
+  // Ensure we have insights in the new categories
+  const validCategoryIds = new Set(["business_imperatives", "gaming_audience_opportunity", "strategic_activation_pathways"]);
   
-  console.log('Available categories after normalization:', Array.from(availableCategories));
-  
-  // If we have fewer than 3 categories, we need to supplement with more varied insights
-  if (availableCategories.size < 3) {
-    console.log('Not enough varied categories, redistributing insights');
+  // Normalize categories to match our expected formats
+  const processedInsights = rawInsights.map((insight: any) => {
+    // Get the raw category or use default if not present
+    const rawCategory = insight.category || 'business_imperatives';
     
-    // List all possible categories
-    const allCategories: WebsiteInsightCategory[] = websiteInsightCategories.map(c => c.id as WebsiteInsightCategory);
-    
-    // Redistribute some insights to other categories to ensure variety
-    rawInsights = rawInsights.map((insight: any, index: number) => {
-      // Leave the first few insights as they are
-      if (index < 3) return insight;
-      
-      // For others, assign to under-represented categories
-      const targetCategory = allCategories[index % allCategories.length];
-      if (!availableCategories.has(targetCategory)) {
-        console.log(`Reassigning insight ${index} to category ${targetCategory}`);
-        return {
-          ...insight,
-          category: targetCategory
-        };
+    // Determine the correct category
+    let normalizedCategory = rawCategory;
+    if (!validCategoryIds.has(rawCategory)) {
+      // Try to map to the closest matching category
+      if (rawCategory.includes('business') || rawCategory.includes('imperative')) {
+        normalizedCategory = 'business_imperatives';
+      } else if (rawCategory.includes('audience') || rawCategory.includes('opportunity')) {
+        normalizedCategory = 'gaming_audience_opportunity';
+      } else if (rawCategory.includes('activation') || rawCategory.includes('pathways') || rawCategory.includes('strategic')) {
+        normalizedCategory = 'strategic_activation_pathways';
+      } else {
+        // Default to business imperatives if can't match
+        normalizedCategory = 'business_imperatives';
       }
       
-      return insight;
-    });
-  }
-  
-  // Make sure all insights have the source field set to 'website'
-  // and have proper category values
-  const processedInsights = rawInsights.map((insight: any) => {
-    // Normalize the category using our utility function
-    const normalizedCategory = normalizeWebsiteCategory(insight.category || 'company_positioning');
-    
-    // Ensure the insight has a valid category
-    if (!isValidWebsiteCategory(normalizedCategory)) {
-      console.log(`Invalid category after normalization for insight: ${insight.id}, setting to default 'company_positioning'`);
+      console.log(`Normalized category "${rawCategory}" to "${normalizedCategory}"`);
     }
     
-    // Fix any problematic title
+    // Clean up titles and ensure they're not empty or just punctuation
     let title = insight.content?.title || '';
     if (!title || title === ',' || title === '.') {
-      // Generate a title based on category
-      title = getCategoryTitle(normalizedCategory);
+      title = getCategoryTitle(normalizedCategory as WebsiteInsightCategory);
+    }
+    
+    // Clean up summary
+    let summary = insight.content?.summary || '';
+    if (!summary || summary === ',' || summary === '.') {
+      summary = `Strategic ${normalizedCategory.replace(/_/g, ' ')} for ${project.clientName || 'the client'}`;
     }
     
     // Clean up the summary to remove duplicate website-derived markers
-    let summary = insight.content?.summary || '';
     summary = summary.replace(/\[Website-derived\]/g, '').trim();
     summary = summary.replace(/🌐\s*🌐/g, '🌐').trim();
-    summary = summary.replace(/Website-derived/g, '').trim(); // Remove any remaining text mentions
-    
-    // Check for error patterns in summary
-    if (summary.includes('-1685557426') || summary.includes('category') || summary === '.' || summary === '') {
-      summary = `Analysis of ${project.clientName || 'client'}'s website for ${normalizedCategory.replace(/_/g, ' ')}`;
-    }
+    summary = summary.replace(/Website-derived/g, '').trim();
     
     // Clean up details
     let details = insight.content?.details || '';
-    if (details.includes('-1685557426') || details.includes('category') || details === '.' || details === '') {
-      details = `Website analysis focused on ${normalizedCategory.replace(/_/g, ' ')}.`;
+    if (!details || details === ',' || details === '.') {
+      details = `Website analysis identified important ${normalizedCategory.replace(/_/g, ' ')} that could help drive business results through gaming audience engagement.`;
     }
     
-    // Clean up recommendations and replace "A gaming company" with "Games Age"
+    // Clean up recommendations
     let recommendations = insight.content?.recommendations || '';
-    if (!recommendations || recommendations.includes('-1685557426')) {
-      recommendations = getCategoryRecommendation(normalizedCategory);
+    if (!recommendations || recommendations === ',' || recommendations === '.') {
+      recommendations = getCategoryRecommendation(normalizedCategory as WebsiteInsightCategory);
     }
     
-    // Replace "A gaming company" with "Games Age" in recommendations
-    recommendations = recommendations.replace(/A gaming company/g, 'Games Age');
+    // Replace generic company references with Games Age
+    recommendations = recommendations.replace(/A gaming company/g, 'Games Age').replace(/The gaming company/g, 'Games Age');
     
     // Fix the type by explicitly setting source to 'website'
     return {
       ...insight,
       source: 'website' as 'website',
-      category: normalizedCategory,
+      category: normalizedCategory as WebsiteInsightCategory,
       content: {
         ...insight.content,
         title,
-        summary: `🌐 ${summary}`, // Use only the globe icon without [Website-derived]
+        summary: `🌐 ${summary}`, // Use only the globe icon
         details,
         recommendations,
         websiteUrl: project.clientWebsite,
@@ -134,14 +115,12 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
     } as StrategicInsight;
   });
   
-  // Log the distributed categories after normalization
-  const categoryDistribution = processedInsights.reduce((acc: Record<string, number>, insight) => {
-    const category = String(insight.category);
-    acc[category] = (acc[category] || 0) + 1;
-    return acc;
-  }, {});
-  
-  console.log('Website insights category distribution after normalization:', categoryDistribution);
+  // Log the processed insights
+  console.log('Processed website insights:', processedInsights.map(i => ({
+    id: i.id,
+    category: i.category,
+    title: i.content.title
+  })));
   
   return processedInsights;
 };

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AIProcessingStatus } from '@/lib/types';
+import { AIProcessingStatus, Project } from '@/lib/types';
 import { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
 
 interface WebInsightsHeaderProps {
@@ -9,7 +9,7 @@ interface WebInsightsHeaderProps {
   isAnalyzing: boolean;
   onAnalyzeWebsite?: () => void;
   hasInsights: boolean;
-  aiStatus?: AIProcessingStatus; // Add aiStatus prop
+  aiStatus?: AIProcessingStatus;
 }
 
 export const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
@@ -26,6 +26,20 @@ export const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
     }
   };
 
+  // Create a partial project object for WebsiteAnalysisControls
+  // This satisfies the type check without needing the full Project type
+  const projectForControls = websiteUrl ? {
+    id: '1',
+    clientWebsite: websiteUrl,
+    title: '', // These props aren't used in WebsiteAnalysisControls but are required by Project type
+    clientName: '',
+    clientIndustry: '',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ownerId: '',
+    description: ''
+  } : undefined;
+
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-4">
@@ -39,11 +53,11 @@ export const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
       
       {hasWebsiteUrl && websiteUrl && onAnalyzeWebsite && (
         <WebsiteAnalysisControls
-          project={{ id: '1', clientWebsite: websiteUrl }}
+          project={projectForControls as Project} // We can safely cast here as we know it meets the required shape
           isAnalyzing={isAnalyzing}
           onAnalyzeWebsite={handleAnalyzeWebsite}
           hasInsights={hasInsights}
-          aiStatus={aiStatus} // Pass aiStatus to enable improved feedback
+          aiStatus={aiStatus}
         />
       )}
     </div>

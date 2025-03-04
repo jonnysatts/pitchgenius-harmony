@@ -1,22 +1,8 @@
 
-import WebInsightsHeader from './WebInsightsHeader';
-import { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
-import { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
-import { NoInsightsEmptyState } from './NoInsightsEmptyState';
-import WebInsightsTabs from './WebInsightsTabs';
-import NoWebsiteCard from './NoWebsiteCard';
-import WebsiteUrlCard from './WebsiteUrlCard';
-import AllInsightsTab from './AllInsightsTab';
-import InsightCategoryTab from './InsightCategoryTab';
-
-export {
-  WebInsightsHeader,
-  WebsiteAnalysisControls,
-  FirecrawlApiKeyForm,
-  NoInsightsEmptyState,
-  WebInsightsTabs,
-  NoWebsiteCard,
-  WebsiteUrlCard,
-  AllInsightsTab,
-  InsightCategoryTab
-};
+// Export all the web insights components
+export { WebsiteUrlCard } from './WebsiteUrlCard';
+export { NoWebsiteCard } from './NoWebsiteCard';
+export { NoInsightsEmptyState } from './NoInsightsEmptyState';
+export { WebInsightsHeader } from './WebInsightsHeader';
+export { default as WebInsightsTabs } from './WebInsightsTabs';
+export { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
