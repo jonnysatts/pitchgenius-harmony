@@ -34,6 +34,37 @@ serve(async (req) => {
     const anthropicKeyValidLength = anthropicKeyExists && ANTHROPIC_API_KEY.length > 20;
     const anthropicKeyPrefix = anthropicKeyExists ? ANTHROPIC_API_KEY.substring(0, 5) + '...' + ANTHROPIC_API_KEY.slice(-3) : 'none';
     
+    // Check for Firecrawl API key (with both possible names)
+    const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
+    const FIRECRAWL_API_KPI = Deno.env.get('FIRECRAWL_API_KPI');
+    const firecrawlKeyExists = !!FIRECRAWL_API_KEY || !!FIRECRAWL_API_KPI;
+    const firecrawlKeyActive = firecrawlKeyExists;
+    
+    // Special Firecrawl check for detailed API check
+    if (reqBody.testType === 'firecrawl-api-check') {
+      console.log('Performing Firecrawl API check');
+      
+      // Determine which key to use
+      const activeKey = FIRECRAWL_API_KEY || FIRECRAWL_API_KPI;
+      const keyName = FIRECRAWL_API_KEY ? 'FIRECRAWL_API_KEY' : 'FIRECRAWL_API_KPI';
+      
+      return new Response(
+        JSON.stringify({
+          message: firecrawlKeyExists ? "Firecrawl API key found" : "No Firecrawl API key found",
+          timestamp: new Date().toISOString(),
+          firecrawlKeyExists,
+          firecrawlKeyActive,
+          keyUsed: keyName,
+          keyPreview: firecrawlKeyExists ? 
+            (activeKey?.substring(0, 5) + '...' + activeKey?.slice(-3)) : 
+            'none'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     // Check for other environment variables
     const environmentChecks = {
       ANTHROPIC_API_KEY: {
@@ -59,12 +90,12 @@ serve(async (req) => {
         preview: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.substring(0, 5) + '...' + Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.slice(-3) : 'none'
       },
       FIRECRAWL_API_KEY: {
-        exists: !!Deno.env.get('FIRECRAWL_API_KEY'),
-        preview: Deno.env.get('FIRECRAWL_API_KEY') ? Deno.env.get('FIRECRAWL_API_KEY')?.substring(0, 5) + '...' + Deno.env.get('FIRECRAWL_API_KEY')?.slice(-3) : 'none'
+        exists: !!FIRECRAWL_API_KEY,
+        preview: FIRECRAWL_API_KEY ? FIRECRAWL_API_KEY.substring(0, 5) + '...' + FIRECRAWL_API_KEY.slice(-3) : 'none'
       },
       FIRECRAWL_API_KPI: {
-        exists: !!Deno.env.get('FIRECRAWL_API_KPI'),
-        preview: Deno.env.get('FIRECRAWL_API_KPI') ? Deno.env.get('FIRECRAWL_API_KPI')?.substring(0, 5) + '...' + Deno.env.get('FIRECRAWL_API_KPI')?.slice(-3) : 'none'
+        exists: !!FIRECRAWL_API_KPI,
+        preview: FIRECRAWL_API_KPI ? FIRECRAWL_API_KPI.substring(0, 5) + '...' + FIRECRAWL_API_KPI.slice(-3) : 'none'
       }
     };
     
@@ -98,6 +129,7 @@ serve(async (req) => {
         anthropicKeyExists,
         anthropicKeyValidFormat,
         anthropicKeyValidLength,
+        firecrawlKeyExists,
         keysFound,
         keysMissing,
         systemInfo,

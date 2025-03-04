@@ -9,8 +9,8 @@
 export async function extractContentWithFirecrawl(websiteUrl: string): Promise<string> {
   console.log(`Extracting content from ${websiteUrl} with Firecrawl`);
   
-  // Check if we have the Firecrawl API key
-  const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KPI') || Deno.env.get('FIRECRAWL_API_KEY');
+  // Check if we have the Firecrawl API key (checking both possible environment variable names)
+  const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
   
   if (!firecrawlApiKey) {
     console.warn('FIRECRAWL_API_KEY or FIRECRAWL_API_KPI not found in environment');

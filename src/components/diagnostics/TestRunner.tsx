@@ -37,10 +37,17 @@ export const testFirecrawlAPI = async () => {
       }
     });
     
+    // Check if either FIRECRAWL_API_KEY or FIRECRAWL_API_KPI exists
+    const firecrawlKeyExists = 
+      (data?.environmentChecks?.FIRECRAWL_API_KEY?.exists === true) || 
+      (data?.environmentChecks?.FIRECRAWL_API_KPI?.exists === true);
+    
     return {
-      success: !error && data?.firecrawlKeyExists,
+      success: !error && firecrawlKeyExists,
       data,
-      error: error ? error.message : data?.error || null,
+      error: error ? error.message : 
+             !firecrawlKeyExists ? "No Firecrawl API key found. Either FIRECRAWL_API_KEY or FIRECRAWL_API_KPI must be set." : 
+             data?.error || null,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
