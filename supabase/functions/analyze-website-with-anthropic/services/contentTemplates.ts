@@ -1,7 +1,21 @@
-
 /**
  * Templates and examples used in Claude prompts
  */
+
+interface Content {
+  title: string;
+  summary: string;
+  details: string;
+  recommendations: string;
+}
+
+interface Insight {
+  id: string;
+  category: string;
+  confidence: number;
+  needsReview: boolean;
+  content: Content;
+}
 
 /**
  * Generate the structured output format for Claude
@@ -77,8 +91,8 @@ BUSINESS IMPERATIVE EXAMPLE:
   "content": {
     "title": "58% Gen Z Brand Awareness Gap Despite 70% Product Relevance",
     "summary": "Website analytics and content focus reveal the brand primarily targets 35-55 age demographic despite their products having high relevance for 16-24 year olds.",
-    "details": "Analysis shows their primary marketing channels (LinkedIn, traditional media) and website messaging (professional focus, corporate language) create a significant disconnection with Gen Z audiences who represent a $142M untapped market opportunity. Their recent product innovation (visible in press releases section) would appeal strongly to younger demographics, but this messaging is buried in corporate communications.",
-    "recommendations": "Games Age can bridge this demographic gap through a strategic gaming audience program targeting the 2.8M Australian Gen Z gamers who align with the brand's innovation positioning, potentially increasing Gen Z awareness by 35-40% based on similar campaigns."
+    "details": "Analysis shows their primary marketing channels (LinkedIn, traditional media) and website messaging (professional focus, corporate language) create a significant disconnection with younger audiences.",
+    "recommendations": "Games Age can bridge this demographic gap through a strategic gaming audience program targeting the 2.8M Australian Gen Z gamers who align with the brand's innovation positioning."
   }
 }
 
@@ -91,8 +105,8 @@ GAMING AUDIENCE OPPORTUNITY EXAMPLE:
   "content": {
     "title": "Mobile-First Casual Gaming Audience Alignment with Product Experience Goals",
     "summary": "The brand's focus on simplifying complex experiences perfectly aligns with the 5.2M Australian casual mobile gamers who value accessibility and frictionless experiences.",
-    "details": "The website's emphasis on streamlining complex processes (evident in product pages and UX) shares core values with casual mobile gaming audiences who represent 68% of all Australian gamers. This audience segment is typically overlooked by competitors focused on hardcore gaming demographics, creating a differentiation opportunity. These gamers index 27% higher for valuing brands that simplify complexity.",
-    "recommendations": "Partner with Games Age to create a casual mobile gaming activation strategy that positions the brand as the 'complexity reducer' in both everyday life and gaming experiences, reaching this audience through integrated mobile game partnerships and Fortress venue activations."
+    "details": "The website's emphasis on streamlining complex processes (evident in product pages and UX) shares core values with casual mobile gaming audiences who represent 68% of all Australian gamers.",
+    "recommendations": "Partner with Games Age to create a casual mobile gaming activation strategy that positions the brand as the 'complexity reducer' in both everyday life and gaming experiences."
   }
 }
 
@@ -105,8 +119,8 @@ STRATEGIC ACTIVATION PATHWAY EXAMPLE:
   "content": {
     "title": "Australian GP Gaming Zone Integration with Product Experience Center",
     "summary": "Create a branded racing simulation experience at the Australian GP that showcases products while engaging 45,000+ racing and gaming enthusiasts over the race weekend.",
-    "details": "Based on the website's event calendar and sponsorship history, the brand already invests in traditional sports marketing but misses the gaming crossover opportunity. Working with Games Age and Fortress, the brand could create a racing simulation zone that naturally integrates product demonstrations in an engaging format. This builds on their existing motorsport connections while adding a gaming dimension that attracts younger audiences.",
-    "recommendations": "Games Age would design and execute a Formula 1 simulation activation space allowing attendees to experience virtual racing while naturally engaging with brand products, generating an estimated 15,000 quality interactions and 3.2M social impressions while collecting first-party data from a typically hard-to-reach demographic."
+    "details": "Based on the website's event calendar and sponsorship history, the brand already invests in traditional sports marketing but misses the gaming crossover opportunity. Working with Games Age, they can create a unique engagement at the intersection of sports and gaming.",
+    "recommendations": "Games Age would design and execute a Formula 1 simulation activation space allowing attendees to experience virtual racing while naturally engaging with brand products, generating both interest and leads."
   }
 }
   `;
@@ -114,9 +128,10 @@ STRATEGIC ACTIVATION PATHWAY EXAMPLE:
 
 /**
  * Get industry-specific gaming context to enhance prompts
+ * @param industry - The industry to get context for
  */
 export function getIndustryGamingContext(industry: string): string {
-  const contexts = {
+  const contexts: Record<string, string> = {
     retail: `
       In the retail industry, gaming audience strategy typically focuses on:
       - Creating authentic shopping experiences for gaming communities (not just "gamer products")
