@@ -1,12 +1,16 @@
 
 import React, { useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+import { Server } from 'lucide-react';
 import { Project, AIProcessingStatus } from '@/lib/types';
 import { FirecrawlApiKeyForm } from './FirecrawlApiKeyForm';
-import { ArrowRight, Globe, Server, RefreshCw, CheckCircle2 } from 'lucide-react';
-import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert } from "@/components/ui/alert";
+import {
+  AnalysisButton,
+  AnalysisProgressIndicator,
+  AnalysisStatusAlert,
+  AnalysisPhaseTimeline
+} from './analysis-controls';
 
 interface WebsiteAnalysisControlsProps {
   project: Project;
@@ -118,124 +122,33 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
           {isAnalyzing && (
             <div className="space-y-3">
               {/* Analysis status alert */}
-              <Alert 
-                className={`${isProcessingPhase ? 'bg-blue-50 border-blue-200' : 
-                           isInsightPhase ? 'bg-indigo-50 border-indigo-200' :
-                           isFinalizingPhase ? 'bg-emerald-50 border-emerald-200' :
-                           'bg-amber-50 border-amber-200'}`}
-              >
-                <div className="flex items-center">
-                  {isProcessingPhase ? (
-                    <Globe className="h-4 w-4 text-blue-500 mr-2 animate-pulse" />
-                  ) : isInsightPhase ? (
-                    <Globe className="h-4 w-4 text-indigo-500 mr-2" />
-                  ) : isFinalizingPhase ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 mr-2" />
-                  ) : (
-                    <Globe className="h-4 w-4 text-amber-500 mr-2 animate-spin" />
-                  )}
-                  <AlertTitle 
-                    className={`${isProcessingPhase ? 'text-blue-700' : 
-                               isInsightPhase ? 'text-indigo-700' :
-                               isFinalizingPhase ? 'text-emerald-700' :
-                               'text-amber-700'}`}
-                  >
-                    {isProcessingPhase ? 'AI Processing' : 
-                     isInsightPhase ? 'Generating Insights' :
-                     isFinalizingPhase ? 'Almost Complete' :
-                     'Website Crawling'}
-                  </AlertTitle>
-                </div>
-                <AlertDescription 
-                  className={`mt-1 ${isProcessingPhase ? 'text-blue-600' : 
-                               isInsightPhase ? 'text-indigo-600' :
-                               isFinalizingPhase ? 'text-emerald-600' :
-                               'text-amber-600'}`}
-                >
-                  {message}
-                </AlertDescription>
-              </Alert>
+              <AnalysisStatusAlert 
+                isProcessingPhase={isProcessingPhase}
+                isInsightPhase={isInsightPhase}
+                isFinalizingPhase={isFinalizingPhase}
+                message={message}
+              />
               
               {/* Progress bar with phase indication */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className={`font-medium ${isProcessingPhase ? 'text-blue-600' : 
-                                   isInsightPhase ? 'text-indigo-600' :
-                                   isFinalizingPhase ? 'text-emerald-600' :
-                                   'text-amber-600'}`}>
-                    {Math.min(Math.round(progress), 99)}%
-                  </span>
-                  <span className="text-slate-600">
-                    {isProcessingPhase ? "Claude AI Analysis" : 
-                     isInsightPhase ? "Insight Generation" :
-                     isFinalizingPhase ? "Finalizing" :
-                     "Website Crawling"}
-                  </span>
-                </div>
-                <Progress 
-                  value={progress} 
-                  className="w-full h-2.5"
-                  indicatorColor={isProcessingPhase ? "bg-blue-500" : 
-                                 isInsightPhase ? "bg-indigo-500" :
-                                 isFinalizingPhase ? "bg-emerald-500" : 
-                                 "bg-amber-500"}
-                  showAnimation={isProcessingPhase}
-                />
-                <p className={`text-xs italic ${isProcessingPhase ? 'text-blue-600 font-medium' : 
-                           isInsightPhase ? 'text-indigo-600' :
-                           isFinalizingPhase ? 'text-emerald-600' :
-                           'text-amber-600'}`}>
-                  {isProcessingPhase ? 
-                    "Claude AI is analyzing your website content. This may take up to 2 minutes..." : 
-                   isInsightPhase ?
-                    "Processing data and generating strategic insights..." :
-                   isFinalizingPhase ?
-                    "Preparing insights for display..." :
-                    "Crawling website and extracting content..."}
-                </p>
-              </div>
+              <AnalysisProgressIndicator 
+                progress={progress}
+                isProcessingPhase={isProcessingPhase}
+                isInsightPhase={isInsightPhase}
+                isFinalizingPhase={isFinalizingPhase}
+                message={message}
+              />
               
               {/* Timeline indicators */}
-              <div className="grid grid-cols-4 gap-1 pt-1">
-                <div className={`h-1 rounded-l ${progress >= 20 ? 'bg-amber-400' : 'bg-slate-200'}`}></div>
-                <div className={`h-1 ${progress >= 40 ? 'bg-blue-400' : 'bg-slate-200'}`}></div>
-                <div className={`h-1 ${progress >= 70 ? 'bg-indigo-400' : 'bg-slate-200'}`}></div>
-                <div className={`h-1 rounded-r ${progress >= 95 ? 'bg-emerald-400' : 'bg-slate-200'}`}></div>
-              </div>
-              <div className="grid grid-cols-4 gap-1 text-[10px] text-slate-500">
-                <div className="text-left">Crawling</div>
-                <div className="text-center">Processing</div>
-                <div className="text-center">Analysis</div>
-                <div className="text-right">Complete</div>
-              </div>
+              <AnalysisPhaseTimeline progress={progress} />
             </div>
           )}
           
-          <Button
-            onClick={onAnalyzeWebsite}
-            disabled={isAnalyzing || !hasWebsiteUrl}
-            className="w-full md:w-auto"
-            size="lg"
-          >
-            {isAnalyzing ? (
-              <>
-                <Globe className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing Website...
-              </>
-            ) : hasInsights ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh Website Analysis
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            ) : (
-              <>
-                <Globe className="mr-2 h-4 w-4" />
-                Start Website Analysis
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
+          <AnalysisButton 
+            isAnalyzing={isAnalyzing}
+            hasWebsiteUrl={hasWebsiteUrl}
+            hasInsights={hasInsights}
+            onAnalyzeWebsite={onAnalyzeWebsite}
+          />
           
           <p className="text-sm text-gray-500">
             Using Firecrawl via Supabase for enhanced analysis of {project.clientWebsite}

@@ -10,3 +10,11 @@ export { WebsiteAnalysisControls } from './WebsiteAnalysisControls';
 export { default as AllInsightsTab } from './AllInsightsTab';
 export { default as InsightCategoryTab } from './InsightCategoryTab';
 export { default as WebsiteAnalysisCard } from '../WebsiteAnalysisCard';
+
+// Export analysis control components
+export { 
+  AnalysisButton,
+  AnalysisProgressIndicator,
+  AnalysisStatusAlert,
+  AnalysisPhaseTimeline 
+} from './analysis-controls';
