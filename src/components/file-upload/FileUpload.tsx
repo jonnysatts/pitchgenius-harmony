@@ -17,8 +17,8 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({
   onFilesSelected,
   acceptedFileTypes = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.rtf', '.md', '.jpg', '.png'],
-  maxFileSizeMB = 10,
-  maxFiles = 10,
+  maxFileSizeMB = 25, // Increased from 10MB to 25MB
+  maxFiles = 20, // Increased from 10 to 20
   className,
   disabled = false
 }) => {

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -44,8 +45,9 @@ export const useFileUpload = ({
       return `File exceeds maximum size of ${maxFileSizeMB}MB`;
     }
     
-    // Check file type - improve PDF detection
-    if (file.type === 'application/pdf') {
+    // Improved PDF detection
+    if (file.type === 'application/pdf' || 
+        file.name.toLowerCase().endsWith('.pdf')) {
       // PDF is explicitly allowed
       return null;
     }
@@ -54,7 +56,9 @@ export const useFileUpload = ({
     const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
     
     // If we accept all files or this specific extension
-    if (acceptedFileTypes.includes('*') || acceptedFileTypes.includes(fileExtension)) {
+    if (acceptedFileTypes.includes('*') || 
+        acceptedFileTypes.includes(fileExtension) || 
+        acceptedFileTypes.some(type => type.includes(fileExtension))) {
       return null;
     }
     
@@ -99,7 +103,6 @@ export const useFileUpload = ({
     }
     
     // We don't check against total documents here - that's handled in useDocuments.ts
-    // This just validates the current batch being uploaded
     
     filesArray.forEach(file => {
       // Add extra logging for PDF files

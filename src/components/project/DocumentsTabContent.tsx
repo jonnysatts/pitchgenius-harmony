@@ -4,9 +4,10 @@ import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
 import DocumentList from "@/components/project/DocumentList";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2, AlertCircle } from "lucide-react";
+import { Brain, Loader2, AlertCircle, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import WebsiteAnalysisCard from "@/components/project/WebsiteAnalysisCard";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface DocumentsTabContentProps {
   documents: Document[];
@@ -59,6 +60,15 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
           Upload your client documents. We support PDFs, Office documents, images, and text files.
           All documents will be thoroughly analyzed by our AI.
         </p>
+        
+        <Alert className="mb-4 bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700">Troubleshooting Tips</AlertTitle>
+          <AlertDescription className="text-blue-600">
+            If you encounter upload errors with large files, try splitting them into smaller documents or compressing PDFs.
+            In development mode, uploads will continue to work even if storage errors occur.
+          </AlertDescription>
+        </Alert>
         
         <FileUpload 
           onFilesSelected={onFilesSelected}
