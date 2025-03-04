@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Project, Document } from "@/lib/types";
 import { useDocuments } from "@/hooks/documents/useDocuments";
@@ -53,13 +52,15 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   // Set up retry analysis handler
   const handleRetryAnalysis = useCallback(() => {
     const retryHandler = retryAnalysis(setActiveTab);
-    retryHandler(documents);
+    // Ensure we provide the correct Document type from @/lib/types
+    retryHandler(documents as Document[]);
   }, [retryAnalysis, documents, setActiveTab]);
   
   // Handle document analysis
   const handleAnalyzeProjectDocuments = useCallback(() => {
     if (documents.length === 0) return;
-    handleAnalyzeDocuments(documents, setActiveTab);
+    // Ensure we provide the correct Document type from @/lib/types
+    handleAnalyzeDocuments(documents as Document[], setActiveTab);
   }, [documents, handleAnalyzeDocuments]);
   
   // Handle website analysis
@@ -139,15 +140,16 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     handleAcceptInsight,
     handleRejectInsight,
     handleUpdateInsight,
-    handleNavigateToDocuments,
-    handleNavigateToPresentation,
-    handleNavigateToWebInsights,
     handleRetryAnalysis,
     isNewProject,
     // Add website analysis functionality
     isAnalyzingWebsite,
     websiteInsights,
-    handleAnalyzeWebsite
+    handleAnalyzeWebsite,
+    // Stable tab navigation functions
+    handleNavigateToDocuments,
+    handleNavigateToPresentation,
+    handleNavigateToWebInsights
   };
 };
 

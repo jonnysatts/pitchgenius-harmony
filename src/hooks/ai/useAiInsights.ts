@@ -1,6 +1,6 @@
 
 import { useCallback } from "react";
-import { Project, StrategicInsight } from "@/lib/types";
+import { Project, StrategicInsight, Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -10,7 +10,7 @@ export const useAiInsights = (
   project: Project,
   insights: StrategicInsight[],
   setInsights: (insights: StrategicInsight[], usingFallback: boolean) => void,
-  persistInsights: (insights: StrategicInsight[], usingFallback: boolean) => void,
+  persistInsights: (insights: StrategicInsight[], usingFallbackInsights: boolean) => void,
   usingFallbackInsights: boolean
 ) => {
   const { toast } = useToast();

@@ -2,6 +2,8 @@
 import { useCallback } from "react";
 import { Project, Document, StoredInsightData } from "@/lib/types";
 import { checkSupabaseConnection } from "@/services/ai";
+// Import the toast from use-toast
+import { useToast } from "@/hooks/use-toast";
 
 // Import the new smaller hooks
 import { useAiStatus } from "./ai/useAiStatus";
@@ -13,6 +15,9 @@ import { useAiInsights } from "./ai/useAiInsights";
 import { useAiAnalysisMain } from "./ai/useAiAnalysisMain";
 
 export const useAiAnalysis = (project: Project) => {
+  // Get toast for notifications
+  const { toast } = useToast();
+  
   // Initialize all the smaller hooks
   const {
     insights,
@@ -85,7 +90,7 @@ export const useAiAnalysis = (project: Project) => {
     
     // Navigate to insights tab
     setActiveTab("insights");
-  }, [handleCompletionToast, usingFallbackInsights, persistInsights, insights, insufficientContent]);
+  }, [handleCompletionToast, usingFallbackInsights, persistInsights, insights, insufficientContent, toast]);
   
   const { handleAnalyzeDocuments } = useAiAnalysisMain(
     project,
