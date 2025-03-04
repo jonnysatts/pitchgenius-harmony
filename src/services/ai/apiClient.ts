@@ -42,15 +42,22 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     console.log("Checking Supabase Edge Function connection...");
     
     const { data, error } = await supabase.functions.invoke('test-connection', {
-      body: { test: true }
+      method: 'POST',
+      body: { test: true, timestamp: new Date().toISOString() }
     });
     
     if (error) {
       console.error("Connection test failed:", error);
+      console.error("Error details:", JSON.stringify(error));
       return false;
     }
     
-    return data?.anthropicKeyExists === true;
+    console.log('Supabase connection test result:', data);
+    
+    // Check specifically for ANTHROPIC_API_KEY
+    const anthropicKeyExists = data?.anthropicKeyExists === true;
+    
+    return anthropicKeyExists;
   } catch (err) {
     console.error("Error checking Supabase connection:", err);
     return false;
@@ -72,9 +79,23 @@ export const callClaudeApi = async (
   const websiteContext = project.clientWebsite ? generateWebsiteContext(project.clientWebsite) : '';
   
   try {
+    // Create a timeout promise to handle edge function timeouts
+    const timeoutPromise = createTimeoutPromise(project, documents);
+    
     // Call the proper edge function
     console.log("Calling generate-insights-with-anthropic with project:", project.id);
-    const { data, error } = await supabase.functions.invoke('generate-insights-with-anthropic', {
+    
+    // Add some diagnostic info to help debug
+    console.log("Edge function request payload:", {
+      projectId: project.id,
+      documentCount: documentContents.length,
+      clientIndustry: project.clientIndustry || 'technology',
+      clientWebsite: project.clientWebsite,
+      projectTitle: project.title
+    });
+    
+    // Make the actual request to the edge function with error handling
+    const responsePromise = supabase.functions.invoke('generate-insights-with-anthropic', {
       body: { 
         projectId: project.id, 
         documentIds,
@@ -89,11 +110,27 @@ export const callClaudeApi = async (
       }
     });
     
-    console.log("Edge Function response received:", data ? "data present" : "no data", error ? `error: ${error.message}` : "no error");
+    // Race between the API call and the timeout
+    const { data, error } = await Promise.race([
+      responsePromise,
+      // Wait 110 seconds then resolve with null to indicate timeout
+      new Promise<{data: null, error: {message: string}}>((resolve) => 
+        setTimeout(() => resolve({
+          data: null,
+          error: {message: "Edge Function timed out after 110 seconds"}
+        }), 110000)
+      )
+    ]);
     
-    if (error) {
+    console.log("Edge Function response received:", 
+      data ? "data present" : "no data", 
+      error ? `error: ${error.message}` : "no error"
+    );
+    
+    // If there was an error or timeout, use the fallback data
+    if (error || !data) {
       console.error('Error from Edge Function:', error);
-      throw new Error(`Edge Function error: ${error.message || 'Unknown error'}`);
+      return await timeoutPromise;
     }
     
     // Check for insufficient content flag
@@ -108,7 +145,8 @@ export const callClaudeApi = async (
     
     // Validate insights from API
     if (!data || !data.insights || data.insights.length === 0) {
-      throw new Error('No insights returned from Claude AI');
+      console.error('No insights returned from Claude AI, using fallback');
+      return await timeoutPromise;
     }
     
     // Add source marker to insights
@@ -128,6 +166,29 @@ export const callClaudeApi = async (
     };
   } catch (apiError: any) {
     console.error('Error calling Anthropic API:', apiError);
-    throw new Error(`Claude AI error: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+    
+    // Return a more helpful error message based on the type of error
+    let errorMessage = "Claude AI error";
+    
+    if (apiError.message && apiError.message.includes('Failed to fetch')) {
+      errorMessage = "Network error connecting to Edge Function. Please check your internet connection.";
+    } else if (apiError.message && apiError.message.includes('timeout')) {
+      errorMessage = "The analysis took too long to complete. Try with fewer documents or check the Edge Function logs.";
+    } else if (apiError.message && apiError.message.includes('401')) {
+      errorMessage = "Authentication error with Anthropic API. Please check your API key.";
+    } else if (apiError.message && apiError.message.includes('429')) {
+      errorMessage = "Anthropic API rate limit exceeded. Please try again later.";
+    } else if (apiError.message && apiError.message.includes('500')) {
+      errorMessage = "Anthropic API server error. Please try again later.";
+    } else {
+      errorMessage = `Claude AI error: ${apiError instanceof Error ? apiError.message : String(apiError)}`;
+    }
+    
+    // Fall back to timeout promise for error case
+    const fallbackResponse = await createTimeoutPromise(project, documents);
+    return { 
+      ...fallbackResponse,
+      error: errorMessage
+    };
   }
 };

@@ -57,9 +57,37 @@ export const getWebsiteInsights = async (
       };
     }
     
-    // Call the Edge Function
+    // Add timeout handling
+    const timeoutPromise = new Promise<{
+      insights: any[];
+      error: string;
+    }>((resolve) => {
+      setTimeout(() => {
+        console.log('Website analysis timed out after 120 seconds');
+        resolve({
+          insights: generateFallbackWebsiteInsights(
+            project.clientName || "", 
+            project.clientIndustry || "technology",
+            project.id || ""
+          ),
+          error: 'Website analysis timed out after 120 seconds'
+        });
+      }, 120000); // 2 minutes timeout
+    });
+    
+    // Call the Edge Function with detailed logging
     console.log(`Calling analyze-website-with-anthropic with URL: ${project.clientWebsite}`);
-    const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+    
+    // Log the request payload
+    console.log('Request payload:', {
+      website_url: project.clientWebsite,
+      client_name: project.clientName || '',
+      client_industry: project.clientIndustry || 'technology',
+      use_firecrawl: useFirecrawl
+    });
+    
+    // Make the actual API call
+    const responsePromise = supabase.functions.invoke('analyze-website-with-anthropic', {
       body: {
         website_url: project.clientWebsite,
         client_name: project.clientName || '',
@@ -68,18 +96,32 @@ export const getWebsiteInsights = async (
       }
     });
     
-    if (error) {
-      console.error('Edge function error:', error);
+    // Race between API call and timeout
+    const { data, error } = await Promise.race([
+      responsePromise,
+      // After 120 seconds, return a custom timeout error response
+      new Promise<{data: null, error: {message: string}}>((resolve) => 
+        setTimeout(() => resolve({
+          data: null, 
+          error: {message: "Edge Function timeout after 120 seconds"}
+        }), 120000)
+      )
+    ]);
+    
+    // If there was an error or timeout, use fallback insights
+    if (error || !data) {
+      console.error('Edge function error or timeout:', error);
       return {
         insights: generateFallbackWebsiteInsights(
           project.clientName || "", 
           project.clientIndustry || "technology",
           project.id || ""
         ),
-        error: `Edge function error: ${error.message || 'Unknown error'}`
+        error: `Edge function error: ${error?.message || 'Function timed out'}`
       };
     }
     
+    // Validate response structure
     if (!data || !Array.isArray(data.data)) {
       console.error('Invalid response from edge function:', data);
       return {
@@ -106,13 +148,27 @@ export const getWebsiteInsights = async (
     };
   } catch (error: any) {
     console.error('Error analyzing website:', error);
+    
+    // Return a more helpful error message based on the type of error
+    let errorMessage = "Analysis error";
+    
+    if (error.message && error.message.includes('Failed to fetch')) {
+      errorMessage = "Network error connecting to Edge Function. Please check your internet connection.";
+    } else if (error.message && error.message.includes('timeout')) {
+      errorMessage = "The analysis took too long to complete. Please try again later.";
+    } else if (error.message && error.message.includes('401')) {
+      errorMessage = "Authentication error with Anthropic API. Please check your API key.";
+    } else {
+      errorMessage = `Analysis error: ${error.message || 'Unknown error'}`;
+    }
+    
     return {
       insights: generateFallbackWebsiteInsights(
         project.clientName || "", 
         project.clientIndustry || "technology",
         project.id || ""
       ),
-      error: `Analysis error: ${error.message || 'Unknown error'}`
+      error: errorMessage
     };
   }
 };
@@ -122,11 +178,24 @@ export const getWebsiteInsights = async (
  */
 export const checkEdgeFunctionConnection = async (): Promise<{ success: boolean }> => {
   try {
+    console.log('Testing connection to Edge Function...');
     // Simple test call to check connectivity
-    const { error } = await supabase.functions.invoke('test-connection');
-    return { success: !error };
+    const { data, error } = await supabase.functions.invoke('test-connection', {
+      method: 'POST',
+      body: { test: true, timestamp: new Date().toISOString() }
+    });
+    
+    if (error) {
+      console.error('Error checking edge function connection:', error);
+      return { success: false };
+    }
+    
+    console.log('Edge Function connection test result:', data);
+    return { 
+      success: !error && data?.anthropicKeyExists === true 
+    };
   } catch (error) {
-    console.error('Error checking edge function connection:', error);
+    console.error('Exception checking edge function connection:', error);
     return { success: false };
   }
 };

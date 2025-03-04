@@ -68,36 +68,64 @@ export class FirecrawlService {
    * Analyze a website using Firecrawl via Supabase Edge Function
    * This is the preferred method as it uses the API key from Supabase secrets
    */
-  static async analyzeWebsiteViaSupabase(url: string, projectId: string, clientName: string, clientIndustry: string): Promise<any> {
+  static async analyzeWebsiteViaSupabase(
+    url: string, 
+    clientName: string = "", 
+    clientIndustry: string = "technology"
+  ): Promise<any> {
     try {
       console.log(`Analyzing website ${url} using Firecrawl via Supabase Edge Function`);
       
-      // We'll call our Supabase Edge Function that will use the Firecrawl API key from secrets
-      const response = await fetch(`https://nryafptwknnftdjugoyn.supabase.co/functions/v1/analyze-website-with-anthropic`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yeWFmcHR3a25uZnRkanVnb3luIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MjA5MjksImV4cCI6MjA1NjM5NjkyOX0.6ixFQDUWcBw7Z3LQW6-uehPCza286BV9HDmHnNrM_vw'}`
-        },
-        body: JSON.stringify({
-          projectId,
-          clientWebsite: url,
-          clientName,
-          clientIndustry,
-          systemPrompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations."
-        })
+      // Add more detailed logging
+      console.log('Request parameters:', {
+        website_url: url,
+        client_name: clientName,
+        client_industry: clientIndustry,
+        use_firecrawl: true
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error from edge function: ${response.status} ${response.statusText} - ${errorText}`);
+      // Prepare the Supabase client from the exported client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // We'll call our Supabase Edge Function with proper error handling
+      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+        body: {
+          website_url: url,
+          client_name: clientName,
+          client_industry: clientIndustry,
+          use_firecrawl: true,
+          system_prompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations."
+        }
+      });
+      
+      if (error) {
+        console.error('Error from edge function:', error);
+        throw new Error(`Error from edge function: ${error.message || JSON.stringify(error)}`);
       }
       
-      const data = await response.json();
-      
+      console.log('Edge function response:', data);
       return data;
     } catch (error) {
       console.error('Exception analyzing website via Supabase:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Fallback method for direct API access (not recommended)
+   */
+  static async analyzeWebsiteDirectly(url: string): Promise<any> {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      throw new Error('No Firecrawl API key found. Please set a key before making API calls.');
+    }
+    
+    try {
+      // Direct API call implementation would go here
+      console.warn('Direct Firecrawl API access is not recommended.');
+      return { error: 'Direct API access not implemented' };
+    } catch (error) {
+      console.error('Error with direct Firecrawl API access:', error);
       throw error;
     }
   }

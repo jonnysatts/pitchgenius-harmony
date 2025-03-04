@@ -1,51 +1,102 @@
 
 /**
- * Extract and parse JSON insights from Claude's text response
+ * Parse and format Claude API responses
  */
-export function parseClaudeResponse(messageContent: string): any {
-  console.log("Claude response length:", messageContent.length);
-  
-  // Extract the JSON insights from Claude's text response
-  const jsonMatch = messageContent.match(/```json\n([\s\S]*?)\n```/) || 
-                    messageContent.match(/{[\s\S]*}/) ||
-                    messageContent.match(/\{\s*"insights":\s*\[([\s\S]*?)\]\s*\}/);
-                    
-  if (!jsonMatch) {
-    console.error("Failed to extract JSON from Claude's response");
-    throw new Error("Failed to extract insights from AI response");
-  }
-  
+
+/**
+ * Parse Claude's response text into strategic insights
+ */
+export function parseClaudeResponse(responseText: string) {
   try {
-    // Try to parse the JSON
-    let insightsData;
-    try {
-      // First try parsing the extracted JSON
-      const jsonStr = jsonMatch[1] || jsonMatch[0];
-      insightsData = JSON.parse(jsonStr);
-    } catch (e) {
-      // If that fails, try parsing the whole message
-      console.log("First JSON parse failed, trying to parse whole message");
-      insightsData = JSON.parse(messageContent);
+    // First, try to extract a JSON array or object from the response
+    const jsonMatch = responseText.match(/```json([\s\S]*?)```/);
+    
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        // Try to parse the extracted JSON
+        const jsonData = JSON.parse(jsonMatch[1].trim());
+        
+        // Check if we have an array of insights
+        if (Array.isArray(jsonData)) {
+          console.log(`Found JSON array with ${jsonData.length} insights`);
+          return jsonData;
+        }
+        
+        // If it's an object with an insights property that's an array
+        if (jsonData.insights && Array.isArray(jsonData.insights)) {
+          console.log(`Found JSON object with ${jsonData.insights.length} insights`);
+          return jsonData.insights;
+        }
+        
+        // If it's a single insight object, wrap it in an array
+        if (jsonData.title || jsonData.content || jsonData.category) {
+          console.log('Found single JSON insight object');
+          return [jsonData];
+        }
+      } catch (jsonError) {
+        console.error('Error parsing JSON from response:', jsonError);
+        // Continue to fallback parsing if JSON parsing fails
+      }
     }
     
-    return insightsData;
-  } catch (parseError) {
-    console.error("JSON parsing error:", parseError);
-    throw new Error("Failed to parse AI-generated insights");
+    // If JSON extraction/parsing failed, try to parse structured text
+    console.log('Falling back to structured text parsing');
+    return parseStructuredTextResponse(responseText);
+  } catch (error) {
+    console.error('Error parsing Claude response:', error);
+    return [];
   }
 }
 
 /**
- * Ensure insights have unique IDs and proper structure
+ * Parse a structured text response from Claude
  */
-export function processInsights(insights: any[]): any[] {
-  if (!insights || insights.length === 0) {
-    return [];
+function parseStructuredTextResponse(responseText: string) {
+  // Split by numbered or titled insights
+  const insightPattern = /\n\s*(?:Insight\s*#?\s*\d+|Strategic Insight\s*#?\s*\d+|#\d+|INSIGHT\s*\d+)[\s:-]*(.*?)(?=\n\s*(?:Insight\s*#?\s*\d+|Strategic Insight\s*#?\s*\d+|#\d+|INSIGHT\s*\d+)|\n\s*$|$)/gis;
+  
+  const insights = [];
+  let match;
+  
+  while ((match = insightPattern.exec(responseText)) !== null) {
+    const insightText = match[0].trim();
+    
+    // Extract title, category, and content
+    const titleMatch = insightText.match(/^(?:Insight\s*#?\s*\d+|Strategic Insight\s*#?\s*\d+|#\d+|INSIGHT\s*\d+)[\s:-]*(.+?)(?:\n|$)/i);
+    const categoryMatch = insightText.match(/Category[\s:-]*([^\n]+)/i);
+    
+    // Create the insight object
+    const insight = {
+      id: `insight_${Date.now()}_${insights.length}`,
+      title: titleMatch ? titleMatch[1].trim() : `Insight ${insights.length + 1}`,
+      category: categoryMatch ? categoryMatch[1].trim() : 'business_imperatives',
+      content: insightText,
+      confidence: Math.round(0.7 * 100) / 100,
+      source: 'document' as const,
+      status: 'pending' as const
+    };
+    
+    insights.push(insight);
   }
   
-  // Add unique IDs to insights if not present
-  return insights.map((insight: any, index: number) => ({
-    id: insight.id || `insight_${Math.random().toString(36).substring(2, 11)}`,
-    ...insight
-  }));
+  // If no insights were found with the pattern, split by newlines and create simpler insights
+  if (insights.length === 0) {
+    const lines = responseText.split('\n\n').filter(line => line.trim().length > 20);
+    
+    lines.forEach((line, index) => {
+      const insight = {
+        id: `insight_${Date.now()}_${index}`,
+        title: `Insight ${index + 1}`,
+        category: 'business_imperatives',
+        content: line.trim(),
+        confidence: Math.round(0.6 * 100) / 100,
+        source: 'document' as const,
+        status: 'pending' as const
+      };
+      
+      insights.push(insight);
+    });
+  }
+  
+  return insights;
 }

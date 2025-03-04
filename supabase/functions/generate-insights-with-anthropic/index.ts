@@ -3,11 +3,12 @@
  * Edge Function for generating strategic insights using Anthropic's Claude AI
  */
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { corsHeaders } from './utils/corsUtils.ts';
-import { callAnthropicAPI } from './services/anthropicService.ts';
-import { createErrorResponse, validateDocumentContent } from './services/errorHandler.ts';
-import { generatePrompt } from './services/promptGenerator.ts';
-import { parseClaudeResponse } from './services/responseParser.ts';
+
+// Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -32,6 +33,13 @@ serve(async (req) => {
     } = requestData;
     
     console.log(`Processing analysis for project ${projectId} with ${documentContents.length} documents`);
+    
+    // Import required modules
+    const { validateDocumentContent } = await import('./services/errorHandler.ts');
+    const { generatePrompt } = await import('./services/promptGenerator.ts');
+    const { callAnthropicAPI } = await import('./services/anthropicService.ts');
+    const { parseClaudeResponse } = await import('./services/responseParser.ts');
+    const { createErrorResponse } = await import('./services/errorHandler.ts');
     
     // Validate the request parameters
     if (!projectId) {
@@ -77,6 +85,9 @@ serve(async (req) => {
     
   } catch (error) {
     console.error('Error in generate-insights-with-anthropic:', error);
+    
+    // Import error handling module using dynamic import
+    const { createErrorResponse } = await import('./services/errorHandler.ts');
     return createErrorResponse(error);
   }
 });
