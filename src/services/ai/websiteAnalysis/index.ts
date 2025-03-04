@@ -3,12 +3,15 @@
  * Export all website analysis services
  */
 
+// Import first to make it available for backward compatibility export
+import { analyzeClientWebsite, getWebsiteAnalysisStatus, extractInsightsFromWebsiteData } from './websiteAnalysisService';
+
 // Re-export the service methods with correct names
 export { 
   analyzeClientWebsite, 
   getWebsiteAnalysisStatus,
   extractInsightsFromWebsiteData
-} from './websiteAnalysisService';
+};
 
 // For backward compatibility
 export const analyzeWebsite = analyzeClientWebsite;
