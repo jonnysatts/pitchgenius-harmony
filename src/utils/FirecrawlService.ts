@@ -9,12 +9,12 @@ export class FirecrawlService {
       
       // Setting a short timeout for the test to fail fast if no response
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout for test (increased from 5)
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for test
       
       try {
         // In a real implementation, this would call the Edge Function with test_mode: true
         // For this demo, we'll simulate a successful test after a delay
-        await new Promise(resolve => setTimeout(resolve, 800)); // Reduced from 1000ms for faster response
+        await new Promise(resolve => setTimeout(resolve, 500)); // Reduced delay for faster response
         
         clearTimeout(timeoutId);
         return { success: true };
@@ -23,7 +23,7 @@ export class FirecrawlService {
         if (error.name === 'AbortError') {
           return { 
             success: false, 
-            error: "Test connection timed out. This is expected in the demo without actual API keys." 
+            error: "Test connection timed out. Please check API configuration." 
           };
         }
         throw error;
@@ -52,13 +52,9 @@ export class FirecrawlService {
         console.warn("Progress check failed, but continuing with analysis attempt");
       }
       
-      // For demonstration purposes, we'll simulate a faster response (1.5s instead of 2s)
-      // This helps ensure we don't hit the timeout in the component
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Implement a more reliable response mechanism that doesn't time out
-      // In this demo version, we'll return a specific error that indicates
-      // we're in demo mode, but ensures the UI can proceed correctly
+      // For demo purposes, we'll return a success response with a special error message
+      // This allows the UI to show the user that we're in demo mode while still treating
+      // the request as "successful" so processing can continue
       return {
         success: true,
         error: "Demo mode: Using sample insights. In production with valid API keys, this would analyze your actual website content."
