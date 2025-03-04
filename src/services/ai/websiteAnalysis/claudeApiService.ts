@@ -8,6 +8,7 @@ import { generateWebsiteResearchPrompt } from "../promptEngineering";
 import { prepareWebsiteContent } from "../promptUtils";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
 import { normalizeWebsiteCategory, isValidWebsiteCategory } from "@/components/project/insights/utils/insightFormatters";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * Call the Claude API to analyze a website
@@ -22,6 +23,8 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
     const websiteContent = prepareWebsiteContent(project.clientWebsite || '', project);
     
     try {
+      console.log('Calling analyze-website-with-anthropic edge function...');
+      
       // Call the Supabase Edge Function that uses Anthropic
       const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
         body: { 
@@ -33,7 +36,11 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
           websiteContent,
           systemPrompt: websiteResearchPrompt,
           // Add the website insight categories to the request as explicit array
-          websiteInsightCategories: websiteInsightCategories.map(cat => cat.id)
+          websiteInsightCategories: websiteInsightCategories.map(cat => cat.id),
+          // Add timestamp to prevent caching issues
+          timestamp: new Date().toISOString(),
+          // Add debug flag to get more detailed logs
+          debugMode: true
         }
       });
       
@@ -49,7 +56,23 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
       // Log raw insights data for debugging
       console.log("Raw insights from API:", JSON.stringify(data.insights.slice(0, 2)));
       
-      return { insights: processWebsiteInsights(data.insights, project) };
+      // Process and validate the insights
+      const processedInsights = processWebsiteInsights(data.insights, project);
+      
+      // Verify that the processed insights have proper content
+      const invalidInsights = processedInsights.filter(insight => {
+        return !insight.content?.title || 
+               insight.content.title === ',' || 
+               insight.content.summary?.includes('-1685557426') ||
+               insight.content.details?.includes('-1685557426');
+      });
+      
+      if (invalidInsights.length > 0) {
+        console.error('Found invalid insights after processing:', invalidInsights.length);
+        throw new Error('The API returned malformed insights');
+      }
+      
+      return { insights: processedInsights };
     } catch (err) {
       console.error('Error calling Supabase Edge Function:', err);
       throw err;
@@ -66,6 +89,32 @@ export const callWebsiteAnalysisApi = async (project: Project): Promise<{ insigh
 export const processWebsiteInsights = (rawInsights: any[], project: Project): StrategicInsight[] => {
   // Log the raw categories from API for debugging
   console.log('Raw categories from API:', rawInsights.map((i: any) => i.category));
+  
+  // Filter out any obviously malformed insights
+  let validInsights = rawInsights.filter(insight => {
+    // Check for valid content structure
+    if (!insight.content || typeof insight.content !== 'object') {
+      return false;
+    }
+    
+    // Check for malformed content fields
+    if (insight.content.title === ',' || 
+        (insight.content.summary && insight.content.summary.includes('-1685557426')) ||
+        (insight.content.details && insight.content.details.includes('-1685557426'))) {
+      return false;
+    }
+    
+    return true;
+  });
+  
+  // If we filtered out too many, we might have a systemic issue
+  if (validInsights.length < rawInsights.length * 0.5) {
+    console.warn(`Filtered out ${rawInsights.length - validInsights.length} malformed insights`);
+    // Use all insights but fix them during processing
+  } else if (validInsights.length > 0) {
+    // Use just the valid ones if we have enough
+    rawInsights = validInsights;
+  }
   
   // Ensure we have insights in all categories
   const availableCategories = new Set(rawInsights.map((i: any) => 
@@ -111,21 +160,32 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       console.log(`Invalid category after normalization for insight: ${insight.id}, setting to default 'company_positioning'`);
     }
     
-    // Clean up the summary to remove duplicate website-derived markers
+    // Fix any problematic title
+    let title = insight.content?.title || '';
+    if (!title || title === ',' || title === '.') {
+      // Generate a title based on category
+      title = getCategoryTitle(normalizedCategory);
+    }
+    
+    // Clean up the summary to remove duplicate website-derived markers and errors
     let summary = insight.content?.summary || '';
     summary = summary.replace(/\[Website-derived\]\s*\[Website-derived\]/g, '[Website-derived]');
     
-    // Ensure title is set
-    if (!insight.content?.title || typeof insight.content.title !== 'string') {
-      insight.content = insight.content || {};
-      insight.content.title = `Website Insight for ${project.clientName}`;
+    // Check for error patterns in summary
+    if (summary.includes('-1685557426') || summary.includes('category') || summary === '.' || summary === '') {
+      summary = `Analysis of ${project.clientName || 'client'}'s website for ${normalizedCategory.replace(/_/g, ' ')}`;
     }
     
-    // Ensure summary is set with website marker
-    if (!summary || typeof summary !== 'string') {
-      summary = `🌐 [Website-derived] Analysis of ${project.clientName}'s website.`;
-    } else if (!summary.includes('[Website-derived]')) {
-      summary = `🌐 [Website-derived] ${summary}`;
+    // Clean up details
+    let details = insight.content?.details || '';
+    if (details.includes('-1685557426') || details.includes('category') || details === '.' || details === '') {
+      details = `Website analysis focused on ${normalizedCategory.replace(/_/g, ' ')}.`;
+    }
+    
+    // Clean up recommendations
+    let recommendations = insight.content?.recommendations || '';
+    if (!recommendations || recommendations.includes('-1685557426')) {
+      recommendations = getCategoryRecommendation(normalizedCategory);
     }
     
     // Fix the type by explicitly setting source to 'website'
@@ -135,7 +195,10 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
       category: normalizedCategory,
       content: {
         ...insight.content,
-        summary,
+        title,
+        summary: summary.includes('[Website-derived]') ? summary : `🌐 [Website-derived] ${summary}`,
+        details,
+        recommendations,
         websiteUrl: project.clientWebsite,
         source: 'Website analysis'
       }
@@ -154,3 +217,36 @@ export const processWebsiteInsights = (rawInsights: any[], project: Project): St
   
   return processedInsights;
 };
+
+/**
+ * Get a default title based on category
+ */
+function getCategoryTitle(category: string): string {
+  const titles: Record<string, string> = {
+    company_positioning: "Company Positioning Analysis",
+    competitive_landscape: "Competitive Landscape Overview",
+    key_partnerships: "Strategic Partnerships Analysis",
+    public_announcements: "Recent Public Announcements",
+    consumer_engagement: "Consumer Engagement Opportunities",
+    product_service_fit: "Product-Service Gaming Fit"
+  };
+  
+  return titles[category] || "Website Analysis Insight";
+}
+
+/**
+ * Get a default recommendation based on category
+ */
+function getCategoryRecommendation(category: string): string {
+  const recommendations: Record<string, string> = {
+    company_positioning: "Align gaming initiatives with the company's brand positioning to ensure consistency and leverage existing brand equity.",
+    competitive_landscape: "Identify gaps in competitors' gaming strategies to develop a distinctive positioning in the gaming space.",
+    key_partnerships: "Explore gaming partnerships that complement existing strategic alliances and extend their value proposition.",
+    public_announcements: "Time gaming initiatives to coincide with or follow major company announcements for maximum visibility.",
+    consumer_engagement: "Develop gaming elements that enhance the existing customer journey and interaction points.",
+    product_service_fit: "Integrate gaming mechanics that highlight and enhance the core value of existing products and services."
+  };
+  
+  return recommendations[category] || 
+         "Consider incorporating gaming elements that align with the company's strategic goals.";
+}
