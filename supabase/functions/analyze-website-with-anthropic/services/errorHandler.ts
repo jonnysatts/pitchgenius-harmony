@@ -23,6 +23,7 @@ export function createErrorResponse(
   
   let errorMessage: string;
   let errorDetail: any = {};
+  let errorType: string = 'unknown_error';
   
   if (error instanceof Error) {
     errorMessage = error.message;
@@ -31,24 +32,45 @@ export function createErrorResponse(
       message: error.message,
       stack: error.stack
     };
+    
+    // Determine error type from error message
+    if (error.message.includes('rate limit') || error.message.includes('timeout') || 
+        error.message.includes('overloaded')) {
+      errorType = 'rate_limit_error';
+    } else if (error.message.includes('API key')) {
+      errorType = 'api_key_error';
+    } else if (error.message.includes('insufficient') || error.message.includes('content too short')) {
+      errorType = 'insufficient_content_error';
+    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+      errorType = 'network_error';
+    } else if (error.name === 'AbortError') {
+      errorType = 'timeout_error';
+    }
   } else if (typeof error === 'object' && error !== null) {
     errorMessage = JSON.stringify(error);
     errorDetail = error;
+    
+    // Check for specific error type in object
+    const errorObj = error as any;
+    if (errorObj.type) {
+      errorType = errorObj.type;
+    }
   } else {
     errorMessage = String(error);
   }
   
   const responseData = {
     error: errorMessage,
-    insufficientContent: false,
+    errorType,
+    insufficientContent: errorType === 'insufficient_content_error',
     usingFallback: true,
     insights: fallbackInsights,
     errorDetail,
     timestamp: new Date().toISOString(),
     success: false,
-    retriableError: errorMessage.includes('rate limit') || 
-                   errorMessage.includes('timeout') || 
-                   errorMessage.includes('overloaded')
+    retriableError: errorType === 'rate_limit_error' || 
+                   errorType === 'timeout_error' || 
+                   errorType === 'network_error'
   };
   
   return new Response(

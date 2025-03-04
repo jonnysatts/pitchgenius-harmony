@@ -55,10 +55,7 @@ export function parseClaudeResponse(response: string): any[] {
         insights = parsed.insights;
       } else {
         console.error('Parsed JSON is not an array or object with insights array');
-        return generateFallbackInsights("", "", "").map(insight => ({
-          ...insight,
-          source: 'website'
-        }));
+        throw new Error('Invalid insight format returned from Claude API');
       }
       
       console.log(`Successfully parsed ${insights.length} insights from JSON`);
@@ -72,21 +69,20 @@ export function parseClaudeResponse(response: string): any[] {
         };
       });
       
+      // Validate that we have actual insights
+      if (enhancedInsights.length === 0) {
+        throw new Error('No insights could be extracted from Claude response');
+      }
+      
       return enhancedInsights;
     } catch (jsonError) {
       console.error('Error parsing JSON:', jsonError);
       // Fall back to generated insights
-      return generateFallbackInsights("", "", "").map(insight => ({
-        ...insight,
-        source: 'website'
-      }));
+      throw new Error(`Failed to parse Claude response as valid JSON: ${jsonError.message}`);
     }
   } catch (error) {
     console.error('Error parsing Claude response:', error);
-    return generateFallbackInsights("", "", "").map(insight => ({
-      ...insight,
-      source: 'website'
-    }));
+    throw error;
   }
 }
 

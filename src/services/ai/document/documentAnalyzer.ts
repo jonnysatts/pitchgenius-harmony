@@ -1,6 +1,8 @@
+
 import { Document, Project } from "@/lib/types";
 import { prepareDocumentContents } from '../promptUtils';
 import { callClaudeApi } from '../apiClient';
+import { errorService } from '@/services/error/errorService';
 
 /**
  * Analyzes documents to generate strategic insights
@@ -14,10 +16,7 @@ export const analyzeDocuments = async (
     
     if (!documents || documents.length === 0) {
       console.error("No documents provided for analysis");
-      return {
-        success: false,
-        message: 'No documents provided for analysis.'
-      };
+      throw errorService.createAnalysisError('No documents provided for analysis.');
     }
     
     // Prepare documents for analysis - this extracts text content
@@ -25,10 +24,7 @@ export const analyzeDocuments = async (
     
     if (documentsContent.length === 0) {
       console.error("No content could be extracted from documents");
-      return {
-        success: false,
-        message: 'No document content could be extracted. Please check the document formats.'
-      };
+      throw errorService.createAnalysisError('No document content could be extracted. Please check the document formats.');
     }
     
     // Log the total content size to help with debugging
@@ -75,10 +71,7 @@ export const analyzeDocuments = async (
       };
     } else if (apiResult.error) {
       console.error("Claude API returned an error:", apiResult.error);
-      return {
-        success: false,
-        message: apiResult.error
-      };
+      throw errorService.createClaudeApiError(apiResult.error);
     }
     
     console.log("Claude API call succeeded but no insights were returned");
@@ -88,9 +81,17 @@ export const analyzeDocuments = async (
     };
   } catch (error) {
     console.error('Error analyzing documents:', error);
+    
+    // Use the error service to handle the error
+    errorService.handleError(error, { 
+      context: 'document-analysis',
+      projectId,
+      documentCount: documents?.length
+    });
+    
     return {
       success: false,
-      message: `Failed to analyze documents: ${error instanceof Error ? error.message : String(error)}`
+      message: error instanceof Error ? error.message : String(error)
     };
   }
 };
@@ -127,5 +128,6 @@ const storeInsightsInLocalStorage = (projectId: string, insights: any[]) => {
     console.log(`Stored ${insights.length} document insights in localStorage for project ${projectId}`);
   } catch (error) {
     console.error('Error storing insights in localStorage:', error);
+    errorService.handleError(error, { context: 'localStorage-storage', projectId });
   }
 };
