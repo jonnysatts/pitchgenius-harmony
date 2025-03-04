@@ -1,4 +1,3 @@
-
 /**
  * Functions to generate default content for insights
  */
