@@ -1,4 +1,3 @@
-
 /**
  * Key validation service for Anthropic API
  */
@@ -13,12 +12,14 @@ export async function verifyAnthropicApiKey(): Promise<{
   keyPrefix: string;
   message: string;
 }> {
-  console.log('Verifying Anthropic API key...');
+  const startTime = new Date().toISOString();
+  console.log(`[${startTime}] Verifying Anthropic API key...`);
   
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   
   if (!apiKey) {
-    console.error('ANTHROPIC_API_KEY not found in environment');
+    const errorTime = new Date().toISOString();
+    console.error(`[${errorTime}] ANTHROPIC_API_KEY not found in environment`);
     return {
       valid: false,
       keyExists: false,
@@ -32,7 +33,8 @@ export async function verifyAnthropicApiKey(): Promise<{
   const isFormatValid = apiKey.startsWith('sk-ant-') && apiKey.length > 20;
   const keyPrefix = apiKey.substring(0, 8) + '...';
   
-  console.log(`API key found. Format valid: ${isFormatValid}, prefix: ${keyPrefix}`);
+  const logTime = new Date().toISOString();
+  console.log(`[${logTime}] API key found. Format valid: ${isFormatValid}, prefix: ${keyPrefix}`);
   
   return {
     valid: isFormatValid,
