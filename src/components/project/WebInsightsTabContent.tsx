@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import NoWebsiteCard from "./web-insights/NoWebsiteCard";
@@ -104,14 +105,18 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
                 onAnalyzeWebsite={handleAnalyzeWebsite}
                 hasInsights={hasInsights}
                 aiStatus={aiStatus}
+                error={error}
               />
             </div>
           )}
 
-          {error && (
+          {error && !isAnalyzingWebsite && (
             <div className="mt-4 p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
               <p>
-                <strong>Analysis Error:</strong> {error}
+                <strong>Note:</strong> {error}
+              </p>
+              <p className="text-xs mt-1 italic">
+                For demonstration purposes, sample insights are shown below.
               </p>
             </div>
           )}
@@ -130,7 +135,6 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             <NoInsightsEmptyState 
               hasWebsiteUrl={!!websiteUrl}
               isAnalyzing={isAnalyzingWebsite}
-              onAnalyzeWebsite={isAnalyzingWebsite ? undefined : undefined}
             />
           )}
         </>

@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Project, AIProcessingStatus } from '@/lib/types';
 import { toast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ interface WebsiteAnalysisControlsProps {
   onAnalyzeWebsite: () => void;
   hasInsights: boolean;
   aiStatus?: AIProcessingStatus;
+  error?: string | null;
 }
 
 export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = ({
@@ -20,7 +22,8 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
   isAnalyzing,
   onAnalyzeWebsite,
   hasInsights,
-  aiStatus
+  aiStatus,
+  error
 }) => {
   const hasWebsiteUrl = !!project.clientWebsite;
   
@@ -124,6 +127,18 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
             
             {/* Timeline indicators */}
             <AnalysisPhaseTimeline progress={progress} />
+            
+            {/* Error message if any */}
+            {error && (
+              <div className="mt-4 p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
+                <p className="text-sm font-medium">
+                  <span className="font-bold">Note:</span> {error}
+                </p>
+                <p className="text-xs mt-1 italic">
+                  For demonstration purposes, sample insights will be shown.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -87,35 +87,65 @@ export class FirecrawlService {
       // Prepare the Supabase client from the exported client
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // We'll call our Supabase Edge Function with proper error handling
-      const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+      // Create a timeout promise
+      const timeout = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timed out after 45 seconds'));
+        }, 45000); // 45 second timeout
+      });
+      
+      // Create the request promise
+      const requestPromise = supabase.functions.invoke('analyze-website-with-anthropic', {
         body: {
           website_url: url,
           client_name: clientName,
           client_industry: clientIndustry,
           use_firecrawl: true,
           system_prompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
-          max_response_time: 120, // Set max response time to 120 seconds to avoid timeouts
+          max_response_time: 40, // Lower the response time to 40 seconds to avoid timeouts
           test_mode: false // Ensure this is false for real analysis
         }
       });
       
-      if (error) {
-        console.error('Error from edge function:', error);
-        throw new Error(`Error from edge function: ${error.message || JSON.stringify(error)}`);
+      // Race the request against the timeout
+      const result = await Promise.race([requestPromise, timeout]);
+      
+      if (!result) {
+        throw new Error('Request timed out');
       }
       
-      console.log('Edge function response:', data);
+      // Check for errors in the response
+      // @ts-ignore - Type 'unknown' has no property 'error'
+      if (result.error) {
+        // @ts-ignore
+        console.error('Error from edge function:', result.error);
+        // @ts-ignore
+        throw new Error(`Error from edge function: ${result.error.message || JSON.stringify(result.error)}`);
+      }
+      
+      // @ts-ignore
+      console.log('Edge function response:', result.data);
       
       // Verify that insights were returned
-      if (!data || !data.insights || data.insights.length === 0) {
+      // @ts-ignore
+      if (!result.data || !result.data.insights || result.data.insights.length === 0) {
         console.error('No insights returned from edge function');
         throw new Error('No insights returned from website analysis. The API may have failed to extract meaningful content.');
       }
       
-      return data;
+      // @ts-ignore
+      return result.data;
     } catch (error) {
       console.error('Exception analyzing website via Supabase:', error);
+      
+      // Determine if it's a timeout
+      const isTimeout = 
+        error instanceof Error && 
+        (error.message.includes('timed out') || error.message.includes('timeout'));
+      
+      if (isTimeout) {
+        throw new Error('Website analysis timed out. The Claude API may be experiencing delays.');
+      }
       
       // Provide a more detailed error that includes the type of error
       if (error instanceof Error) {

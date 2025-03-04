@@ -5,13 +5,11 @@ import { AlertCircle, Globe } from 'lucide-react';
 interface NoInsightsEmptyStateProps {
   hasWebsiteUrl: boolean;
   isAnalyzing?: boolean;
-  onAnalyzeWebsite?: () => void;
 }
 
 export const NoInsightsEmptyState = ({
   hasWebsiteUrl,
-  isAnalyzing = false,
-  onAnalyzeWebsite
+  isAnalyzing = false
 }: NoInsightsEmptyStateProps) => {
   if (!hasWebsiteUrl) {
     return (
