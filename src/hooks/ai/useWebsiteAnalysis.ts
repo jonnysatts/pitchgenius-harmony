@@ -42,7 +42,8 @@ export const useWebsiteAnalysis = (
     notifyInvalidUrl,
     notifyMissingUrl,
     notifyApiSetupIssue,
-    notifyAnalysisError
+    notifyAnalysisError,
+    notifyClaudeOverloaded
   } = useWebsiteAnalysisNotifications(project);
 
   // Get website processor helpers
@@ -124,6 +125,14 @@ export const useWebsiteAnalysis = (
       clearInterval(progressCheckInterval);
       clearTimeout(analysisTimeout);
       
+      // Special handling for Claude overloaded error
+      if (result.error && result.error.includes('overloaded')) {
+        setIsAnalyzing(false);
+        notifyClaudeOverloaded();
+        handleFallbackInsights(`Claude API is currently overloaded. Using sample insights instead.`);
+        return;
+      }
+      
       // Process the results
       await processAnalysisResult(result, progressInterval, progressCheckInterval);
     } catch (error) {
@@ -151,6 +160,7 @@ export const useWebsiteAnalysis = (
     notifyMissingUrl,
     notifyApiSetupIssue,
     notifyAnalysisError,
+    notifyClaudeOverloaded,
     handleAnalysisTimeout,
     setupProgressChecking,
     checkAnalysisProgress,

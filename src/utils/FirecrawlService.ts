@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // This service connects to the Supabase Edge Function to analyze websites
@@ -46,7 +47,7 @@ export class FirecrawlService {
     websiteUrl: string,
     clientName: string = "",
     clientIndustry: string = "technology"
-  ): Promise<{success: boolean, error?: string, insights?: any[]}> {
+  ): Promise<{success: boolean, error?: string, insights?: any[], retriableError?: boolean}> {
     try {
       console.log(`Analyzing website: ${websiteUrl}`);
       
@@ -71,7 +72,9 @@ export class FirecrawlService {
         console.error('Error from Edge Function:', error);
         return {
           success: false,
-          error: error.message || `API error: ${error.code || 'unknown'}`
+          error: error.message || `API error: ${error.code || 'unknown'}`,
+          // Don't set retriableError for edge function errors - these need to be fixed
+          retriableError: false
         };
       }
       
@@ -83,17 +86,25 @@ export class FirecrawlService {
         };
       }
       
-      // If we got a valid response but no insights, it might be demo data
+      // Check for retriable errors - Claude overload or rate limit
       if (data.error) {
+        const isRetriable = 
+          (typeof data.error === 'string' && 
+           (data.error.includes('overloaded') || 
+            data.error.includes('rate limit') || 
+            data.error.includes('429') || 
+            data.error.includes('529')));
+            
         return {
-          success: true,
+          success: false,
           error: data.error,
-          insights: data.sample_insights || []
+          insights: data.sample_insights || [],
+          retriableError: isRetriable
         };
       }
       
       return {
-        success: true,
+        success: false,
         error: "Received a valid response but no insights were found.",
         insights: []
       };
@@ -101,7 +112,8 @@ export class FirecrawlService {
       console.error("Error analyzing website:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error analyzing website"
+        error: error instanceof Error ? error.message : "Unknown error analyzing website",
+        retriableError: false
       };
     }
   }

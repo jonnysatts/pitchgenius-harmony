@@ -39,6 +39,9 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
   // Determine if this is a content error
   const isContentError = error?.includes('insufficient') || error?.includes('content too short') || 
                          error?.includes('Failed to fetch website content');
+                         
+  // Determine if this is a Claude overload error
+  const isClaudeOverloaded = error?.includes('overloaded') || error?.includes('529');
   
   if (isClaudeProcessing) {
     return (
@@ -100,6 +103,8 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
         <XCircle className="h-4 w-4 text-red-500" /> 
       ) : isApiKeyMissing ? (
         <Key className="h-4 w-4 text-red-500" />
+      ) : isClaudeOverloaded ? (
+        <AlertTriangle className="h-4 w-4 text-amber-500" />
       ) : (
         <AlertTriangle className="h-4 w-4 text-amber-500" />
       )}
@@ -108,16 +113,17 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
         {/* Error Title */}
         {isEdgeFunctionError && <AlertTitle className="text-red-700">Supabase Edge Function Error</AlertTitle>}
         {isApiKeyMissing && <AlertTitle className="text-red-700">Anthropic API Key Missing</AlertTitle>}
-        {isClaudeApiError && <AlertTitle className="text-red-700">Claude AI API Error</AlertTitle>}
+        {isClaudeApiError && !isClaudeOverloaded && <AlertTitle className="text-red-700">Claude AI API Error</AlertTitle>}
+        {isClaudeOverloaded && <AlertTitle className="text-amber-700">Claude AI Currently Overloaded</AlertTitle>}
         {isContentError && <AlertTitle className="text-amber-700">Website Content Issue</AlertTitle>}
-        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && usingFallbackInsights && 
+        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && !isClaudeOverloaded && usingFallbackInsights && 
           <AlertTitle className="text-amber-700">Using Sample Insights</AlertTitle>}
-        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && !usingFallbackInsights &&
+        {!isEdgeFunctionError && !isApiKeyMissing && !isClaudeApiError && !isContentError && !isClaudeOverloaded && !usingFallbackInsights &&
           <AlertTitle className="text-amber-700">Analysis Issue</AlertTitle>}
         
         <AlertDescription 
           className={`flex justify-between items-center ${
-            isEdgeFunctionError || isClaudeApiError ? 'text-red-700' : 'text-amber-800'
+            isEdgeFunctionError || (isClaudeApiError && !isClaudeOverloaded) ? 'text-red-700' : 'text-amber-800'
           }`}
         >
           <div>
@@ -147,8 +153,21 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
               </div>
             )}
             
+            {/* Special explanation for overloaded error */}
+            {isClaudeOverloaded && (
+              <div className="mt-2 text-sm">
+                <p>Claude AI's servers are currently overloaded. This is a temporary issue on Anthropic's side.</p>
+                <p>To resolve this:</p>
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Wait a few minutes and try the analysis again</li>
+                  <li>Try at a different time of day when usage may be lower</li>
+                  <li>Sample insights are being shown for demonstration purposes</li>
+                </ul>
+              </div>
+            )}
+            
             {/* Specific additional content based on error type */}
-            {isApiKeyMissing && (
+            {isApiKeyMissing && !isClaudeOverloaded && (
               <div className="mt-2 text-sm">
                 <p>The ANTHROPIC_API_KEY is missing from your Supabase secrets or can't be accessed by the Edge Function.</p>
                 <p>To fix this:</p>
@@ -161,7 +180,7 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
               </div>
             )}
             
-            {isEdgeFunctionError && !isApiKeyMissing && (
+            {isEdgeFunctionError && !isApiKeyMissing && !isClaudeOverloaded && (
               <div className="mt-2 text-sm">
                 <p>There was a problem connecting to the Supabase Edge Function for Claude AI.</p>
                 <p>This could be due to:</p>
@@ -174,7 +193,7 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
                 <div className="mt-2 flex items-center">
                   <TerminalSquare className="h-3.5 w-3.5 mr-1 text-red-700" />
                   <a 
-                    href="https://supabase.com/dashboard/project/nryafptwknnftdjugoyn/functions/generate-insights-with-anthropic/logs" 
+                    href="https://supabase.com/dashboard/project/nryafptwknnftdjugoyn/functions/analyze-website-with-anthropic/logs" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-red-700 underline"
@@ -185,7 +204,7 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
               </div>
             )}
             
-            {isClaudeApiError && (
+            {isClaudeApiError && !isClaudeOverloaded && (
               <div className="mt-2 text-sm">
                 <p>There was a problem calling the Claude AI API:</p>
                 <ul className="list-disc pl-5 mt-1">
@@ -196,7 +215,7 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
               </div>
             )}
             
-            {isContentError && (
+            {isContentError && !isClaudeOverloaded && (
               <div className="mt-2 text-sm">
                 <p>There was an issue with the content:</p>
                 <ul className="list-disc pl-5 mt-1">
@@ -213,14 +232,14 @@ const InsightsErrorAlert: React.FC<InsightsErrorAlertProps> = ({
               size="sm" 
               variant="outline" 
               className={`flex items-center gap-1 ml-4 ${
-                isEdgeFunctionError || isClaudeApiError
+                isEdgeFunctionError || (isClaudeApiError && !isClaudeOverloaded)
                   ? 'border-red-500 text-red-700 hover:bg-red-100' 
                   : 'border-amber-500 text-amber-700 hover:bg-amber-100'
               }`}
               onClick={onRetryAnalysis}
             >
               <RefreshCw size={14} />
-              Retry with Claude AI
+              {isClaudeOverloaded ? "Retry Later" : "Retry with Claude AI"}
             </Button>
           )}
         </AlertDescription>

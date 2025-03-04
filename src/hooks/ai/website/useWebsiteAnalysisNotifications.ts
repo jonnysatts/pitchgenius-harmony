@@ -5,51 +5,60 @@ import { useToast } from '@/hooks/use-toast';
 
 export const useWebsiteAnalysisNotifications = (project: Project) => {
   const { toast } = useToast();
-
+  
   const notifyAnalysisStart = useCallback(() => {
     toast({
-      title: "Starting Website Analysis",
-      description: "Beginning analysis of " + project.clientWebsite,
+      title: "Analysis Started",
+      description: `Analyzing website: ${project.clientWebsite}. This may take up to 2 minutes.`
     });
   }, [project.clientWebsite, toast]);
-
+  
   const notifyInvalidUrl = useCallback(() => {
     toast({
       title: "Invalid Website URL",
-      description: `"${project.clientWebsite}" doesn't appear to be a valid URL.`,
+      description: "Please enter a valid website URL (e.g., https://example.com)",
       variant: "destructive"
     });
-  }, [project.clientWebsite, toast]);
-
+  }, [toast]);
+  
   const notifyMissingUrl = useCallback(() => {
     toast({
-      title: "Missing Website URL",
-      description: "Please add a website URL to the project before analyzing.",
+      title: "No Website URL",
+      description: "Please enter a website URL in the project details before analyzing",
       variant: "destructive"
     });
   }, [toast]);
-
-  const notifyApiSetupIssue = useCallback((error: string) => {
+  
+  const notifyApiSetupIssue = useCallback((message: string) => {
     toast({
-      title: "Analysis Setup Issue",
-      description: "API connection failed. Check logs for details.",
+      title: "API Setup Issue",
+      description: message || "There was an issue with the API setup. Please check your configuration.",
       variant: "destructive"
     });
   }, [toast]);
-
-  const notifyAnalysisError = useCallback((error: string) => {
+  
+  const notifyAnalysisError = useCallback((errorMessage: string) => {
     toast({
-      title: "Website Analysis Error",
-      description: "An error occurred during analysis. See details for more information.",
+      title: "Analysis Error",
+      description: errorMessage || "An error occurred during website analysis.",
       variant: "destructive"
     });
   }, [toast]);
-
+  
+  const notifyClaudeOverloaded = useCallback(() => {
+    toast({
+      title: "Claude AI Overloaded",
+      description: "Claude AI is currently experiencing high demand. Please try again in a few minutes. Using sample insights for now.",
+      variant: "destructive"
+    });
+  }, [toast]);
+  
   return {
     notifyAnalysisStart,
     notifyInvalidUrl,
     notifyMissingUrl,
     notifyApiSetupIssue,
-    notifyAnalysisError
+    notifyAnalysisError,
+    notifyClaudeOverloaded
   };
 };

@@ -65,6 +65,8 @@ export const useWebsiteAnalysisLogic = (
       });
     } else {
       const errorMessage = result?.error || "No insights returned from website analysis. The API may have failed to extract meaningful content.";
+      const isRetriable = result?.retriableError === true;
+      
       setError(errorMessage);
       
       if (!result.insights || result.insights.length === 0) {
@@ -74,9 +76,11 @@ export const useWebsiteAnalysisLogic = (
       }
       
       toast({
-        title: "Analysis Note",
-        description: "Analysis completed with limited results. See details for more information.",
-        variant: "default"
+        title: isRetriable ? "Claude API Temporarily Unavailable" : "Analysis Note",
+        description: isRetriable 
+          ? "Claude AI is currently overloaded. Please try again in a few minutes." 
+          : "Analysis completed with limited results. See details for more information.",
+        variant: isRetriable ? "destructive" : "default"
       });
     }
   }, [project, setAnalysisProgress, setAnalysisStatus, setWebsiteInsights, addInsights, setError, toast]);
