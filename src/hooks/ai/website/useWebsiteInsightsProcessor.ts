@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { FirecrawlService } from '@/utils/FirecrawlService';
