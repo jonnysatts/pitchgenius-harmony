@@ -6,11 +6,14 @@ import { fetchWebsiteContentBasic } from './websiteFetcher.ts';
  * If Firecrawl fails, fall back to basic fetching
  */
 export async function fetchWebsiteContentWithFirecrawl(url: string): Promise<string> {
-  // Check for both potential key names to be safe
+  // Check for API key under both possible names (original and typo version)
   const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
   
-  // If no API key is available, use basic fetch
-  if (!firecrawlApiKey) {
+  // Debug the actual key being used (partial for security)
+  if (firecrawlApiKey) {
+    const safeKeyPreview = firecrawlApiKey.substring(0, 4) + '...' + firecrawlApiKey.substring(firecrawlApiKey.length - 4);
+    console.log(`Using Firecrawl API key (preview): ${safeKeyPreview}`);
+  } else {
     console.log(`No Firecrawl API key found, using basic fetch for ${url}`);
     return await fetchWebsiteContentBasic(url);
   }
@@ -20,6 +23,8 @@ export async function fetchWebsiteContentWithFirecrawl(url: string): Promise<str
     
     // Ensure URL has protocol
     const urlWithProtocol = url.startsWith('http') ? url : `https://${url}`;
+    
+    console.log(`Making request to Firecrawl API for: ${urlWithProtocol}`);
     
     const response = await fetch('https://api.firecrawl.dev/crawl', {
       method: 'POST',
@@ -38,14 +43,19 @@ export async function fetchWebsiteContentWithFirecrawl(url: string): Promise<str
     });
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Firecrawl API error: ${response.status} ${response.statusText} - ${errorText}`);
       throw new Error(`Firecrawl API error: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
+    console.log(`Firecrawl API response status: ${data.success ? 'success' : 'failed'}`);
     
     if (data.success && data.data && data.data.length > 0) {
       // Combine all content from crawled pages
       let combinedContent = '';
+      
+      console.log(`Firecrawl returned ${data.data.length} pages of content`);
       
       for (const page of data.data) {
         if (page.markdown) {
@@ -55,10 +65,18 @@ export async function fetchWebsiteContentWithFirecrawl(url: string): Promise<str
         }
       }
       
-      console.log(`Successfully fetched content with Firecrawl (${combinedContent.length} chars)`);
+      const contentLength = combinedContent.length;
+      console.log(`Successfully fetched content with Firecrawl (${contentLength} chars)`);
+      
       // Limit content length for Claude's context window
-      return combinedContent.slice(0, 90000);
+      const truncatedContent = combinedContent.slice(0, 90000);
+      if (truncatedContent.length < contentLength) {
+        console.log(`Content truncated from ${contentLength} to ${truncatedContent.length} chars for Claude's context window`);
+      }
+      
+      return truncatedContent;
     } else {
+      console.error('No content returned from Firecrawl:', data);
       throw new Error('No content returned from Firecrawl');
     }
   } catch (error) {

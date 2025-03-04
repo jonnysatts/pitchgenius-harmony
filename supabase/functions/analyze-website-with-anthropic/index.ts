@@ -24,8 +24,17 @@ serve(async (req) => {
   if (corsResponse) return corsResponse;
   
   try {
+    console.log('Website analysis Edge Function starting...');
+    
     // Parse the request body
     const requestData = await req.json();
+    console.log('Request data received:', {
+      projectId: requestData.projectId,
+      clientIndustry: requestData.clientIndustry,
+      clientWebsite: requestData.clientWebsite,
+      hasWebsiteContent: !!requestData.websiteContent
+    });
+    
     const { 
       projectId, 
       clientIndustry, 
@@ -38,13 +47,19 @@ serve(async (req) => {
     
     // Check we have the minimum required data
     if (!projectId || !clientWebsite) {
+      console.error('Missing required fields in request');
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    console.log(`Analyzing website for project ${projectId}: ${clientWebsite}\n`);
+    console.log(`Analyzing website for project ${projectId}: ${clientWebsite}`);
+    
+    // Print current environment variables (securely)
+    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KPI');
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+    console.log(`Environment check: Firecrawl API Key exists: ${!!firecrawlKey}, Anthropic API Key exists: ${!!anthropicKey}`);
     
     // Try to use provided content first, otherwise fetch it
     let contentToAnalyze = websiteContent;
@@ -53,14 +68,29 @@ serve(async (req) => {
       
       try {
         // First try using Firecrawl for enhanced scraping
+        console.log("Attempting to fetch content with Firecrawl...");
         contentToAnalyze = await fetchWebsiteContentWithFirecrawl(clientWebsite);
+        console.log(`Firecrawl returned ${contentToAnalyze.length} characters of content`);
       } catch (fetchError) {
         console.error("Error with Firecrawl, falling back to basic fetch:", fetchError);
         contentToAnalyze = await fetchWebsiteContentBasic(clientWebsite);
+        console.log(`Basic fetch returned ${contentToAnalyze.length} characters of content`);
       }
     }
     
+    if (!contentToAnalyze || contentToAnalyze.length < 100) {
+      console.error("Failed to fetch sufficient website content");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to fetch website content or content too short',
+          content: contentToAnalyze
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Call Claude to analyze the content
+    console.log("Calling Claude API to analyze content...");
     const claudeResponse = await analyzeWebsiteWithAnthropic(
       contentToAnalyze,
       systemPrompt || "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
@@ -68,16 +98,20 @@ serve(async (req) => {
       clientIndustry || "general"
     );
     
+    console.log(`Claude API response received (${claudeResponse.length} chars)`);
+    
     // Process the response to extract insights
     let insights;
     try {
+      console.log("Parsing Claude response into insights...");
       insights = parseClaudeResponse(claudeResponse);
+      console.log(`Parsed ${insights.length} insights from Claude response`);
     } catch (parseError) {
       console.error('Failed to parse Claude response:', parseError);
       return new Response(
         JSON.stringify({ 
           error: 'Failed to parse Claude response', 
-          rawResponse: claudeResponse
+          rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -85,10 +119,11 @@ serve(async (req) => {
     
     // Check if we got valid insights
     if (!insights || !Array.isArray(insights) || insights.length === 0) {
+      console.error('No valid insights generated from Claude response');
       return new Response(
         JSON.stringify({ 
           error: 'No valid insights generated', 
-          rawResponse: claudeResponse 
+          rawResponse: claudeResponse.substring(0, 1000) + "..." // Truncate for readability
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -99,6 +134,7 @@ serve(async (req) => {
     
     // Process insights to ensure they have all required fields
     const processedInsights = processInsights(insights);
+    console.log(`Processed ${processedInsights.length} insights, sending response`);
     
     // Return the insights
     return new Response(

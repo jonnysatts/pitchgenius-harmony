@@ -18,6 +18,7 @@ export async function fetchWebsiteContentBasic(url: string): Promise<string> {
     });
     
     if (!response.ok) {
+      console.error(`Failed to fetch website: ${response.status} ${response.statusText}`);
       throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
     }
     
@@ -38,6 +39,6 @@ export async function fetchWebsiteContentBasic(url: string): Promise<string> {
     return cleanText.slice(0, 50000);
   } catch (error) {
     console.error(`Error fetching website with basic fetch:`, error);
-    return `Error fetching website content: ${error.message || 'Unknown error'}`;
+    return `Error fetching website content: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 }

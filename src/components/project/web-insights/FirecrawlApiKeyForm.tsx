@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FirecrawlService } from '@/utils/FirecrawlService';
-import { CheckCircle, Server, Link } from 'lucide-react';
+import { CheckCircle, Server, Link, AlertTriangle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 export const FirecrawlApiKeyForm = () => {
   const [savedApiKey, setSavedApiKey] = useState<string | null>(null);
@@ -27,8 +28,8 @@ export const FirecrawlApiKeyForm = () => {
           <div>
             <p className="text-green-800 font-medium">Using Supabase Firecrawl Integration</p>
             <p className="text-sm text-green-600 mt-1">
-              Your Firecrawl API key is already configured in Supabase Edge Function secrets
-              as "FIRECRAWL_API_KPI". This enables enhanced website scraping capabilities.
+              Your Firecrawl API key is configured in Supabase Edge Function secrets.
+              This enables enhanced website scraping capabilities.
             </p>
             <div className="mt-3 flex items-center">
               <Link className="h-4 w-4 text-green-700 mr-1" />
@@ -41,6 +42,30 @@ export const FirecrawlApiKeyForm = () => {
                 View Supabase Edge Function Secrets
               </a>
             </div>
+          </div>
+        </div>
+        
+        <Separator className="my-4" />
+        
+        <div className="text-sm text-gray-600">
+          <p className="mb-2">
+            <strong>Troubleshooting Note:</strong> The Edge Function looks for either 
+            <code className="px-1 py-0.5 bg-gray-100 rounded">FIRECRAWL_API_KEY</code> or 
+            <code className="px-1 py-0.5 bg-gray-100 rounded">FIRECRAWL_API_KPI</code> in your Supabase secrets.
+          </p>
+          <p>
+            If website analysis isn't working, check the Edge Function logs for more detailed errors.
+          </p>
+          <div className="mt-2 flex items-center">
+            <Link className="h-4 w-4 text-blue-600 mr-1" />
+            <a 
+              href="https://supabase.com/dashboard/project/nryafptwknnftdjugoyn/functions/analyze-website-with-anthropic/logs" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 underline"
+            >
+              View Edge Function Logs
+            </a>
           </div>
         </div>
         
