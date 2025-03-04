@@ -94,7 +94,8 @@ export class FirecrawlService {
           client_name: clientName,
           client_industry: clientIndustry,
           use_firecrawl: true,
-          system_prompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations."
+          system_prompt: "You are a strategic analyst helping a gaming agency identify opportunities for gaming partnerships and integrations.",
+          max_response_time: 90 // Set max response time to 90 seconds to avoid timeouts
         }
       });
       
@@ -107,6 +108,22 @@ export class FirecrawlService {
       return data;
     } catch (error) {
       console.error('Exception analyzing website via Supabase:', error);
+      
+      // Provide a more detailed error that includes the type of error
+      if (error instanceof Error) {
+        // If it's a FunctionsHttpError, it likely means the Edge Function had issues
+        if (error.name === 'FunctionsHttpError') {
+          throw new Error(`Edge Function error: The server returned an error response. This could be due to a timeout or server-side error. Please try again later.`);
+        }
+        
+        // Network or connection errors
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          throw new Error(`Network error: Unable to connect to the analysis service. Please check your internet connection and try again.`);
+        }
+        
+        throw error;
+      }
+      
       throw error;
     }
   }

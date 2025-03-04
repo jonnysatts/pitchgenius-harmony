@@ -1,105 +1,58 @@
 
+/**
+ * Error handling utilities for Claude API integration
+ */
 import { corsHeaders } from '../utils/corsUtils.ts';
+import { generateFallbackInsights } from '../utils/fallbackGenerator.ts';
 
-export const createErrorResponse = (error: any) => {
-  console.error("Error in generate-insights-with-anthropic:", error);
+/**
+ * Create an error response that follows the API contract
+ */
+export function createErrorResponse(
+  error: any,
+  status: number = 500,
+  clientIndustry: string = 'technology',
+  documentCount: number = 5
+): Response {
+  console.error('Creating error response:', error);
   
-  // Create a structured error response with detailed information
-  let errorMessage = "Unknown error occurred";
-  let statusCode = 500;
+  // Generate fallback insights when Claude API fails
+  const fallbackInsights = generateFallbackInsights(clientIndustry, documentCount);
   
-  if (error instanceof Error) {
-    errorMessage = error.message;
-    
-    // Check for specific error types
-    if (error.name === 'AbortError') {
-      errorMessage = "Request timed out while waiting for Anthropic API";
-      statusCode = 504; // Gateway Timeout
-    } else if (error.message.includes('API key')) {
-      errorMessage = "Anthropic API key error: The API key is invalid, missing, or has incorrect permissions";
-      statusCode = 401; // Unauthorized
-    } else if (error.message.includes('rate limit') || error.message.includes('429')) {
-      errorMessage = "Anthropic API rate limit exceeded. Please try again later.";
-      statusCode = 429; // Too Many Requests
-    }
-  }
-  
-  // Create a fallback error response with CORS headers
+  // Log the error but return fallback insights to maintain application function
   return new Response(
-    JSON.stringify({ 
-      error: errorMessage,
-      insights: [],
-      status: statusCode,
-      timestamp: new Date().toISOString()
+    JSON.stringify({
+      insights: fallbackInsights,
+      error: getErrorMessage(error),
+      usingFallbackData: true,
+      fallbackReason: getErrorMessage(error),
+      processingTime: 0
     }),
-    { 
-      status: statusCode, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    {
+      status: 200, // Return 200 even for errors so client gets fallback data
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     }
   );
-};
+}
 
-// Enhanced document content validation
-export const validateDocumentContent = (documentContents: any[]) => {
-  // Check if there's any document content
-  if (!documentContents || documentContents.length === 0) {
-    return {
-      valid: false,
-      message: "No document content provided for analysis"
-    };
+/**
+ * Extract a useful error message
+ */
+function getErrorMessage(error: any): string {
+  if (error instanceof Error) {
+    return error.message;
   }
-
-  // Check if the content is too small for meaningful analysis (less than 500 characters total)
-  const totalContentLength = documentContents.reduce((acc, doc) => {
-    return acc + (typeof doc.content === 'string' ? doc.content.length : 0);
-  }, 0);
-
-  if (totalContentLength < 500) {
-    return {
-      valid: false,
-      message: "Document content is too short for meaningful analysis. Please provide more detailed documents."
-    };
+  
+  if (typeof error === 'string') {
+    return error;
   }
-
-  // Check if content might be too large for Claude's context window
-  if (totalContentLength > 100000) {
-    console.warn(`Document content is very large: ${totalContentLength} characters. This may exceed Claude's context window.`);
-    // We'll continue but log a warning - the anthropicService will handle this
+  
+  if (error && error.error) {
+    return error.error;
   }
-
-  return {
-    valid: true,
-    message: "Content validation passed",
-    contentLength: totalContentLength
-  };
-};
-
-// Handle API response errors more effectively
-export const handleApiResponseError = async (response: Response): Promise<string> => {
-  try {
-    const errorText = await response.text();
-    let errorMessage = `Anthropic API error (${response.status})`;
-    
-    // Try to parse as JSON for more details
-    try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.error) {
-        errorMessage = `Anthropic API error: ${errorJson.error.type || errorJson.error.message || errorJson.error}`;
-      }
-    } catch {
-      // If not JSON, use the text
-      errorMessage += `: ${errorText}`;
-    }
-    
-    // Log detailed error info
-    console.error('Anthropic API error details:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorText
-    });
-    
-    throw new Error(errorMessage);
-  } catch (parseError) {
-    throw new Error(`Anthropic API returned status ${response.status} but couldn't parse error details: ${parseError.message}`);
-  }
-};
+  
+  return 'Unknown error occurred during analysis';
+}
