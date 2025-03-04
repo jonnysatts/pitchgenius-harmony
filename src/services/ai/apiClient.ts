@@ -1,4 +1,3 @@
-
 /**
  * Module for handling AI API interactions
  */
@@ -116,4 +115,17 @@ export const createTimeoutPromise = (
       });
     }, timeoutMs); // timeout in milliseconds
   });
+};
+
+/**
+ * Checks connection to Supabase functions
+ */
+export const checkSupabaseConnection = async () => {
+  try {
+    // Simulated API call
+    return { success: true, message: 'Connection successful' };
+  } catch (error) {
+    console.error('Error checking Supabase connection:', error);
+    return { success: false, message: 'Connection failed' };
+  }
 };

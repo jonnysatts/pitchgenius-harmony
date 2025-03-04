@@ -1,4 +1,28 @@
-import { StrategicInsight, Document } from "@/lib/types";
+import { StrategicInsight, InsightCategory, WebsiteInsightCategory, NarrativeSection } from "@/lib/types";
+
+/**
+ * Groups insights by their category
+ */
+export const groupInsightsByCategory = (insights: StrategicInsight[]) => {
+  return insights.reduce((groups, insight) => {
+    const category = insight.category;
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(insight);
+    return groups;
+  }, {} as Record<string, StrategicInsight[]>);
+};
+
+/**
+ * Formats a category name for display
+ */
+export const formatCategoryTitle = (category: string): string => {
+  return category
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 // Define the NarrativeSection type as string enum
 export enum NarrativeSection {

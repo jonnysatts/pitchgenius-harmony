@@ -1,6 +1,8 @@
 
-// Re-export all document service functionality
-export * from './errors';
-export * from './storageOperations';
+// Re-export all document-related services
 export * from './databaseOperations';
-export * from './fetchOperations';
+export * from './storageOperations';
+
+// Add an explicit export for fetchProjectDocuments 
+export { fetchProjectDocumentsFromApi as fetchProjectDocuments } from './fetchOperations';
+export * from './errors';
