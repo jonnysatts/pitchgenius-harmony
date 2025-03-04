@@ -43,7 +43,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     
     const { data, error } = await supabase.functions.invoke('test-connection', {
       method: 'POST',
-      body: { test: true, timestamp: new Date().toISOString() }
+      body: { testType: 'anthropic-key-check', timestamp: new Date().toISOString() }
     });
     
     if (error) {
