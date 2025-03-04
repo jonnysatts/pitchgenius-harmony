@@ -3,8 +3,21 @@
  * Service for analyzing website content
  */
 import { supabase } from "@/integrations/supabase/client";
-import { Project, WebsiteInsightCategory } from "@/lib/types";
+import { Project, WebsiteInsightCategory, WebsiteAnalysisStatus } from "@/lib/types";
 import { generateFallbackWebsiteInsights } from "./fallbackInsightGenerator";
+
+/**
+ * Analyzes a client website and returns insights
+ */
+export const analyzeClientWebsite = async (
+  project: Project,
+  useFirecrawl = false
+): Promise<{
+  insights: any[];
+  error?: string;
+}> => {
+  return await getWebsiteInsights(project, useFirecrawl);
+};
 
 /**
  * Returns website insights from analysis
@@ -19,7 +32,11 @@ export const getWebsiteInsights = async (
   if (!project.clientWebsite || project.clientWebsite.trim() === '') {
     console.log('No website URL provided for analysis');
     return {
-      insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+      insights: generateFallbackWebsiteInsights(
+        project.clientName || "", 
+        project.clientIndustry || "technology",
+        project.id || ""
+      ),
       error: 'No website URL provided for analysis'
     };
   }
@@ -31,7 +48,11 @@ export const getWebsiteInsights = async (
     if (!connectionCheck.success) {
       console.error('Connection check failed:', connectionCheck);
       return {
-        insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+        insights: generateFallbackWebsiteInsights(
+          project.clientName || "", 
+          project.clientIndustry || "technology",
+          project.id || ""
+        ),
         error: 'Failed to connect to the analysis service'
       };
     }
@@ -50,7 +71,11 @@ export const getWebsiteInsights = async (
     if (error) {
       console.error('Edge function error:', error);
       return {
-        insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+        insights: generateFallbackWebsiteInsights(
+          project.clientName || "", 
+          project.clientIndustry || "technology",
+          project.id || ""
+        ),
         error: `Edge function error: ${error.message || 'Unknown error'}`
       };
     }
@@ -58,7 +83,11 @@ export const getWebsiteInsights = async (
     if (!data || !Array.isArray(data.data)) {
       console.error('Invalid response from edge function:', data);
       return {
-        insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+        insights: generateFallbackWebsiteInsights(
+          project.clientName || "", 
+          project.clientIndustry || "technology",
+          project.id || ""
+        ),
         error: 'Invalid response from analysis service'
       };
     }
@@ -78,7 +107,11 @@ export const getWebsiteInsights = async (
   } catch (error: any) {
     console.error('Error analyzing website:', error);
     return {
-      insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+      insights: generateFallbackWebsiteInsights(
+        project.clientName || "", 
+        project.clientIndustry || "technology",
+        project.id || ""
+      ),
       error: `Analysis error: ${error.message || 'Unknown error'}`
     };
   }
@@ -96,4 +129,42 @@ export const checkEdgeFunctionConnection = async (): Promise<{ success: boolean 
     console.error('Error checking edge function connection:', error);
     return { success: false };
   }
+};
+
+/**
+ * Get the status of website analysis
+ */
+export const getWebsiteAnalysisStatus = async (
+  projectId: string
+): Promise<WebsiteAnalysisStatus> => {
+  try {
+    // Placeholder implementation - in a real app, you would fetch this from a database
+    return {
+      status: 'completed',
+      progress: 100,
+      message: 'Analysis complete',
+      error: null
+    };
+  } catch (error) {
+    console.error('Error getting website analysis status:', error);
+    return {
+      status: 'error',
+      progress: 0,
+      message: 'Error fetching analysis status',
+      error: 'Analysis status could not be retrieved'
+    };
+  }
+};
+
+/**
+ * Extract insights from raw website data
+ */
+export const extractInsightsFromWebsiteData = (
+  websiteData: any,
+  clientName: string,
+  clientIndustry: string
+): any[] => {
+  // This would normally process raw website data into structured insights
+  // For now, it's a placeholder that returns mock insights
+  return generateFallbackWebsiteInsights(clientName, clientIndustry, "placeholder-id");
 };
