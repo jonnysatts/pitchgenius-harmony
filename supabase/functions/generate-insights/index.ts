@@ -68,8 +68,31 @@ function formatDocumentsForAnalysis(documents: any[], clientIndustry: string): s
   return formattedText
 }
 
+// Verify the Anthropic API key
+function verifyAnthropicApiKey(): boolean {
+  const apiKey = ANTHROPIC_API_KEY;
+  
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY environment variable is not set');
+    return false;
+  }
+  
+  if (!apiKey.startsWith('sk-ant-')) {
+    console.error('ANTHROPIC_API_KEY does not have the expected format (should start with sk-ant-)');
+    return false;
+  }
+  
+  console.log('API key verification passed');
+  return true;
+}
+
 async function callAnthropicAPI(content: string, clientIndustry: string): Promise<any> {
   console.log(`Calling Claude API for analysis in ${clientIndustry} industry`)
+  
+  // First verify the API key
+  if (!verifyAnthropicApiKey()) {
+    throw new Error('Invalid or missing Anthropic API key. Please check your ANTHROPIC_API_KEY in Supabase secrets.');
+  }
   
   const systemPrompt = `You are an expert strategic consultant from Games Age, a gaming consultancy that helps businesses integrate gaming into their strategy. 
   
@@ -108,6 +131,7 @@ YOUR OUTPUT MUST BE VALID JSON in this exact format:
 }`
 
   try {
+    // Updated API call using the Messages API instead of Completions API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -116,7 +140,7 @@ YOUR OUTPUT MUST BE VALID JSON in this exact format:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-opus-20240229',
+        model: 'claude-3-sonnet-20240229', // Updated to the newer Claude model
         max_tokens: 4000,
         system: systemPrompt,
         messages: [
@@ -138,12 +162,21 @@ YOUR OUTPUT MUST BE VALID JSON in this exact format:
     const data = await response.json()
     console.log('Claude response received')
     
-    // Parse the JSON from Claude's content
+    // Parse the JSON from Claude's content (updated for Messages API)
     try {
       // Claude sometimes surrounds JSON with markdown code blocks
+      if (!data.content || !data.content[0] || !data.content[0].text) {
+        throw new Error('Invalid response structure from Claude API')
+      }
+      
       const content = data.content[0].text
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, content]
-      const jsonText = jsonMatch[1].trim()
+      
+      // Try multiple regex patterns to extract the JSON
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
+                       content.match(/\{\s*"insights":\s*\[[\s\S]*\]\s*\}/) ||
+                       [null, content]
+                       
+      const jsonText = jsonMatch[1]?.trim() || content.trim()
       
       return JSON.parse(jsonText)
     } catch (parseError) {
