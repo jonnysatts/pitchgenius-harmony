@@ -1,148 +1,99 @@
 
-import { Project, StrategicInsight } from "@/lib/types";
-import { callWebsiteAnalysisApi } from "./claudeApiService";
+/**
+ * Service for analyzing website content
+ */
+import { supabase } from "@/integrations/supabase/client";
+import { Project, WebsiteInsightCategory } from "@/lib/types";
 import { generateFallbackWebsiteInsights } from "./fallbackInsightGenerator";
-import { processWebsiteInsights } from "./websiteInsightProcessor";
-import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Analyzes a client's website to generate strategic insights
+ * Returns website insights from analysis
  */
-export const analyzeClientWebsite = async (project: Project) => {
-  // Validate inputs
-  if (!project.clientWebsite) {
-    console.error('No website URL provided for analysis');
+export const getWebsiteInsights = async (
+  project: Project,
+  useFirecrawl = false
+): Promise<{
+  insights: any[];
+  error?: string;
+}> => {
+  if (!project.clientWebsite || project.clientWebsite.trim() === '') {
+    console.log('No website URL provided for analysis');
     return {
-      insights: [],
-      error: "No website URL provided for analysis"
+      insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+      error: 'No website URL provided for analysis'
     };
   }
 
   try {
-    console.log(`Analyzing website: ${project.clientWebsite}`);
+    // First, check connection 
+    const connectionCheck = await checkEdgeFunctionConnection();
     
-    // Call the Claude API for website analysis
-    const websiteAnalysisParams = {
-      website_url: project.clientWebsite, 
-      client_name: project.clientName || '',
-      client_industry: project.industry || 'technology',
-      use_firecrawl: true // Use Firecrawl by default for better content extraction
-    };
-    
-    const response = await callWebsiteAnalysisApi(websiteAnalysisParams);
-    
-    if (!response.success) {
-      console.error('Website analysis API error:', response.error);
-      
-      // Generate fallback insights if API call fails
-      const fallbackInsights = generateFallbackWebsiteInsights(
-        project.clientWebsite,
-        project.clientName || '',
-        project.industry || 'technology'
-      );
-      
-      // Process fallback insights with project context
-      const processedFallbackInsights = processWebsiteInsights(fallbackInsights, project);
-      
+    if (!connectionCheck.success) {
+      console.error('Connection check failed:', connectionCheck);
       return {
-        insights: processedFallbackInsights,
-        error: `Website analysis API error: ${response.error}`
+        insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+        error: 'Failed to connect to the analysis service'
       };
     }
     
-    // Process raw insights with project context
-    let insights = response.data || [];
+    // Call the Edge Function
+    console.log(`Calling analyze-website-with-anthropic with URL: ${project.clientWebsite}`);
+    const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
+      body: {
+        website_url: project.clientWebsite,
+        client_name: project.clientName || '',
+        client_industry: project.clientIndustry || 'technology',
+        use_firecrawl: useFirecrawl
+      }
+    });
     
-    // Add unique IDs to insights if missing
-    insights = insights.map(insight => ({
-      ...insight,
-      id: insight.id || `website-${insight.category || 'insight'}-${uuidv4()}`
-    }));
-    
-    // If API returned no insights, use fallback
-    if (!insights || insights.length === 0) {
-      console.warn('API returned no insights, using fallback generator');
-      insights = generateFallbackWebsiteInsights(
-        project.clientWebsite,
-        project.clientName || '',
-        project.industry || 'technology'
-      );
+    if (error) {
+      console.error('Edge function error:', error);
+      return {
+        insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+        error: `Edge function error: ${error.message || 'Unknown error'}`
+      };
     }
     
-    // Process insights through our processor to ensure proper formatting
-    const processedInsights = processWebsiteInsights(insights, project);
+    if (!data || !Array.isArray(data.data)) {
+      console.error('Invalid response from edge function:', data);
+      return {
+        insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+        error: 'Invalid response from analysis service'
+      };
+    }
     
-    return {
-      insights: processedInsights,
-      error: null
+    console.log(`Successfully received ${data.data.length} insights from edge function`);
+    
+    // Add source marker to insights
+    const markedInsights = data.data.map((insight: any) => ({
+      ...insight,
+      source: 'website' as 'website'
+    }));
+    
+    return { 
+      insights: markedInsights,
+      error: data.error
     };
-  } catch (err) {
-    console.error('Error in analyzeClientWebsite:', err);
-    
-    // Generate fallback insights if there was an error
-    const fallbackInsights = generateFallbackWebsiteInsights(
-      project.clientWebsite,
-      project.clientName || '',
-      project.industry || 'technology'
-    );
-    
-    // Process fallback insights
-    const processedFallbackInsights = processWebsiteInsights(fallbackInsights, project);
-    
+  } catch (error: any) {
+    console.error('Error analyzing website:', error);
     return {
-      insights: processedFallbackInsights,
-      error: err instanceof Error ? err.message : 'Unknown error during website analysis'
+      insights: generateFallbackWebsiteInsights(project.clientName || "", project.clientIndustry || "technology"),
+      error: `Analysis error: ${error.message || 'Unknown error'}`
     };
   }
 };
 
 /**
- * Gets the status of an ongoing website analysis
+ * Check connection to the edge function
  */
-export const getWebsiteAnalysisStatus = async (projectId: string) => {
-  // Implementation for getting the analysis status
-  return {
-    status: 'processing',
-    progress: 0.5,
-    message: 'Analyzing website content...'
-  };
-};
-
-/**
- * Extracts strategic insights from raw website data
- */
-export const extractInsightsFromWebsiteData = (websiteData: any, project?: Project) => {
+export const checkEdgeFunctionConnection = async (): Promise<{ success: boolean }> => {
   try {
-    // Basic validation
-    if (!websiteData || (typeof websiteData === 'object' && Object.keys(websiteData).length === 0)) {
-      console.warn('Empty website data provided to extractInsightsFromWebsiteData');
-      return [];
-    }
-    
-    // If website data is already an array of insights, process it
-    if (Array.isArray(websiteData)) {
-      return processWebsiteInsights(websiteData, project);
-    }
-    
-    // If website data is a string (raw HTML/text), generate fallback insights
-    if (typeof websiteData === 'string') {
-      const fallbackInsights = generateFallbackWebsiteInsights(
-        project?.clientWebsite || 'unknown',
-        project?.clientName || '',
-        project?.industry || 'technology'
-      );
-      return processWebsiteInsights(fallbackInsights, project);
-    }
-    
-    // Handle object with data property
-    if (websiteData.data && Array.isArray(websiteData.data)) {
-      return processWebsiteInsights(websiteData.data, project);
-    }
-    
-    // If nothing worked, return empty array
-    return [];
+    // Simple test call to check connectivity
+    const { error } = await supabase.functions.invoke('test-connection');
+    return { success: !error };
   } catch (error) {
-    console.error('Error extracting insights from website data:', error);
-    return [];
+    console.error('Error checking edge function connection:', error);
+    return { success: false };
   }
 };
