@@ -27,7 +27,7 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
@@ -39,7 +39,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="bg-white border-b">
+      <header className="bg-white border-b sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/">
@@ -60,13 +60,13 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </div>
       </header>
       
-      <div className="flex flex-1">
-        <aside className={`bg-white border-r shrink-0 transition-all duration-300 ${
+      <div className="flex flex-1 relative">
+        <aside className={`bg-white border-r fixed left-0 top-16 bottom-0 h-[calc(100vh-4rem)] z-10 transition-all duration-300 ${
           isExpanded ? "w-64" : "w-16"
         }`}>
           <div className="flex flex-col h-full py-4 relative">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={toggleSidebar}
               className="absolute -right-3 top-3 h-6 w-6 bg-white border shadow-sm rounded-full z-10"
@@ -128,22 +128,24 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               </TooltipProvider>
             </div>
             
-            <Separator className="my-4" />
+            {isExpanded && <Separator className="my-4" />}
             
-            <div className="px-3 py-2">
-              {isExpanded && (
+            {isExpanded && (
+              <div className="px-3 py-2">
                 <h3 className="mb-2 px-4 text-xs font-semibold text-gray-500">
                   Recent Projects
                 </h3>
-              )}
-              <nav className="flex flex-col gap-1">
-                {/* Recent projects would go here */}
-              </nav>
-            </div>
+                <nav className="flex flex-col gap-1">
+                  {/* Recent projects would go here */}
+                </nav>
+              </div>
+            )}
           </div>
         </aside>
         
-        <main className="flex-1 overflow-auto">
+        <main className={`flex-1 overflow-auto transition-all duration-300 ${
+          isExpanded ? "ml-64" : "ml-16"
+        }`}>
           {children}
         </main>
       </div>

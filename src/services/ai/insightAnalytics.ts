@@ -16,8 +16,9 @@ export const calculateOverallConfidence = (insights: StrategicInsight[]): number
   if (validInsights.length === 0) return 0;
   
   const total = validInsights.reduce((sum, insight) => sum + insight.confidence, 0);
-  // If confidence is stored as 0-1 value, multiply by 100 to get percentage
+  // Ensure we handle both percentage format (0-100) and decimal format (0-1)
   const average = total / validInsights.length;
+  // Round to nearest integer
   return Math.round(average > 1 ? average : average * 100);
 };
 

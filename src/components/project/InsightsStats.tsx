@@ -21,7 +21,7 @@ const InsightsStats: React.FC<InsightsStatsProps> = ({
   const rejectedCount = insightCount - acceptedCount - needsReviewCount;
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
       <ConfidenceCard 
         confidence={confidence} 
         usingFallbackInsights={usingFallbackInsights} 

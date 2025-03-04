@@ -13,11 +13,11 @@ const InsightsCategoryNav: React.FC<InsightsCategoryNavProps> = ({
   getCategoryName
 }) => {
   return (
-    <div className="bg-slate-50 rounded-lg mb-6 p-1.5 border border-slate-200">
-      <TabsList className="w-full h-auto p-1 bg-transparent flex overflow-x-auto no-scrollbar gap-1">
+    <div className="mb-6">
+      <TabsList className="w-full h-auto bg-white rounded-lg border border-slate-200 p-1.5 flex overflow-x-auto no-scrollbar">
         <TabsTrigger 
           value="all" 
-          className="text-sm font-medium rounded-md py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          className="px-5 py-2.5 rounded-md text-sm font-medium data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200"
         >
           All Categories
         </TabsTrigger>
@@ -25,7 +25,7 @@ const InsightsCategoryNav: React.FC<InsightsCategoryNavProps> = ({
           <TabsTrigger 
             key={category} 
             value={category}
-            className="text-sm font-medium rounded-md py-2.5 px-4 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            className="px-5 py-2.5 rounded-md text-sm font-medium whitespace-nowrap data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200"
           >
             {getCategoryName(category)}
           </TabsTrigger>

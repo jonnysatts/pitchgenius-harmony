@@ -73,9 +73,9 @@ const ProjectDetail = () => {
     checkAiAvailability();
   }, [setUseRealAI]);
   
-  // Calculate the confidence manually as a fallback
+  // Ensure we always have a valid confidence value
   const calculatedConfidence = calculateOverallConfidence(insights);
-  const confidenceToUse = overallConfidence > 0 ? overallConfidence : calculatedConfidence;
+  const confidenceToUse = overallConfidence || calculatedConfidence || 0;
   
   if (!project) {
     return (

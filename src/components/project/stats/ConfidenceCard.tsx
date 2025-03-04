@@ -35,7 +35,7 @@ const ConfidenceCard: React.FC<ConfidenceCardProps> = ({
   };
 
   return (
-    <Card className="shadow-sm border-slate-200">
+    <Card className="shadow-sm border-slate-200 h-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <span>AI Confidence</span>
@@ -47,10 +47,10 @@ const ConfidenceCard: React.FC<ConfidenceCardProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-3xl font-bold">{confidence}%</span>
-            <span className={`text-sm font-medium ${getTextColorClass()} bg-slate-50 px-2 py-1 rounded-full`}>
+        <div className="space-y-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-4xl font-bold">{confidence}%</span>
+            <span className={`text-sm font-medium ${getTextColorClass()} px-3 py-1 rounded-full border ${confidence >= 80 ? 'border-green-200 bg-green-50' : confidence >= 60 ? 'border-amber-200 bg-amber-50' : 'border-red-200 bg-red-50'}`}>
               {getConfidenceLabel()}
             </span>
           </div>
