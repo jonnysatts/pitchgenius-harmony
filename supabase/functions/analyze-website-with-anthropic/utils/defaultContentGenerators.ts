@@ -39,7 +39,7 @@ export function getCategoryRecommendation(category: string): string {
 /**
  * Generate fallback insights when Claude API fails
  */
-export function generateFallbackInsights(websiteUrl: string, clientName: string, clientIndustry: string): any[] {
+export async function generateFallbackInsights(websiteUrl: string, clientName: string, clientIndustry: string): Promise<any[]> {
   console.log(`Generating fallback insights for website`);
   
   const timestamp = Date.now();
@@ -48,8 +48,7 @@ export function generateFallbackInsights(websiteUrl: string, clientName: string,
   const insights: any[] = [];
   
   // Import needed functions from other modules
-  const { formatCategoryName } = await import('./textProcessingUtils');
-  const { getCategoryTitle, getCategoryRecommendation } = await import('./defaultContentGenerators');
+  const { formatCategoryName } = await import('./textProcessingUtils.ts');
   
   // Company Positioning
   insights.push({

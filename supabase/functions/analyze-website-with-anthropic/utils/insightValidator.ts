@@ -2,8 +2,8 @@
 /**
  * Functions to validate and fix insight data
  */
-import { cleanTextContent } from './textProcessingUtils';
-import { getCategoryTitle, getCategoryRecommendation } from './defaultContentGenerators';
+import { cleanTextContent } from './textProcessingUtils.ts';
+import { getCategoryTitle, getCategoryRecommendation } from './defaultContentGenerators.ts';
 
 // Valid website insight categories
 const validCategories = [
@@ -67,7 +67,7 @@ export function validateAndFixInsight(insight: any): any {
  * Process insights to ensure they have all required fields
  */
 export function processInsights(insights: any[], websiteUrl: string, clientName: string): any[] {
-  const { generateFallbackInsights } = require('./defaultContentGenerators');
+  const { generateFallbackInsights } = require('./defaultContentGenerators.ts');
   
   if (!insights || insights.length === 0) {
     return generateFallbackInsights(websiteUrl, clientName, "");

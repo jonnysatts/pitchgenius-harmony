@@ -2,9 +2,9 @@
 /**
  * Main parser for Claude API responses
  */
-import { validateAndFixInsight } from './insightValidator';
-import { extractInsightsFromText } from './textExtractor';
-import { generateFallbackInsights } from './defaultContentGenerators';
+import { validateAndFixInsight } from './insightValidator.ts';
+import { extractInsightsFromText } from './textExtractor.ts';
+import { generateFallbackInsights } from './defaultContentGenerators.ts';
 
 /**
  * Parse Claude's JSON response into structured insights
@@ -71,5 +71,5 @@ export function parseClaudeResponse(response: string): any[] {
 }
 
 // Re-export functions from other modules for backward compatibility
-export { processInsights } from './insightValidator';
-export { generateFallbackInsights } from './defaultContentGenerators';
+export { processInsights } from './insightValidator.ts';
+export { generateFallbackInsights } from './defaultContentGenerators.ts';
