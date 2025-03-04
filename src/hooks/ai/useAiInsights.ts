@@ -45,7 +45,9 @@ export const useAiInsights = (
     setUsingFallbackInsights: (usingFallback: boolean) => void,
     useRealAI: boolean
   ) => {
-    return (documents: Document[]) => {
+    return async (documents: Document[]) => {
+      console.log("Retry analysis initiated with documents:", documents.length);
+      
       // Reset states
       setError(null);
       setUsingFallbackInsights(false);
@@ -66,26 +68,24 @@ export const useAiInsights = (
       // Start processing and get monitoring function
       const monitorProgress = startProcessing(handleProcessingComplete);
       
-      return async () => {
-        // Start monitoring
-        monitorProgress(setActiveTab);
-        
-        // Add a toast notification for retry attempt
-        toast({
-          title: "Retrying Claude AI Analysis",
-          description: `Analyzing ${documents.length} documents again with Claude AI...`,
-        });
-        
-        console.log("Retrying document analysis with useRealAI set to:", useRealAI);
-        
-        // Try to generate insights with retry flag
-        const success = await generateProjectInsights(documents, true);
-        
-        // If generation failed, use fallback insights
-        if (!success) {
-          generateFallbackInsights(documents);
-        }
-      };
+      // Start monitoring
+      monitorProgress(setActiveTab);
+      
+      // Add a toast notification for retry attempt
+      toast({
+        title: "Retrying Claude AI Analysis",
+        description: `Analyzing ${documents.length} documents again with Claude AI...`,
+      });
+      
+      console.log("Retrying document analysis with useRealAI set to:", useRealAI);
+      
+      // Try to generate insights with retry flag
+      const success = await generateProjectInsights(documents, true);
+      
+      // If generation failed, use fallback insights
+      if (!success) {
+        generateFallbackInsights(documents);
+      }
     };
   }, [project?.id, toast]);
 

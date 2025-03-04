@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 
 interface InsightsTabHeaderProps {
@@ -50,17 +51,18 @@ const InsightsTabHeader: React.FC<InsightsTabHeaderProps> = ({
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => document.querySelector('[data-state="open"] button[aria-label="Close"]')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => {
-                  onRetryAnalysis();
-                  document.querySelector('[data-state="open"] button[aria-label="Close"]')?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
-                }}
-              >
-                Confirm Refresh
-              </Button>
+              <DialogClose asChild>
+                <Button variant="outline">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <DialogClose asChild>
+                <Button 
+                  onClick={onRetryAnalysis}
+                >
+                  Confirm Refresh
+                </Button>
+              </DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>
