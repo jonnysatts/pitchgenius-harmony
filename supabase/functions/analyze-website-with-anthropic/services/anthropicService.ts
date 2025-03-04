@@ -1,10 +1,6 @@
 
-import { Anthropic } from 'https://esm.sh/@anthropic-ai/sdk@0.9.0';
-
-// Initialize Anthropic client with the latest SDK
-const anthropic = new Anthropic({
-  apiKey: Deno.env.get('ANTHROPIC_API_KEY') || '',
-});
+// Removed the SDK import and using fetch directly instead
+// Previously: import { Anthropic } from 'https://esm.sh/@anthropic-ai/sdk@0.9.0';
 
 /**
  * Generate the structured output format for Claude
@@ -63,7 +59,7 @@ export function verifyAnthropicApiKey(): boolean {
 
 /**
  * Call Claude API to analyze website content with improved error handling
- * Updated to use the Messages API instead of the Completions API
+ * Using direct fetch approach instead of the SDK
  */
 export async function analyzeWebsiteWithAnthropic(
   websiteContent: string,
@@ -115,44 +111,44 @@ export async function analyzeWebsiteWithAnthropic(
         apiKeyPrefix: Deno.env.get('ANTHROPIC_API_KEY')?.substring(0, 8) + '...'
       });
       
-      // Log a sample of the request body for debugging
-      const requestBodySample = {
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 4000,
-        system: fullSystemPrompt.substring(0, 100) + '...',
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt.substring(0, 100) + '...'
-          }
-        ],
-        temperature: 0.3
-      };
-      console.log('API request body sample:', JSON.stringify(requestBodySample));
-      
-      // Make the API call using the Messages API instead of Completions API
-      const completion = await anthropic.messages.create({
-        model: 'claude-3-sonnet-20240229', // Updated model
-        max_tokens: 4000,
-        system: fullSystemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ],
-        temperature: 0.3
+      // Use fetch directly instead of the SDK
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || '',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-sonnet-20240229',
+          max_tokens: 4000,
+          system: fullSystemPrompt,
+          messages: [
+            {
+              role: 'user',
+              content: userPrompt
+            }
+          ],
+          temperature: 0.3
+        })
       });
       
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Claude API error:', errorText);
+        throw new Error(`Claude API HTTP error: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
       console.log('Claude API call successful, received response');
       
       // Check if we got a valid response
-      if (!completion || !completion.content || completion.content.length === 0) {
+      if (!data || !data.content || data.content.length === 0) {
         console.error('Claude response was empty or invalid');
         throw new Error('Claude API returned an empty response');
       }
       
-      const responseText = completion.content[0].text;
+      const responseText = data.content[0].text;
       console.log(`Claude response length: ${responseText.length} chars`);
       console.log(`Claude response sample: ${responseText.substring(0, 200)}...`);
       

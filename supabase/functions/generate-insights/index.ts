@@ -131,7 +131,8 @@ YOUR OUTPUT MUST BE VALID JSON in this exact format:
 }`
 
   try {
-    // Updated API call using the Messages API instead of Completions API
+    // Using direct fetch approach instead of the SDK
+    console.log('Making direct API call to Claude API...');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -140,7 +141,7 @@ YOUR OUTPUT MUST BE VALID JSON in this exact format:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229', // Updated to the newer Claude model
+        model: 'claude-3-sonnet-20240229',
         max_tokens: 4000,
         system: systemPrompt,
         messages: [
@@ -151,48 +152,62 @@ YOUR OUTPUT MUST BE VALID JSON in this exact format:
         ],
         temperature: 0.2
       })
-    })
+    });
     
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Claude API error:', errorText)
-      throw new Error(`Claude API error: ${response.status} ${errorText}`)
+      const errorText = await response.text();
+      console.error('Claude API error:', errorText);
+      throw new Error(`Claude API HTTP error: ${response.status} - ${errorText}`);
     }
     
-    const data = await response.json()
-    console.log('Claude response received')
+    const data = await response.json();
+    console.log('Claude response received');
     
     // Parse the JSON from Claude's content (updated for Messages API)
     try {
-      // Claude sometimes surrounds JSON with markdown code blocks
+      // Check for valid response structure
       if (!data.content || !data.content[0] || !data.content[0].text) {
-        throw new Error('Invalid response structure from Claude API')
+        throw new Error('Invalid response structure from Claude API');
       }
       
-      const content = data.content[0].text
+      const content = data.content[0].text;
+      console.log('Claude raw response:', content.substring(0, 200) + '...');
       
       // Try multiple regex patterns to extract the JSON
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
                        content.match(/\{\s*"insights":\s*\[[\s\S]*\]\s*\}/) ||
-                       [null, content]
+                       [null, content];
                        
-      const jsonText = jsonMatch[1]?.trim() || content.trim()
+      const jsonText = jsonMatch[1]?.trim() || content.trim();
+      console.log('Extracted JSON text:', jsonText.substring(0, 200) + '...');
       
-      return JSON.parse(jsonText)
+      try {
+        return JSON.parse(jsonText);
+      } catch (innerParseError) {
+        console.error('First JSON parse attempt failed:', innerParseError);
+        // Try a fallback approach to extract just the insights array
+        const insightsMatch = content.match(/"insights"\s*:\s*(\[\s*\{[\s\S]*?\}\s*\])/);
+        if (insightsMatch && insightsMatch[1]) {
+          console.log('Attempting to parse just the insights array');
+          const insightsArray = JSON.parse(insightsMatch[1]);
+          return { insights: insightsArray };
+        }
+        throw innerParseError;
+      }
     } catch (parseError) {
-      console.error('Error parsing Claude response as JSON:', parseError)
-      throw new Error('Failed to parse AI response as JSON')
+      console.error('Error parsing Claude response as JSON:', parseError);
+      throw new Error('Failed to parse AI response as JSON');
     }
   } catch (error) {
-    console.error('Error calling Claude API:', error)
-    throw error
+    console.error('Error calling Claude API:', error);
+    throw error;
   }
 }
 
 // Mock processing documents content from base64 or text extraction
 // In a real implementation, this would extract text from documents
 async function processDocumentContent(documentIds: string[]): Promise<any[]> {
-  console.log(`Processing ${documentIds.length} documents`)
+  console.log(`Processing ${documentIds.length} documents`);
   
   // For demonstration, we're returning mock document content
   // In a real implementation, this would fetch documents from storage and extract text
@@ -200,51 +215,51 @@ async function processDocumentContent(documentIds: string[]): Promise<any[]> {
     id,
     name: `Document ${id.slice(0, 6)}`,
     content: `This is a sample content for document ${id}. In a real implementation, text would be extracted from the actual document.`
-  }))
+  }));
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
   
   try {
-    const { projectId, documentIds, clientIndustry = 'technology' } = await req.json()
+    const { projectId, documentIds, clientIndustry = 'technology' } = await req.json();
     
     if (!projectId || !documentIds || documentIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Missing required parameters: projectId and documentIds' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
     
-    console.log(`Processing analysis request for project ${projectId} with ${documentIds.length} documents`)
+    console.log(`Processing analysis request for project ${projectId} with ${documentIds.length} documents`);
     
     // Process documents to extract content
-    const processedDocuments = await processDocumentContent(documentIds)
+    const processedDocuments = await processDocumentContent(documentIds);
     
     // Format documents for analysis
-    const formattedContent = formatDocumentsForAnalysis(processedDocuments, clientIndustry)
+    const formattedContent = formatDocumentsForAnalysis(processedDocuments, clientIndustry);
     
     // Split content into chunks if it exceeds Claude's context window
-    const chunks = chunkText(formattedContent)
-    console.log(`Split content into ${chunks.length} chunks`)
+    const chunks = chunkText(formattedContent);
+    console.log(`Split content into ${chunks.length} chunks`);
     
     // For now, we'll just use the first chunk to stay within Claude's context window
     // A more sophisticated approach would be to analyze each chunk and then synthesize
-    const analysisResult = await callAnthropicAPI(chunks[0], clientIndustry)
+    const analysisResult = await callAnthropicAPI(chunks[0], clientIndustry);
     
     // Return the insights
     return new Response(
       JSON.stringify(analysisResult),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   } catch (error) {
-    console.error('Error in generate-insights function:', error)
+    console.error('Error in generate-insights function:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Unknown error processing insights' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   }
-})
+});
