@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // This service connects to the Supabase Edge Function to analyze websites
@@ -107,8 +106,8 @@ export class FirecrawlService {
     }
   }
   
-  // Check progress of analysis
-  private static async checkAnalysisProgress(
+  // Check progress of analysis - now public instead of private
+  static async checkAnalysisProgress(
     websiteUrl: string
   ): Promise<{success: boolean, progress?: number, error?: string}> {
     try {
