@@ -6,8 +6,8 @@ import { MessageSquare } from "lucide-react";
 
 interface ManualRefinementModeProps {
   insightTitle: string;
-  insightContent: string;
-  setRefinedContent: (content: string) => void;
+  insightContent: Record<string, any>;
+  setRefinedContent: (content: Record<string, any>) => void;
   onStartAIConversation: () => void;
 }
 
@@ -17,20 +17,73 @@ export const ManualRefinementMode: React.FC<ManualRefinementModeProps> = ({
   setRefinedContent,
   onStartAIConversation
 }) => {
+  // Function to update a specific field
+  const updateField = (fieldName: string, value: string) => {
+    setRefinedContent(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
+
   return (
-    <div className="space-y-4 py-4">
+    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
       <div>
         <h4 className="text-sm font-medium mb-2">Insight Title</h4>
-        <div className="bg-slate-50 p-2 rounded text-sm">{insightTitle}</div>
+        <Textarea
+          value={insightContent.title || ""}
+          onChange={(e) => updateField("title", e.target.value)}
+          className="min-h-[40px]"
+          placeholder="Edit the insight title..."
+        />
       </div>
       
       <div>
-        <h4 className="text-sm font-medium mb-2">Insight Content</h4>
+        <h4 className="text-sm font-medium mb-2">Summary</h4>
         <Textarea
-          value={insightContent}
-          onChange={(e) => setRefinedContent(e.target.value)}
-          className="min-h-[200px]"
-          placeholder="Edit the insight content..."
+          value={insightContent.summary || ""}
+          onChange={(e) => updateField("summary", e.target.value)}
+          className="min-h-[60px]"
+          placeholder="Edit the insight summary..."
+        />
+      </div>
+      
+      <div>
+        <h4 className="text-sm font-medium mb-2">Detailed Analysis</h4>
+        <Textarea
+          value={insightContent.details || ""}
+          onChange={(e) => updateField("details", e.target.value)}
+          className="min-h-[120px]"
+          placeholder="Edit the detailed analysis..."
+        />
+      </div>
+      
+      <div>
+        <h4 className="text-sm font-medium mb-2">Supporting Evidence</h4>
+        <Textarea
+          value={insightContent.evidence || ""}
+          onChange={(e) => updateField("evidence", e.target.value)}
+          className="min-h-[80px]"
+          placeholder="Edit the supporting evidence..."
+        />
+      </div>
+      
+      <div>
+        <h4 className="text-sm font-medium mb-2">Business Impact</h4>
+        <Textarea
+          value={insightContent.impact || ""}
+          onChange={(e) => updateField("impact", e.target.value)}
+          className="min-h-[80px]"
+          placeholder="Edit the business impact..."
+        />
+      </div>
+      
+      <div>
+        <h4 className="text-sm font-medium mb-2">Strategic Recommendations</h4>
+        <Textarea
+          value={insightContent.recommendations || ""}
+          onChange={(e) => updateField("recommendations", e.target.value)}
+          className="min-h-[80px]"
+          placeholder="Edit the strategic recommendations..."
         />
       </div>
       

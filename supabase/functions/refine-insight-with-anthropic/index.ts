@@ -1,3 +1,4 @@
+
 /**
  * Edge Function for refining insights using Anthropic's Claude API
  */
@@ -32,10 +33,13 @@ When refining insights:
 - Make recommendations specific and actionable
 - Keep the tone professional but conversational
 - Provide clear rationale for your suggested changes
+- Always maintain the structured format with title, summary, details, evidence, impact, and recommendations
+
+Your analysis should be structured and maintain the original insight format. When you suggest changes, make sure to include the complete structured content in your response.
 
 You're an expert in gaming industry trends, audience analysis, competitive positioning, and gaming opportunities for businesses.`;
 
-    // Build the user prompt
+    // Build the user prompt with instructions to maintain structure
     let userPrompt = "";
     
     if (conversationContext) {
@@ -43,20 +47,33 @@ You're an expert in gaming industry trends, audience analysis, competitive posit
 ${conversationContext}
 
 CURRENT INSIGHT CONTENT:
-${insightContent}
+Title: ${insightContent.title || ""}
+Summary: ${insightContent.summary || ""}
+Details: ${insightContent.details || ""}
+Evidence: ${insightContent.evidence || ""}
+Impact: ${insightContent.impact || ""}
+Recommendations: ${insightContent.recommendations || ""}
 
 USER'S LATEST QUESTION/REQUEST:
-${prompt}`;
+${prompt}
+
+Please respond to the request and if appropriate, suggest an updated version with all sections preserved.`;
     } else {
       userPrompt = `I need to refine the following insight about "${insightTitle}":
 
 CURRENT INSIGHT CONTENT:
-${insightContent}
+Title: ${insightContent.title || ""}
+Summary: ${insightContent.summary || ""}
+Details: ${insightContent.details || ""}
+Evidence: ${insightContent.evidence || ""}
+Impact: ${insightContent.impact || ""}
+Recommendations: ${insightContent.recommendations || ""}
 
 USER REQUEST:
 ${prompt}
 
-Please help me improve this insight. If you have specific suggestions for improvement, present them clearly.`;
+Please help me improve this insight. First, respond to my request with helpful advice.
+Then, provide a complete refined version with all sections (title, summary, details, evidence, impact, and recommendations) preserved.`;
     }
     
     console.log("Sending prompt to Claude API");
@@ -64,13 +81,13 @@ Please help me improve this insight. If you have specific suggestions for improv
     // Call the Anthropic API (using the shared service from generate-insights-with-anthropic)
     const response = await callAnthropicAPI(userPrompt, systemPrompt, {
       temperature: 0.7,
-      maxTokens: 1000
+      maxTokens: 1500
     });
     
     console.log("Received response from Claude API");
     
     // Process the insight content to extract refinement suggestions
-    const refinedContent = extractRefinedContent(response, insightContent);
+    const refinedContent = extractStructuredContent(response, insightContent);
     
     // Return the response
     return new Response(
@@ -97,63 +114,52 @@ Please help me improve this insight. If you have specific suggestions for improv
 });
 
 /**
- * Extract refined content from the AI response
+ * Extract structured content from the AI response
  */
-function extractRefinedContent(response: string, originalContent: string): string | null {
-  // Look for sections indicating proposed content
-  const contentMarkers = [
-    "Here's the refined insight:",
-    "Here's my suggestion:",
-    "Refined version:",
-    "Here's a revised version:",
-    "Updated insight:",
-    "I suggest this revision:",
-    "Here's how I would rewrite it:"
-  ];
+function extractStructuredContent(response: string, originalContent: Record<string, any>): Record<string, any> | null {
+  // Create a copy of the original content
+  const result = { ...originalContent };
   
-  // Try to find any of the markers in the response
-  for (const marker of contentMarkers) {
-    if (response.includes(marker)) {
-      const parts = response.split(marker);
-      if (parts.length > 1) {
-        // Extract the content after the marker
-        let extracted = parts[1].trim();
-        
-        // If there's another section after, trim to that
-        const endMarkers = [
-          "Is this helpful?", 
-          "Does this work for you?", 
-          "What do you think?",
-          "Would you like me to",
-          "Let me know if",
-          "I hope this helps",
-          "Would you prefer"
-        ];
-        
-        for (const endMarker of endMarkers) {
-          if (extracted.includes(endMarker)) {
-            extracted = extracted.split(endMarker)[0].trim();
-          }
-        }
-        
-        return extracted;
-      }
-    }
+  // Try to extract title
+  const titleMatch = response.match(/Title:(.+?)(?=Summary:|$)/s);
+  if (titleMatch && titleMatch[1].trim()) {
+    result.title = titleMatch[1].trim();
   }
   
-  // If we can't find any markers, try to use regex to find quoted blocks
-  const quotedBlockRegex = /```([\s\S]*?)```/;
-  const quotedMatch = response.match(quotedBlockRegex);
-  if (quotedMatch && quotedMatch[1]) {
-    return quotedMatch[1].trim();
+  // Try to extract summary
+  const summaryMatch = response.match(/Summary:(.+?)(?=Details:|$)/s);
+  if (summaryMatch && summaryMatch[1].trim()) {
+    result.summary = summaryMatch[1].trim();
   }
   
-  // If there are no explicit markers but the response is long enough,
-  // it might contain a refined version directly
-  if (response.length > 100 && response.length < 2000) {
-    return response;
+  // Try to extract details
+  const detailsMatch = response.match(/Details:(.+?)(?=Evidence:|Supporting Evidence:|$)/s);
+  if (detailsMatch && detailsMatch[1].trim()) {
+    result.details = detailsMatch[1].trim();
   }
   
-  // If all else fails, return null to keep the original content
-  return null;
+  // Try to extract evidence - handle both "Evidence:" and "Supporting Evidence:" labels
+  const evidenceMatch = response.match(/(?:Evidence|Supporting Evidence):(.+?)(?=Impact:|Business Impact:|$)/s);
+  if (evidenceMatch && evidenceMatch[1].trim()) {
+    result.evidence = evidenceMatch[1].trim();
+  }
+  
+  // Try to extract impact - handle both "Impact:" and "Business Impact:" labels
+  const impactMatch = response.match(/(?:Impact|Business Impact):(.+?)(?=Recommendations:|Strategic Recommendations:|$)/s);
+  if (impactMatch && impactMatch[1].trim()) {
+    result.impact = impactMatch[1].trim();
+  }
+  
+  // Try to extract recommendations - handle both "Recommendations:" and "Strategic Recommendations:" labels
+  const recommendationsMatch = response.match(/(?:Recommendations|Strategic Recommendations):(.+?)$/s);
+  if (recommendationsMatch && recommendationsMatch[1].trim()) {
+    result.recommendations = recommendationsMatch[1].trim();
+  }
+  
+  // Check if we made any changes
+  const hasChanges = Object.keys(result).some(key => 
+    result[key] !== originalContent[key]
+  );
+  
+  return hasChanges ? result : null;
 }

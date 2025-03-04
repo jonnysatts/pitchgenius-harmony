@@ -100,7 +100,7 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     
     console.log("Updating insight:", insightId, "with content:", updatedContent);
     
-    // Create the updated insight
+    // Create the updated insight with merged content
     const updatedInsight: StrategicInsight = {
       ...originalInsight,
       content: {

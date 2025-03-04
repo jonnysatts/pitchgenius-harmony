@@ -17,8 +17,8 @@ interface InsightRefineDialogProps {
   isOpen: boolean;
   onClose: () => void;
   insightTitle: string;
-  insightContent: string;
-  onRefine: (refinedContent: string) => void;
+  insightContent: Record<string, any>;
+  onRefine: (refinedContent: Record<string, any>) => void;
 }
 
 const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
@@ -28,17 +28,18 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
   insightContent,
   onRefine
 }) => {
-  const [refinedContent, setRefinedContent] = useState(insightContent);
+  // Store the full content object, not just the details field
+  const [refinedContent, setRefinedContent] = useState<Record<string, any>>({...insightContent});
   const [isRefining, setIsRefining] = useState(false);
   const [aiConversationMode, setAIConversationMode] = useState(false);
   
   const handleRefine = () => {
     setIsRefining(true);
     
-    // Call the onRefine callback with the updated content
+    // Call the onRefine callback with the full updated content
     onRefine(refinedContent);
     
-    // Close the dialog and reset state
+    // Reset the refining state but don't close the dialog here
     setTimeout(() => {
       setIsRefining(false);
     }, 500);
@@ -47,6 +48,14 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
   const startAIConversation = () => {
     console.log("Starting AI conversation mode");
     setAIConversationMode(true);
+  };
+
+  // Handle manual text updates for specific fields
+  const handleManualTextUpdate = (field: string, value: string) => {
+    setRefinedContent(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
