@@ -1,50 +1,57 @@
 
 /**
- * Error handling service for website analysis
+ * Error handling service for the website analysis function
  */
 import { corsHeaders } from '../utils/corsHandlers.ts';
-import { generateFallbackInsights } from '../utils/defaultContentGenerators.ts';
+import { generateFallbackInsights } from './fallbackGenerator.ts';
 
 /**
- * Create a standard error response with CORS headers
+ * Create an error response with proper structure
  */
 export function createErrorResponse(
-  error: any, 
-  status: number = 500, 
-  clientName: string = '', 
-  clientIndustry: string = '',
-  websiteUrl: string = ''
+  error: unknown, 
+  statusCode: number = 500,
+  clientIndustry: string = 'technology'
 ): Response {
-  console.error("Error in website analysis edge function:", error);
+  console.error('Creating error response:', error);
   
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  // Generate fallback insights for the error response
+  const fallbackInsights = generateFallbackInsights(clientIndustry);
   
-  // Generate fallback insights when an error occurs
-  const fallbackInsights = generateFallbackInsights(
-    websiteUrl || "unknown", 
-    clientName || "", 
-    clientIndustry || "technology"
-  );
+  let errorMessage: string;
+  let errorDetail: any = {};
   
-  const responseData = { 
+  if (error instanceof Error) {
+    errorMessage = error.message;
+    errorDetail = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    };
+  } else if (typeof error === 'object' && error !== null) {
+    errorMessage = JSON.stringify(error);
+    errorDetail = error;
+  } else {
+    errorMessage = String(error);
+  }
+  
+  const responseData = {
     error: errorMessage,
-    data: fallbackInsights
+    insufficientContent: false,
+    usingFallback: true,
+    insights: fallbackInsights,
+    errorDetail,
+    timestamp: new Date().toISOString()
   };
   
   return new Response(
     JSON.stringify(responseData),
-    { 
-      headers: { ...corsHeaders, "Content-Type": "application/json" }, 
-      status: 200 // Always return 200 with fallback data for better UX
+    {
+      status: statusCode,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     }
   );
-}
-
-/**
- * Handle API response errors
- */
-export async function handleApiResponseError(response: Response): Promise<string> {
-  const errorText = await response.text();
-  console.error("Claude API error:", response.status, errorText);
-  throw new Error(`Claude API error: ${response.status}`);
 }

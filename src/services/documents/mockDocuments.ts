@@ -24,10 +24,12 @@ export const getMockDocuments = (projectId: string): Document[] => {
   
   // Only return mock documents if we don't have real ones
   console.log("Providing mock documents for new project");
+  
+  // Explicitly mark mock documents so they're easily identifiable
   return [
     {
-      id: 'doc_1',
-      name: 'Brand Strategy.pdf',
+      id: 'mock_doc_1',
+      name: 'Brand Strategy.pdf (MOCK)',
       size: 1024 * 1024 * 2.3, // 2.3 MB
       type: 'application/pdf',
       url: 'https://example.com/docs/brand-strategy.pdf',
@@ -38,8 +40,8 @@ export const getMockDocuments = (projectId: string): Document[] => {
       priority: 3
     },
     {
-      id: 'doc_2',
-      name: 'Market Research.xlsx',
+      id: 'mock_doc_2',
+      name: 'Market Research.xlsx (MOCK)',
       size: 1024 * 1024 * 4.1, // 4.1 MB
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       url: 'https://example.com/docs/market-research.xlsx',
@@ -50,8 +52,8 @@ export const getMockDocuments = (projectId: string): Document[] => {
       priority: 2
     },
     {
-      id: 'doc_3',
-      name: 'Competitor Analysis.docx',
+      id: 'mock_doc_3',
+      name: 'Competitor Analysis.docx (MOCK)',
       size: 1024 * 1024 * 1.7, // 1.7 MB
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       url: 'https://example.com/docs/competitor-analysis.docx',

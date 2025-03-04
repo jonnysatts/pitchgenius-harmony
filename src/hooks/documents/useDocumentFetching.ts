@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -38,16 +39,9 @@ export const useDocumentFetching = (
         const docs = await fetchProjectDocuments(projectId);
         console.log("Fetched documents:", docs);
         
-        // Only set documents if we got any or if documents haven't been set yet
-        setDocuments(prevDocs => {
-          // If we already have documents and fetched none, keep what we have
-          if (prevDocs.length > 0 && docs.length === 0) {
-            console.log("Keeping existing documents instead of empty fetch result");
-            return prevDocs;
-          }
-          return docs;
-        });
-        
+        // Always set documents regardless of count
+        // This ensures mock docs don't override empty lists
+        setDocuments(docs);
         hasFetchedRef.current = true;
       } catch (err) {
         console.error('Error fetching documents:', err);

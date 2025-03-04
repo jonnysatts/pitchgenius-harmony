@@ -32,6 +32,7 @@ export const fetchProjectDocumentsFromApi = async (projectId: string): Promise<D
         
         if (Array.isArray(storedDocs) && storedDocs.length > 0) {
           // Return stored documents if they exist
+          console.log('Using stored documents from localStorage');
           return storedDocs.map(convertApiDocumentToModel);
         }
       } catch (parseError) {
@@ -60,6 +61,9 @@ export const uploadDocumentToApi = async (
     // Simulate API call
     const newDocument = simulateDocumentUpload(projectId, file, priority);
     
+    // Save the new document to localStorage to persist it
+    saveDocumentToLocalStorage(projectId, newDocument);
+    
     return newDocument;
   } catch (error) {
     console.error('Error uploading document:', error);
@@ -75,12 +79,12 @@ const simulateDocumentUpload = (
   const now = new Date();
   
   const newDocument: Document = {
-    id: `doc_${Date.now()}`,
+    id: `local_${Math.random().toString(36).substr(2, 9)}`,
     projectId: projectId,
     name: file.name,
     size: file.size,
     type: file.type,
-    url: 'https://example.com/document/' + file.name,
+    url: URL.createObjectURL(file), // Create a blob URL for the file
     createdAt: now,
     uploadedAt: now.toISOString(),
     uploadedBy: 'user_123',
@@ -89,4 +93,30 @@ const simulateDocumentUpload = (
   
   console.log('Simulated document upload:', newDocument);
   return newDocument;
+};
+
+// Helper function to save documents to localStorage
+const saveDocumentToLocalStorage = (projectId: string, document: Document) => {
+  const storageKey = `project_documents_${projectId}`;
+  let documents: Document[] = [];
+  
+  // Get existing documents
+  const existingDocs = localStorage.getItem(storageKey);
+  if (existingDocs) {
+    try {
+      const parsed = JSON.parse(existingDocs);
+      if (Array.isArray(parsed)) {
+        documents = parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing existing documents:', e);
+    }
+  }
+  
+  // Add the new document
+  documents.push(document);
+  
+  // Save back to localStorage
+  localStorage.setItem(storageKey, JSON.stringify(documents));
+  console.log(`Document saved to localStorage. Total documents: ${documents.length}`);
 };

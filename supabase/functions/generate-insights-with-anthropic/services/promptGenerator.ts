@@ -1,216 +1,100 @@
 
 /**
- * Generate prompts for Claude API
+ * Service for generating prompts for Claude AI
  */
 
 /**
  * Generate the system prompt for Claude
  */
 export function generateSystemPrompt(
-  clientIndustry: string,
-  projectTitle: string = '',
-  maximumResponseTime: number = 90
+  clientIndustry: string = 'technology',
+  projectTitle: string = 'Document Analysis'
 ): string {
-  return `
-You are an expert strategic analyst specializing in gaming and gamification strategies.
-Your task is to analyze business documents and identify strategic insights related to gaming opportunities.
-
-${getIndustrySpecificContext(clientIndustry)}
-
-Focus on finding:
-1. Business challenges that can be solved through gamification
-2. Audience gaps that can be filled with gaming elements 
-3. Competitive threats that can be addressed through gaming
-4. Specific gaming opportunities that could benefit the client
-5. Strategic recommendations for implementation
-6. Key narratives that could form presentation slides
-
-Project details:
-- Industry: ${clientIndustry}
-- Project title: ${projectTitle || 'Gaming Strategy Analysis'}
-
-Your response MUST be structured as a valid JSON array of insight objects. Each insight should include:
-1. id - A unique identifier string
-2. category - One of: "business_challenges", "audience_gaps", "competitive_threats", "gaming_opportunities", "strategic_recommendations", "key_narratives"
-3. title - A clear, concise title
-4. content - Detailed description with evidence from the documents
-5. confidence - A number between 70 and 100 indicating your confidence in this insight
-
-You have ${maximumResponseTime} seconds to respond. If you cannot complete a thorough analysis in that time,
-provide the highest quality insights you can within the time constraint.
-
-IMPORTANT: Format your entire response as valid JSON. Wrap it in a code block with ```json and ``` markers.
-`.trim();
+  return `You are an expert strategic consultant specializing in ${clientIndustry}. 
+Your task is to analyze documents for a project titled "${projectTitle}" and identify key strategic insights.
+Focus on extracting specific, actionable insights that would be valuable to a business in the ${clientIndustry} industry.
+Provide your analysis in a structured JSON format as specified in the user prompt.
+Be objective and balanced in your analysis, highlighting both strengths and areas for improvement.
+Avoid generic advice - all insights should be directly tied to specific content in the provided documents.`;
 }
 
 /**
- * Generate the user prompt with document content
+ * Generate the main prompt for Claude based on document contents
  */
 export function generatePrompt(
   documentContents: any[],
   clientIndustry: string = 'technology',
   clientWebsite: string = '',
-  projectTitle: string = '',
-  processingMode: string = 'comprehensive'
+  projectTitle: string = 'Document Analysis',
+  processingMode: 'comprehensive' | 'focused' = 'comprehensive'
 ): string {
-  // Format document summaries
-  const formattedDocuments = formatDocumentSummaries(documentContents);
+  // Create a header for the prompt
+  let prompt = `I need you to analyze documents for a project titled "${projectTitle}" in the ${clientIndustry} industry.\n\n`;
   
-  // Add website context if available
-  const websiteContext = clientWebsite 
-    ? `\n\nClient website: ${clientWebsite}. Please consider any relevant information from the website in your analysis.` 
-    : '';
-  
-  // Get processing mode instructions
-  const modeInstructions = getProcessingModeInstructions(processingMode);
-  
-  return `
-I need you to analyze these documents for a client in the ${clientIndustry} industry${projectTitle ? ` for project: "${projectTitle}"` : ''}.
-The goal is to identify strategic gaming and gamification opportunities for this client.${websiteContext}
-
-${modeInstructions}
-
-DOCUMENT CONTENT TO ANALYZE:
-${formattedDocuments}
-
-Format your response as a JSON array of insight objects inside a code block, like this:
-
-\`\`\`json
-[
-  {
-    "id": "unique_id_1",
-    "category": "business_challenges",
-    "title": "Clear title for this insight",
-    "content": "Detailed explanation with evidence from the documents",
-    "confidence": 85
-  },
-  {
-    "id": "unique_id_2",
-    "category": "audience_gaps",
-    "title": "Another clear insight title",
-    "content": "Details about this insight with supporting evidence",
-    "confidence": 90
+  // Add context about the client's website if available
+  if (clientWebsite) {
+    prompt += `The client's website is ${clientWebsite}. Please consider this when generating insights.\n\n`;
   }
-]
+  
+  // Add the document contents
+  prompt += `DOCUMENT CONTENTS:\n\n`;
+  
+  // Include each document with clear separation
+  documentContents.forEach((doc, index) => {
+    prompt += `DOCUMENT ${index + 1}: ${doc.name || 'Untitled Document'}\n`;
+    prompt += `${doc.content || 'No content available'}\n\n`;
+    prompt += `---- END OF DOCUMENT ${index + 1} ----\n\n`;
+  });
+  
+  // Specify the required JSON output format
+  prompt += `Based on these documents, generate strategic insights structured as JSON in the following format:
+\`\`\`json
+{
+  "insights": [
+    {
+      "id": "unique_id_1",
+      "category": "business_challenges",
+      "content": {
+        "title": "Concise insight title",
+        "summary": "Brief summary of the insight",
+        "details": "More detailed explanation of the insight",
+        "evidence": "Evidence from the documents",
+        "recommendations": "Strategic recommendations",
+        "impact": "Potential business impact",
+        "sources": [
+          {
+            "id": "doc_id",
+            "name": "Document Name",
+            "relevance": "high"
+          }
+        ]
+      },
+      "confidence": 85,
+      "needsReview": false
+    },
+    // Additional insights...
+  ]
+}
 \`\`\`
 
-Aim for 6-10 high-quality insights across different categories. Each insight should be detailed and specific, not generic.
-`.trim();
-}
+Generate insights for each of these categories:
+1. business_challenges: Key business challenges identified in the documents
+2. audience_gaps: Gaps in audience understanding or targeting
+3. competitive_threats: Competitive threats and challenges
+4. gaming_opportunities: Specific opportunities in the gaming market
+5. strategic_recommendations: High-level strategic recommendations
+6. key_narratives: Important narrative themes from the documents
 
-/**
- * Format document content for Claude analysis
- */
-export function formatDocumentSummaries(documentContents: any[]): string {
-  if (!documentContents || documentContents.length === 0) {
-    return "No document content provided.";
-  }
-  
-  // Sort by priority if available
-  const sortedContents = [...documentContents].sort((a, b) => 
-    (b.priority || 0) - (a.priority || 0)
-  );
-  
-  // Calculate total content length for potential truncation
-  let totalLength = 0;
-  const MAX_CONTENT_LENGTH = 85000; // Safe limit for Claude's context window
-  
-  return sortedContents.map((doc, index) => {
-    // Check if we should truncate individual large documents
-    let content = doc.content || '';
-    
-    // If this document would push us over the limit, truncate it
-    if (totalLength + content.length > MAX_CONTENT_LENGTH) {
-      const remainingSpace = Math.max(0, MAX_CONTENT_LENGTH - totalLength);
-      if (remainingSpace > 1000) { // Only include if we can get meaningful content
-        content = content.substring(0, remainingSpace) + "\n[Content truncated due to size limits]";
-      } else {
-        content = "[Content omitted due to size limits]";
-      }
-    }
-    
-    totalLength += content.length;
-    
-    return `
------ DOCUMENT ${index + 1}: ${doc.name || 'Untitled'} -----
-Type: ${doc.type || 'Unknown'}
-Priority: ${doc.priority || 'Normal'}
+For each insight:
+- The title should be specific and actionable
+- The summary should be 1-2 sentences
+- Details should provide more comprehensive information
+- Evidence should cite specific content from the documents
+- Confidence should range from 60-95 based on the strength of evidence
+- Set needsReview to true if the insight is based on limited evidence
 
-${content}
-`.trim();
-  }).join("\n\n---\n\n");
-}
+Your insights must be specific to the document content provided, not generic advice.
+ONLY output the JSON, nothing else.`;
 
-/**
- * Get processing mode specific instructions
- */
-function getProcessingModeInstructions(mode: string): string {
-  switch (mode.toLowerCase()) {
-    case 'quick':
-      return "Perform a rapid analysis focusing on the most prominent insights. Aim for 4-6 key insights.";
-    case 'comprehensive':
-      return "Perform a thorough analysis of all documents. Focus on depth and quality rather than quantity.";
-    case 'focused':
-      return "Focus specifically on actionable gaming opportunities and quick wins the client could implement.";
-    default:
-      return "Analyze these documents thoroughly to extract strategic gaming insights.";
-  }
-}
-
-/**
- * Get industry-specific context for the system prompt
- */
-function getIndustrySpecificContext(industry: string): string {
-  const industries: Record<string, string> = {
-    'retail': `
-Since this client is in the retail industry, focus on:
-- How gaming can enhance the in-store and online shopping experience
-- Opportunities for limited edition products with gaming themes
-- How gaming creators could showcase products authentically
-- Gamification of loyalty programs and shopping experiences
-`,
-    'finance': `
-Since this client is in the finance industry, focus on:
-- Financial literacy gamification opportunities
-- Gen Z attitudes toward traditional banking
-- Opportunities for rewards programs tied to gaming
-- How financial tools could integrate with gaming ecosystems
-`,
-    'technology': `
-Since this client is in the technology industry, focus on:
-- How product demonstrations could leverage gaming elements
-- Integration opportunities with streaming platforms
-- Gaming as a showcase for technical capabilities
-- Gaming community influencers as technical advocates
-`,
-    'entertainment': `
-Since this client is in the entertainment industry, focus on:
-- Narrative extensions into gaming
-- Character/IP integration opportunities
-- Crossover audience potential
-- Transmedia storytelling opportunities
-`,
-    'gaming': `
-Since this client is already in the gaming industry, focus on:
-- Audience expansion opportunities
-- Community building strategies
-- Competitive positioning against other gaming brands
-- Cross-promotion with non-gaming brands
-`,
-    'healthcare': `
-Since this client is in the healthcare industry, focus on:
-- Health education through gamification
-- Patient engagement opportunities
-- Wellness tracking and rewards
-- Community building around health goals
-`
-  };
-  
-  return industries[industry.toLowerCase()] || `
-For this client in the ${industry} industry, focus on:
-- Identifying business challenges that gaming could solve
-- Spotting gaps in reaching younger/gaming audiences
-- Finding competitive threats from more gaming-savvy brands
-- Discovering untapped opportunities within gaming communities
-`;
+  return prompt;
 }

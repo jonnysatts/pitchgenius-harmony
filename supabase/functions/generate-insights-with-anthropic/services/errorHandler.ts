@@ -1,53 +1,97 @@
 
 /**
- * Error handling utilities for Claude API integration
+ * Error handling services for Claude API
  */
 import { corsHeaders } from '../utils/corsUtils.ts';
-import { generateFallbackInsights } from '../utils/fallbackGenerator.ts';
 
 /**
- * Create an error response that follows the API contract
+ * Validate document content before processing
  */
-export function createErrorResponse(
-  error: any,
-  status: number = 500,
-  clientIndustry: string = 'technology',
-  documentCount: number = 5
-): Response {
-  // Log the detailed error information for debugging
-  console.error('Creating error response with details:', {
-    errorType: typeof error,
-    errorMessage: error instanceof Error ? error.message : String(error),
-    errorObject: JSON.stringify(error),
-    status,
-    clientIndustry
-  });
+export function validateDocumentContent(documentContents: any[]): {
+  valid: boolean;
+  message: string;
+  contentLength?: number;
+} {
+  // Check if we have any documents
+  if (!documentContents || !Array.isArray(documentContents) || documentContents.length === 0) {
+    return {
+      valid: false,
+      message: "No document contents provided for analysis"
+    };
+  }
   
-  // Generate fallback insights when Claude API fails
-  const fallbackInsights = generateFallbackInsights(clientIndustry, documentCount);
+  // Calculate total content length
+  let totalContentLength = 0;
+  let nonEmptyDocuments = 0;
   
-  // Get a more descriptive error message
-  const errorMessage = getErrorMessage(error);
-  
-  // Add context about using fallback data
-  const fallbackReason = `Claude AI error: ${errorMessage}. Using sample insights instead.`;
-  
-  // Log the error details but return fallback insights to maintain application function
-  return new Response(
-    JSON.stringify({
-      insights: fallbackInsights,
-      error: errorMessage,
-      usingFallbackData: true,
-      fallbackReason: fallbackReason,
-      processingTime: 0,
-      apiKeyStatus: {
-        checked: true,
-        exists: true, // Since user confirmed the key exists
-        validFormat: true // Assume valid format since the user confirmed it exists
+  for (const doc of documentContents) {
+    if (doc.content && typeof doc.content === 'string') {
+      totalContentLength += doc.content.length;
+      if (doc.content.length > 100) {
+        nonEmptyDocuments++;
       }
-    }),
+    }
+  }
+  
+  // Check if we have enough content to analyze
+  if (totalContentLength < 500) {
+    return {
+      valid: false,
+      message: "Insufficient document content for meaningful analysis",
+      contentLength: totalContentLength
+    };
+  }
+  
+  // Check if we have at least one non-empty document
+  if (nonEmptyDocuments === 0) {
+    return {
+      valid: false,
+      message: "No documents with sufficient content found",
+      contentLength: totalContentLength
+    };
+  }
+  
+  return {
+    valid: true,
+    message: "Document content validation successful",
+    contentLength: totalContentLength
+  };
+}
+
+/**
+ * Create a standardized error response
+ */
+export function createErrorResponse(error: unknown, statusCode: number = 500): Response {
+  console.error('Creating error response:', error);
+  
+  let errorMessage: string;
+  let errorDetail: any = {};
+  
+  if (error instanceof Error) {
+    errorMessage = error.message;
+    errorDetail = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    };
+  } else if (typeof error === 'object' && error !== null) {
+    errorMessage = JSON.stringify(error);
+    errorDetail = error;
+  } else {
+    errorMessage = String(error);
+  }
+  
+  const responseData = {
+    error: errorMessage,
+    insights: [],
+    errorDetail,
+    timestamp: new Date().toISOString()
+  };
+  
+  return new Response(
+    JSON.stringify(responseData),
     {
-      status: 200, // Return 200 even for errors so client gets fallback data
+      status: statusCode,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json'
@@ -57,125 +101,35 @@ export function createErrorResponse(
 }
 
 /**
- * Validate document content before processing
+ * Handle API response errors
  */
-export function validateDocumentContent(documents: any[]): { valid: boolean; message: string; contentLength?: number } {
-  if (!documents || !Array.isArray(documents)) {
-    return { valid: false, message: "No documents provided for analysis" };
-  }
-
-  if (documents.length === 0) {
-    return { valid: false, message: "No documents provided for analysis" };
-  }
-
-  // Calculate total content length
-  let totalContentLength = 0;
-  let hasContent = false;
-
-  for (const doc of documents) {
-    if (doc.content && typeof doc.content === 'string') {
-      totalContentLength += doc.content.length;
-      if (doc.content.length > 100) { // Consider documents with meaningful content
-        hasContent = true;
-      }
-    }
-  }
-
-  if (!hasContent) {
-    return { 
-      valid: false, 
-      message: "Documents contain insufficient content for meaningful analysis",
-      contentLength: totalContentLength
-    };
-  }
-
-  // Content is valid
-  return { 
-    valid: true, 
-    message: "Content validation passed",
-    contentLength: totalContentLength
-  };
-}
-
-/**
- * Extract a useful error message
- */
-function getErrorMessage(error: any): string {
-  // Handle different error types
-  if (error instanceof Error) {
-    // For standard Error objects
-    return `Error: ${error.message}`;
-  }
+export async function handleApiResponseError(response: Response): Promise<never> {
+  const statusCode = response.status;
   
-  if (typeof error === 'string') {
-    // For string errors
-    return error;
-  }
-  
-  if (error && error.error) {
-    // For objects with error property
-    return typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
-  }
-  
-  if (error && error.message) {
-    // For objects with message property
-    return error.message;
-  }
-  
-  if (error && error.status) {
-    // For HTTP-like errors with status codes
-    return `API error: status ${error.status}`;
-  }
-  
-  // Default fallback
-  return 'Unknown error occurred during analysis. Check Claude API configuration and Edge Function logs.';
-}
-
-/**
- * Testing function to validate API key access
- * This helps diagnose issues with the ANTHROPIC_API_KEY
- */
-export async function testApiKeyAccess(): Promise<{ 
-  keyExists: boolean; 
-  keyPrefix?: string;
-  error?: string;
-}> {
+  let errorBody = '';
   try {
-    // Try to access the API key
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    
-    if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY not found in environment variables');
-      return { 
-        keyExists: false,
-        error: 'ANTHROPIC_API_KEY not found in environment variables'
-      };
-    }
-    
-    // Return the first 8 characters for verification (safe to share)
-    const keyPrefix = apiKey.substring(0, 8) + '...';
-    
-    // Simple validation that it looks like an Anthropic key
-    // Claude API keys typically start with 'sk-ant-' 
-    const isValidFormat = apiKey.startsWith('sk-ant-');
-    
-    if (!isValidFormat) {
-      return {
-        keyExists: true,
-        keyPrefix,
-        error: 'API key exists but does not appear to be a valid Anthropic API key format (should start with sk-ant-)'
-      };
-    }
-    
-    return {
-      keyExists: true,
-      keyPrefix
-    };
-  } catch (error) {
-    console.error('Error accessing ANTHROPIC_API_KEY:', error);
-    return {
-      keyExists: false,
-      error: `Error accessing API key: ${error instanceof Error ? error.message : String(error)}`
-    };
+    errorBody = await response.text();
+  } catch (e) {
+    errorBody = 'Could not read error response body';
   }
+  
+  // Create more specific error messages based on status code
+  let errorMessage = `API request failed with status ${statusCode}`;
+  
+  if (statusCode === 401) {
+    errorMessage = 'Authentication failed - check your API key';
+  } else if (statusCode === 403) {
+    errorMessage = 'Authorization failed - your API key does not have permission';
+  } else if (statusCode === 429) {
+    errorMessage = 'Rate limit exceeded - please try again later';
+  } else if (statusCode >= 500) {
+    errorMessage = 'Server error - please try again later';
+  }
+  
+  console.error(`API error: ${errorMessage}`, {
+    status: statusCode,
+    body: errorBody.substring(0, 500) // Log a sample of the error body
+  });
+  
+  throw new Error(`${errorMessage}. Details: ${errorBody.substring(0, 200)}`);
 }
