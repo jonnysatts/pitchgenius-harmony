@@ -8,13 +8,15 @@ interface ProjectWelcomeAlertProps {
   newProjectTitle?: string;
   newProjectClient?: string;
   isNewProject?: boolean;
+  setActiveTab?: (tab: string) => void;
 }
 
 const ProjectWelcomeAlert: React.FC<ProjectWelcomeAlertProps> = ({ 
   mockProjectWarning = false, 
   newProjectTitle, 
   newProjectClient,
-  isNewProject
+  isNewProject,
+  setActiveTab
 }) => {
   // Only show the alert if mockProjectWarning is true or it's a newly created project
   if (!mockProjectWarning && !isNewProject) return null;

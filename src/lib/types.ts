@@ -1,3 +1,4 @@
+
 export interface Project {
   id: string;
   title: string;
@@ -8,6 +9,10 @@ export interface Project {
   ownerId: string;
   description: string;
   clientWebsite?: string;
+  status?: 'draft' | 'in_progress' | 'completed';
+  coverImage?: string;
+  createdBy?: string;
+  collaborators?: string[];
 }
 
 export interface Document {
@@ -20,6 +25,9 @@ export interface Document {
   createdAt: Date;
   status?: 'uploading' | 'processing' | 'ready' | 'error';
   error?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  priority?: number;
 }
 
 export interface AIProcessingStatus {
@@ -39,7 +47,13 @@ export type InsightCategory =
 export type WebsiteInsightCategory = 
   | 'business_imperatives'
   | 'gaming_audience_opportunity'
-  | 'strategic_activation_pathways';
+  | 'strategic_activation_pathways'
+  | 'company_positioning'
+  | 'competitive_landscape'
+  | 'key_partnerships'
+  | 'public_announcements'
+  | 'consumer_engagement'
+  | 'product_service_fit';
 
 export interface StrategicInsight {
   id: string;
@@ -47,6 +61,7 @@ export interface StrategicInsight {
   confidence: number;
   needsReview: boolean;
   source?: 'document' | 'website';
+  priorityLevel?: number;
   content: {
     title: string;
     summary: string;
@@ -73,4 +88,20 @@ export interface StoredInsightData {
   insights: StrategicInsight[];
   usingFallbackData: boolean;
   generationTimestamp: number;
+  projectId?: string;
 }
+
+export interface NarrativeSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  role?: UserRole;
+}
+
+export type UserRole = 'admin' | 'user' | 'guest';

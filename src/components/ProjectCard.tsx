@@ -61,9 +61,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, className }) 
       
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start mb-2">
-          <Badge className={cn("font-normal text-xs", statusColors[project.status])}>
-            {project.status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
-          </Badge>
+          {project.status && (
+            <Badge className={cn("font-normal text-xs", statusColors[project.status])}>
+              {project.status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+            </Badge>
+          )}
           <span className="text-xl" aria-hidden="true">
             {industryIcons[project.clientIndustry]}
           </span>

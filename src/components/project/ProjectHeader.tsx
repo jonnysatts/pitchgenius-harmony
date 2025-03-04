@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Project, AIProcessingStatus } from "@/lib/types";
+import { Project, AIProcessingStatus, StrategicInsight } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import ApiConnectionTest from "./ApiConnectionTest";
 import { Globe } from "lucide-react";
@@ -10,12 +10,20 @@ interface ProjectHeaderProps {
   project: Project;
   activeTab?: string;
   aiStatus?: AIProcessingStatus;
+  insights?: StrategicInsight[];
+  isNewProject?: boolean;
+  setActiveTab?: (tab: string) => void;
+  navigateToPresentation?: () => void;
 }
 
 const ProjectHeader: React.FC<ProjectHeaderProps> = ({ 
   project,
   activeTab,
-  aiStatus
+  aiStatus,
+  insights,
+  isNewProject,
+  setActiveTab,
+  navigateToPresentation
 }) => {
   const location = useLocation();
   

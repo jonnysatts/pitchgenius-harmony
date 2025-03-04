@@ -20,6 +20,7 @@ interface DocumentsTabContentProps {
   isAnalyzingWebsite?: boolean;
   hasDocuments?: boolean;
   websiteUrl?: string;
+  error?: string | null;
 }
 
 const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
@@ -34,6 +35,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   isAnalyzingWebsite = false,
   hasDocuments,
   websiteUrl,
+  error
 }) => {
   // Only disable the Analyze button if:
   // 1. There are no documents OR
@@ -131,6 +133,13 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
             <p className="text-slate-600 text-center">
               No documents have been uploaded yet. Please upload documents to analyze.
             </p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+            <p className="font-medium">Error:</p>
+            <p>{error}</p>
           </div>
         )}
         

@@ -19,36 +19,42 @@ const BASE_MOCK_PROJECTS: Project[] = [
     title: "MegaMart Gaming Strategy",
     clientName: "MegaMart Retail",
     clientIndustry: "retail",
-    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    createdBy: "1",
-    collaborators: ["2"],
+    createdAt: new Date(Date.now() - 86400000 * 7),
+    updatedAt: new Date(Date.now() - 86400000 * 2),
+    ownerId: "1",
+    description: "Gaming strategy for MegaMart retail chain",
     status: "in_progress",
-    coverImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158"
+    coverImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
+    createdBy: "1",
+    collaborators: ["2"]
   },
   {
     id: "2",
     title: "NextGen Bank Gaming Activation",
     clientName: "NextGen Financial",
     clientIndustry: "finance",
-    createdAt: new Date(Date.now() - 86400000 * 14).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    createdBy: "1",
-    collaborators: [],
+    createdAt: new Date(Date.now() - 86400000 * 14),
+    updatedAt: new Date(Date.now() - 86400000 * 5),
+    ownerId: "1",
+    description: "Gaming activation strategy for NextGen Financial",
     status: "draft",
-    coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085"
+    coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
+    createdBy: "1",
+    collaborators: []
   },
   {
     id: "3",
     title: "TechCorp Gaming Launch",
     clientName: "TechCorp Inc.",
     clientIndustry: "technology",
-    createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
-    updatedAt: new Date(Date.now()).toISOString(),
-    createdBy: "1",
-    collaborators: ["2"],
+    createdAt: new Date(Date.now() - 86400000 * 30),
+    updatedAt: new Date(Date.now()),
+    ownerId: "1",
+    description: "Gaming launch strategy for TechCorp",
     status: "completed",
-    coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+    coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
+    createdBy: "1",
+    collaborators: ["2"]
   }
 ];
 

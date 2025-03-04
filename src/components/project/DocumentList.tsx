@@ -53,9 +53,11 @@ const DocumentList: React.FC<DocumentListProps> = ({
                 <span className="text-xs text-slate-500">
                   {(document.size / 1024 / 1024).toFixed(2)} MB
                 </span>
-                <span className="text-xs text-slate-500">
-                  {formatDistanceToNow(new Date(document.uploadedAt), { addSuffix: true })}
-                </span>
+                {document.uploadedAt && (
+                  <span className="text-xs text-slate-500">
+                    {formatDistanceToNow(new Date(document.uploadedAt), { addSuffix: true })}
+                  </span>
+                )}
                 {document.priority && document.priority > 0 && (
                   <div className="flex items-center text-amber-500">
                     <Star size={12} className="mr-1" />

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -67,14 +68,14 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   
   // Group insights by category with proper type checking and fallbacks
   const insightsByCategory = websiteInsights.reduce((acc, insight) => {
-    // Add a fallback for category - default to "company_positioning" if not set
+    // Add a fallback for category - default to "business_imperatives" if not set
     // Make sure category is a valid WebsiteInsightCategory
-    let category = (insight.category || "company_positioning") as WebsiteInsightCategory;
+    let category = (insight.category || "business_imperatives") as WebsiteInsightCategory;
     
     // Validate that the category exists in our defined categories, if not use default
     if (!websiteInsightCategories.some(cat => cat.id === category)) {
-      console.warn(`Invalid category ${category} for insight ${insight.id}, defaulting to company_positioning`);
-      category = "company_positioning";
+      console.warn(`Invalid category ${category} for insight ${insight.id}, defaulting to business_imperatives`);
+      category = "business_imperatives";
     }
     
     if (!acc[category]) {

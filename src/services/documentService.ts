@@ -32,7 +32,7 @@ export const calculateDocumentPriority = (filename: string): number => {
  */
 export const processFiles = (files: File[], projectId: string, userId: string): Document[] => {
   return Array.from(files).map(file => {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date();
     const priority = calculateDocumentPriority(file.name);
     
     return {
@@ -40,9 +40,11 @@ export const processFiles = (files: File[], projectId: string, userId: string): 
       name: file.name,
       size: file.size,
       type: file.type,
-      uploadedAt: timestamp,
-      uploadedBy: userId,
+      projectId: projectId,
+      createdAt: timestamp,
       url: URL.createObjectURL(file), // Local temporary URL
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: userId,
       priority
     };
   });
@@ -52,7 +54,11 @@ export const processFiles = (files: File[], projectId: string, userId: string): 
  * Sort documents by priority (highest first)
  */
 export const sortDocumentsByPriority = (documents: Document[]): Document[] => {
-  return [...documents].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  return [...documents].sort((a, b) => {
+    const aPriority = a.priority || 0;
+    const bPriority = b.priority || 0;
+    return bPriority - aPriority;
+  });
 };
 
 /**
@@ -93,4 +99,3 @@ export const estimateDocumentComplexity = (document: Document): number => {
   
   return Math.min(complexity, 5);
 };
-

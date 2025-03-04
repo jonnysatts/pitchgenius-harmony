@@ -1,48 +1,83 @@
 
-/**
- * Utilities for preparing document contents for AI processing
- */
-import { Document, Project } from "@/lib/types";
+import { Project, Document } from "@/lib/types";
+import { getFileCategory } from "@/services/documentService";
 
 /**
- * Prepare document contents for AI processing
+ * Generate a prompt for document analysis based on project details
  */
-export const prepareDocumentContents = (documents: Document[], project: Project): any[] => {
-  return documents.map(doc => {
-    return {
-      id: doc.id,
-      name: doc.name,
-      type: doc.type,
-      priority: doc.priority,
-      summary: `Content from document: ${doc.name} (${doc.type})`,
-      // In a real implementation, this would contain actual document text content
-      // For now, we use placeholder text since we're using mock data anyway
-      content: `This is simulated content for the document ${doc.name}. In a production environment, this would be the actual text extracted from the document.`
-    };
-  });
+export const generateAnalysisPrompt = (project: Project, documents: Document[]): string => {
+  // Format document information for the prompt
+  const documentsSummary = documents.map(doc => {
+    const priority = doc.priority || 0;
+    const category = getFileCategory(doc.type);
+    return `- ${doc.name} (${category}, ${(doc.size / 1024 / 1024).toFixed(2)}MB, Priority: ${priority})`;
+  }).join('\n');
+  
+  return `
+    You are a strategic gaming audience consultant for Games Age, analyzing documents for ${project.clientName} in the ${project.clientIndustry} industry.
+    
+    Key information about the client:
+    - Name: ${project.clientName}
+    - Industry: ${project.clientIndustry}
+    - Website: ${project.clientWebsite || 'Not provided'}
+    - Description: ${project.description || 'No additional information provided'}
+    
+    The following documents have been uploaded for analysis:
+    ${documentsSummary}
+    
+    Extract strategic insights related to gaming audience engagement opportunities, focusing on:
+    - Business challenges that gaming audience strategies could address
+    - Audience gaps or engagement opportunities
+    - Competitive threats in the gaming space
+    - Specific gaming opportunities relevant to their business
+    - Strategic recommendations for gaming audience engagement
+    - Key cultural or narrative elements that could connect with gaming audiences
+    
+    For each insight, provide:
+    - A clear, specific title
+    - A concise summary
+    - Supporting details/evidence from the documents
+    - Strategic recommendations
+    
+    Your analysis should be thorough, actionable, and directly relevant to the client's industry.
+  `;
 };
 
 /**
- * Prepare website content for AI processing
+ * Generate a prompt for website research based on client details
  */
-export const prepareWebsiteContent = (websiteUrl: string, project: Project): string => {
-  // For the moment, provide more structured information to guide the AI analysis
-  // This will be replaced with actual scraped content once Firecrawl is integrated
+export const generateWebsiteResearchPrompt = (websiteUrl: string, clientName: string, clientIndustry: string): string => {
   return `
-Website URL: ${websiteUrl}
-Industry: ${project.clientIndustry}
-Project Title: ${project.title}
-Client Name: ${project.clientName}
-
-ANALYSIS REQUIREMENTS:
-- Extract specific details from the website about ${project.clientName}'s products, services, partnerships, and announcements
-- Identify their target audience and how they position themselves in the market
-- Look for any gaming-related content or opportunities already present
-- Analyze their brand voice, messaging style, and visual identity
-- Identify competitors mentioned or implied on their website
-- Look for news articles, press releases, or blog posts with specific details
-
-IMPORTANT: Do NOT generate generic or placeholder content. Only include specific, factual information that can be found on the website.
-If you cannot find specific information for a category, explicitly note what's missing rather than creating generic content.
-`;
+    You are a senior strategic consultant at Games Age, Australia's premier gaming audience strategy agency. You specialize in helping brands authentically connect with gaming audiences (not developing games or simple gamification).
+    
+    Your task is to analyze ${clientName}'s website (${websiteUrl}) and identify strategic opportunities for them to engage with gaming audiences and gaming culture to solve real business challenges.
+    
+    Games Age's unique approach combines:
+    1. Deep gaming audience insights (powered by Fortress venue data from 1 million+ Australian gamers)
+    2. Cultural connection strategies (not superficial "gamer marketing")
+    3. Experiential expertise in gaming activations, events, and sponsorships
+    4. Content and partnership strategies that build authentic gaming community engagement
+    
+    For ${clientName} in the ${clientIndustry} industry, analyze their website to identify:
+    
+    1. BUSINESS IMPERATIVES (what critical business challenges could gaming audience engagement solve?)
+      * Audience gaps (especially with Gen Z/younger demographics)
+      * Brand perception challenges
+      * Market differentiation needs
+      * Digital transformation opportunities
+      * Demand generation requirements
+    
+    2. GAMING AUDIENCE OPPORTUNITY (how can gaming audiences specifically help them?)
+      * Specific gaming audience segments that align with their brand/products
+      * Cultural crossover points between their industry and gaming culture
+      * Authentic ways to engage these audiences without seeming inauthentic
+      * Competitor analysis in gaming space (gaps and opportunities)
+    
+    3. STRATEGIC ACTIVATION PATHWAYS (what specific Games Age services would deliver value?)
+      * Potential experiential/event opportunities (both digital and physical)
+      * Content strategy recommendations
+      * Sponsorship opportunities within gaming culture
+      * Partnership approaches with gaming entities
+      * Measurement frameworks for success
+  `;
 };

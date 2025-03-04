@@ -1,104 +1,126 @@
 
-/**
- * Generate fallback insights when API calls fail
- */
-import { StrategicInsight, Project } from "@/lib/types";
-import { getCategoryTitle, getCategoryRecommendation, formatCategoryName } from "./insightContentUtils";
+// This file contains fallback insight generators for website analysis
+import { WebsiteInsightCategory, StrategicInsight } from "@/lib/types";
+import { v4 as uuidv4 } from "uuid";
 
 /**
- * Generate fallback insights for all website categories
+ * Get fallback insight templates based on industry
  */
-export function generateFallbackInsights(project: Project): StrategicInsight[] {
-  console.log(`Generating fallback insights for ${project.clientName || 'client'}`);
+function getFallbackInsightTemplatesByIndustry(industry: string): Record<WebsiteInsightCategory, StrategicInsight> {
+  // Base templates that will be customized per industry
+  const baseTemplates: Record<WebsiteInsightCategory, StrategicInsight> = {
+    business_imperatives: {
+      id: uuidv4(),
+      category: "business_imperatives",
+      confidence: 75,
+      needsReview: true,
+      source: "website",
+      content: {
+        title: "Digital Engagement Gap with Gaming-Native Audiences",
+        summary: "Website content analysis suggests a significant opportunity to connect with gaming audiences",
+        details: "The current digital strategy appears focused on traditional audiences, potentially missing engagement opportunities with gaming-native consumers who expect more interactive and culturally relevant experiences.",
+        recommendations: "Develop a gaming audience engagement strategy that bridges this gap through authentic content and experiences."
+      }
+    },
+    gaming_audience_opportunity: {
+      id: uuidv4(),
+      category: "gaming_audience_opportunity",
+      confidence: 70,
+      needsReview: true,
+      source: "website",
+      content: {
+        title: "Mobile-First Casual Gaming Audience Alignment",
+        summary: "The Australian casual mobile gaming community represents a strategic opportunity",
+        details: "With over 5 million Australians identifying as casual mobile gamers, this audience segment represents a significant opportunity for brands looking to expand their demographic reach.",
+        recommendations: "Develop mobile-first gaming activations that align with brand values while authentically connecting with this growing audience."
+      }
+    },
+    strategic_activation_pathways: {
+      id: uuidv4(),
+      category: "strategic_activation_pathways",
+      confidence: 68,
+      needsReview: true,
+      source: "website",
+      content: {
+        title: "Fortress Venue Experiential Marketing Opportunity",
+        summary: "Australia's premier gaming venue network offers unique brand activation opportunities",
+        details: "Fortress venues across Australia provide access to highly engaged gaming audiences in premium environments, offering brands the opportunity to create memorable physical experiences.",
+        recommendations: "Develop a Fortress venue activation strategy with branded experiences that naturally integrate products/services with gaming culture."
+      }
+    }
+  } as Record<WebsiteInsightCategory, StrategicInsight>;
   
-  const timestamp = Date.now();
-  const companyName = project.clientName || "The client";
-  const industry = project.clientIndustry || "technology";
-  const insights: StrategicInsight[] = [];
+  // Return the base templates - in a more complex implementation, 
+  // we would customize these based on the industry
+  return baseTemplates;
+}
+
+/**
+ * Generate fallback insights when we can't analyze the website content
+ * This ensures users always get some insights even if the API or crawling fails
+ */
+export function generateFallbackWebsiteInsights(
+  websiteUrl: string, 
+  clientName: string, 
+  clientIndustry: string
+): StrategicInsight[] {
+  // Get the templates for this industry
+  const templates = getFallbackInsightTemplatesByIndustry(clientIndustry);
   
-  // Company Positioning
-  insights.push(createCategoryInsight('company_positioning', timestamp, companyName, industry));
-  
-  // Competitive Landscape
-  insights.push(createCategoryInsight('competitive_landscape', timestamp, companyName, industry));
-  
-  // Key Partnerships
-  insights.push(createCategoryInsight('key_partnerships', timestamp, companyName, industry));
-  
-  // Public Announcements
-  insights.push(createCategoryInsight('public_announcements', timestamp, companyName, industry));
-  
-  // Consumer Engagement
-  insights.push(createCategoryInsight('consumer_engagement', timestamp, companyName, industry));
-  
-  // Product/Service Fit
-  insights.push(createCategoryInsight('product_service_fit', timestamp, companyName, industry));
+  // Create a copy of each template and customize for this client
+  const insights: StrategicInsight[] = Object.values(templates).map(template => {
+    const insight: StrategicInsight = {
+      ...template,
+      id: uuidv4()
+    };
+    
+    // Add client name to content where appropriate
+    insight.content = {
+      ...template.content,
+      title: template.content.title.replace("[CLIENT]", clientName),
+      summary: template.content.summary.replace("[CLIENT]", clientName).replace("[INDUSTRY]", clientIndustry),
+      details: template.content.details?.replace("[CLIENT]", clientName).replace("[INDUSTRY]", clientIndustry),
+      recommendations: template.content.recommendations?.replace("[CLIENT]", clientName)
+    };
+    
+    return insight;
+  });
   
   return insights;
 }
 
 /**
- * Create a single fallback insight for a specific category
+ * Generate custom fallback insights for a specific website category
  */
-function createCategoryInsight(
-  category: string, 
-  timestamp: number, 
-  companyName: string, 
-  industry: string
+export function generateCategoryFallbackInsight(
+  category: WebsiteInsightCategory,
+  websiteUrl: string,
+  clientName: string,
+  clientIndustry: string
 ): StrategicInsight {
-  const categoryFormatted = formatCategoryName(category as any);
+  // Get the templates and select the one for this category
+  const templates = getFallbackInsightTemplatesByIndustry(clientIndustry);
+  const template = templates[category as WebsiteInsightCategory];
   
-  // Generate content based on category
-  let summary = '';
-  let details = '';
-  let recommendations = '';
-  
-  switch(category) {
-    case 'company_positioning':
-      summary = `${companyName} positions itself in the ${industry} market with a focus on customer service and innovation.`;
-      details = `Based on website analysis, the company emphasizes its customer-focused approach and technological capabilities in the ${industry} sector. Their positioning appears to target both business and consumer segments with a premium service offering.`;
-      recommendations = `Games Age should leverage the company's customer-centric positioning by creating gaming experiences that reinforce their commitment to service excellence and innovation.`;
-      break;
-    case 'competitive_landscape':
-      summary = `${companyName} differentiates from competitors through service quality, reliability, and technological innovation.`;
-      details = `The website highlights key differentiators including superior customer support, advanced technology infrastructure, and reliability. These appear to be core competitive advantages in a crowded market.`;
-      recommendations = `Games Age should develop gaming elements that highlight competitive differentiators - consider a game that demonstrates superior service quality or technology advantages in an engaging way.`;
-      break;
-    case 'key_partnerships':
-      summary = `${companyName} appears to maintain strategic partnerships with technology providers and industry associations.`;
-      details = `The website mentions partnerships with technology providers and industry organizations, suggesting an openness to strategic alliances that enhance their market position and service offerings.`;
-      recommendations = `Games Age should explore gaming partnerships that complement existing alliances, particularly with technology providers who could help implement gaming elements into current offerings.`;
-      break;
-    case 'public_announcements':
-      summary = `${companyName} has recently announced service expansions and technology upgrades according to their website.`;
-      details = `News sections on the website indicate recent expansions in service offerings and technology infrastructure upgrades, reflecting a growth-oriented business strategy.`;
-      recommendations = `Games Age should time gaming initiative announcements to align with planned product or service launches to maximize visibility and create marketing synergies.`;
-      break;
-    case 'consumer_engagement':
-      summary = `${companyName}'s website reveals multiple digital touchpoints for customer engagement including online account management and support.`;
-      details = `The website features multiple customer engagement channels including online account management, support portals, and social media integration, indicating a commitment to digital customer experience.`;
-      recommendations = `Games Age should implement gamification elements within existing customer portals to increase engagement and time spent in owned digital channels.`;
-      break;
-    case 'product_service_fit':
-      summary = `${companyName}'s ${industry} services offer several opportunities for gaming integration, particularly in customer education and loyalty.`;
-      details = `The product and service offerings displayed on the website could benefit from gaming elements particularly in areas of customer education, loyalty development, and community building among users.`;
-      recommendations = `Games Age should create interactive games or challenges that educate customers about service offerings while rewarding engagement and loyalty.`;
-      break;
+  if (!template) {
+    // If the category doesn't exist in our templates, default to business_imperatives
+    return generateCategoryFallbackInsight("business_imperatives", websiteUrl, clientName, clientIndustry);
   }
   
-  return {
-    id: `website-${category}-${timestamp}-${Math.floor(Math.random() * 1000)}`,
-    source: 'website',
-    category: category,
-    confidence: 75 + Math.floor(Math.random() * 15),
-    needsReview: true,
-    content: {
-      title: getCategoryTitle(category),
-      summary: `🌐 ${summary}`, // Use only the globe icon
-      details,
-      recommendations,
-      websiteUrl: 'website-analysis',
-      source: 'Website analysis'
-    }
-  } as StrategicInsight;
+  // Create a copy and customize for this client
+  const insight: StrategicInsight = {
+    ...template,
+    id: uuidv4()
+  };
+  
+  // Add client name to content where appropriate
+  insight.content = {
+    ...template.content,
+    title: template.content.title.replace("[CLIENT]", clientName),
+    summary: template.content.summary.replace("[CLIENT]", clientName).replace("[INDUSTRY]", clientIndustry),
+    details: template.content.details?.replace("[CLIENT]", clientName).replace("[INDUSTRY]", clientIndustry),
+    recommendations: template.content.recommendations?.replace("[CLIENT]", clientName)
+  };
+  
+  return insight;
 }
