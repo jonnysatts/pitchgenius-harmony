@@ -1,10 +1,10 @@
 
-// This is a mock implementation since we don't have actual API access
+// This service connects to the Supabase Edge Function to analyze websites
 export class FirecrawlService {
   // Test if the website analysis function is accessible
   static async testWebsiteAnalysis(): Promise<{success: boolean, error?: string}> {
     try {
-      // Simulate a test request to the Edge Function
+      // Test connection to the Edge Function
       console.log("Testing website analysis function");
       
       // Setting a short timeout for the test to fail fast if no response
@@ -13,10 +13,25 @@ export class FirecrawlService {
       
       try {
         // In a real implementation, this would call the Edge Function with test_mode: true
-        // For this demo, we'll simulate a successful test after a delay
-        await new Promise(resolve => setTimeout(resolve, 500)); // Reduced delay for faster response
+        const response = await fetch('/api/analyze-website-test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ test_mode: true }),
+          signal: controller.signal
+        });
         
         clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          return { 
+            success: false, 
+            error: errorData.error || "API test failed. Please check configuration." 
+          };
+        }
+        
         return { success: true };
       } catch (error) {
         clearTimeout(timeoutId);
@@ -52,12 +67,52 @@ export class FirecrawlService {
         console.warn("Progress check failed, but continuing with analysis attempt");
       }
       
-      // For demo purposes, we'll return a success response with a special error message
-      // This allows the UI to show the user that we're in demo mode while still treating
-      // the request as "successful" so processing can continue
+      // Call the actual Edge Function for website analysis
+      const response = await fetch('/api/analyze-website', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          website_url: websiteUrl,
+          client_name: clientName,
+          client_industry: clientIndustry,
+          timeout_seconds: 60,
+          max_pages: 10
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || `API error: ${response.status}`
+        };
+      }
+      
+      const data = await response.json();
+      
+      // Check if the API returned proper insights
+      if (data.insights && Array.isArray(data.insights) && data.insights.length > 0) {
+        return {
+          success: true,
+          insights: data.insights
+        };
+      }
+      
+      // If we got a valid response but no insights, it might be demo data
+      if (data.error) {
+        return {
+          success: true,
+          error: data.error,
+          insights: data.sample_insights || []
+        };
+      }
+      
       return {
         success: true,
-        error: "Demo mode: Using sample insights. In production with valid API keys, this would analyze your actual website content."
+        error: "Received a valid response but no insights were found.",
+        insights: []
       };
     } catch (error) {
       console.error("Error analyzing website:", error);
@@ -76,13 +131,26 @@ export class FirecrawlService {
     try {
       console.log(`Checking analysis progress for: ${websiteUrl}`);
       
-      // In a real implementation, this would check the status of an ongoing analysis
-      // For the demo, we'll simulate a quick progress check
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch('/api/analyze-website-progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ website_url: websiteUrl })
+      });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || `API error: ${response.status}`
+        };
+      }
+      
+      const data = await response.json();
       return {
         success: true,
-        progress: 25 // Indicate early progress
+        progress: data.progress || 0
       };
     } catch (error) {
       console.warn("Error checking analysis progress:", error);

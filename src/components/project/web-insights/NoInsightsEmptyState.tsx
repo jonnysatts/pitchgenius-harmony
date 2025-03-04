@@ -5,11 +5,13 @@ import { AlertCircle, Globe } from 'lucide-react';
 interface NoInsightsEmptyStateProps {
   hasWebsiteUrl: boolean;
   isAnalyzing?: boolean;
+  error?: string | null;
 }
 
 export const NoInsightsEmptyState = ({
   hasWebsiteUrl,
-  isAnalyzing = false
+  isAnalyzing = false,
+  error = null
 }: NoInsightsEmptyStateProps) => {
   if (!hasWebsiteUrl) {
     return (
@@ -32,7 +34,7 @@ export const NoInsightsEmptyState = ({
       
       <p className="text-gray-500 max-w-md mb-6">
         {isAnalyzing 
-          ? "Please wait while we analyze the website content and generate strategic insights. This may take a minute or two."
+          ? "Please wait while we analyze the website content and generate strategic insights. This may take up to 2 minutes for complex websites."
           : "The website has been set up for analysis. Use the 'Analyze Website' button at the top of the page to start the process."
         }
       </p>
@@ -41,7 +43,15 @@ export const NoInsightsEmptyState = ({
         <div className="flex flex-col items-center gap-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-xs text-gray-500 mt-2">
-            <span className="font-medium">Note:</span> In this demo version, sample insights will be provided.
+            <span className="font-medium">Note:</span> Website analysis uses the Firecrawl API to extract content and Claude AI to generate insights.
+          </p>
+        </div>
+      )}
+      
+      {error && !isAnalyzing && (
+        <div className="mt-4 p-3 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+          <p className="text-sm font-medium">
+            <span className="font-bold">Analysis Note:</span> {error}
           </p>
         </div>
       )}

@@ -52,28 +52,28 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
       
       interval = setInterval(() => {
         setInternalProgress(prev => {
-          if (prev < 20) {
-            setStatusMessage('Fetching website content...');
-            return prev + 3; // Faster initial progress
-          } else if (prev < 40) {
-            setStatusMessage('Crawling website pages...');
-            return prev + 1.5; // Faster mid progress
-          } else if (prev < 60) {
-            setStatusMessage('Claude AI is analyzing website data...');
-            return prev + 0.6; // Double the previous speed
-          } else if (prev < 80) {
+          if (prev < 15) {
+            setStatusMessage('Connecting to Firecrawl API...');
+            return prev + 5; // Faster initial progress
+          } else if (prev < 30) {
+            setStatusMessage('Crawling website content...');
+            return prev + 2; // Medium progress
+          } else if (prev < 50) {
+            setStatusMessage('Extracting text from website...');
+            return prev + 1.5; // Slower
+          } else if (prev < 70) {
+            setStatusMessage('Claude AI is analyzing content...');
+            return prev + 1.0; // Even slower
+          } else if (prev < 90) {
             setStatusMessage('Generating strategic insights...');
-            return prev + 1.0; // Slightly faster
-          } else if (prev < 95) {
-            setStatusMessage('Finalizing analysis...');
-            return prev + 0.8; // Faster finishing
+            return prev + 0.5; // Very slow at the end
           } else if (prev < 100) {
-            setStatusMessage('Completing analysis...');
-            return prev + 0.4; // Double the previous speed
+            setStatusMessage('Finalizing analysis...');
+            return prev + 0.2; // Barely moving at the very end
           }
           return prev;
         });
-      }, 250); // Slightly faster updates
+      }, 200); // Update more frequently
     } else if (!isAnalyzing) {
       setInternalProgress(0);
       setStatusMessage('');
@@ -134,9 +134,11 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
                 <p className="text-sm font-medium">
                   <span className="font-bold">Note:</span> {error}
                 </p>
-                <p className="text-xs mt-1 italic">
-                  For demonstration purposes, sample insights will be shown instead of actual analysis.
-                </p>
+                {error.includes("demo") && (
+                  <p className="text-xs mt-1 italic">
+                    Using the Firecrawl API and Claude AI to extract and analyze website content.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -144,4 +146,4 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
       )}
     </div>
   );
-};
+}

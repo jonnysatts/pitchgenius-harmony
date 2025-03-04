@@ -46,6 +46,57 @@ export const useWebsiteAnalysis = (
     }
   }, [project.clientWebsite]);
 
+  // Function to periodically check analysis progress
+  const checkAnalysisProgress = useCallback(async (
+    websiteUrl: string,
+    progressInterval: NodeJS.Timeout,
+    analysisTimeout: NodeJS.Timeout
+  ) => {
+    try {
+      // Add a random parameter to avoid caching
+      const result = await fetch(`/api/analyze-website-progress?t=${Date.now()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ website_url: websiteUrl })
+      });
+      
+      if (!result.ok) {
+        console.log("Progress check failed, continuing simulation");
+        return;
+      }
+      
+      const data = await result.json();
+      
+      // If we got valid progress data, update the UI
+      if (data && typeof data.progress === 'number') {
+        // Only update if the new progress is higher
+        setAnalysisProgress(prev => Math.max(prev, data.progress));
+        
+        if (data.status) {
+          setAnalysisStatus(data.status);
+        }
+        
+        // If analysis is complete, stop checking
+        if (data.progress >= 100 || data.status === 'complete') {
+          clearInterval(progressInterval);
+          clearTimeout(analysisTimeout);
+          
+          // Complete the analysis
+          setIsAnalyzing(false);
+          toast({
+            title: "Analysis Complete",
+            description: "Website insights are now available",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error checking analysis progress:", error);
+      // Just log the error, don't stop the process
+    }
+  }, [toast]);
+
   const analyzeWebsite = useCallback(async () => {
     // Reset states
     setAnalysisProgress(0);
@@ -80,8 +131,7 @@ export const useWebsiteAnalysis = (
         description: "Beginning analysis of " + project.clientWebsite,
       });
 
-      // Set up timeout for the entire operation - increased to 120 seconds to give more time
-      // This is longer than before to ensure we don't hit timeouts
+      // Setup timeout for the entire operation - set to 120 seconds
       const analysisTimeout = setTimeout(() => {
         console.log("Website analysis timed out - using fallback insights");
         
@@ -89,7 +139,7 @@ export const useWebsiteAnalysis = (
         const fallbackInsights = generateFallbackWebsiteInsights(project);
         
         // Add timeout-specific message
-        setError("Analysis timed out. Using sample insights instead of actual website analysis. In a production environment with valid API keys, this would analyze your actual website data.");
+        setError("Analysis timed out. Using sample insights instead of actual website analysis.");
         
         // Add the fallback insights
         setWebsiteInsights(fallbackInsights);
@@ -102,44 +152,48 @@ export const useWebsiteAnalysis = (
         
         toast({
           title: "Analysis Timeout",
-          description: "Using sample insights due to timeout. This would work with valid API keys in production.",
+          description: "Analysis took too long to complete. Try again or use a simpler website.",
           variant: "destructive"
         });
-      }, 120000); // 120 second timeout for the entire process (increased from 90s)
+      }, 120000); // 120 seconds timeout
 
-      // Create progress simulation with optimized timing to make the UI more responsive
-      // Progress moves more quickly at beginning and slows down later to give impression of actual analysis
+      // Create progress simulation to give immediate feedback
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          // Move faster at the beginning to give a sense of progress
-          if (prev < 15) {
+          // Move faster at the beginning to show progress immediately
+          if (prev < 10) {
+            setAnalysisStatus('Connecting to analysis service...');
+            return prev + 5; // Quick start
+          } else if (prev < 20) {
             setAnalysisStatus('Fetching website content...');
-            return prev + 4; // Faster initial progress (increased from 3)
-          } else if (prev < 35) {
-            setAnalysisStatus('Crawling website pages...');
-            return prev + 2; // Moderately fast progress (increased from 1.5)
-          } else if (prev < 60) {
-            setAnalysisStatus('Claude AI is analyzing website data...');
-            return prev + 0.7; // More visible progress (increased from 0.5)
-          } else if (prev < 80) {
-            setAnalysisStatus('Generating strategic insights...');
-            return prev + 0.5; // Slightly faster (increased from 0.3)
-          } else if (prev < 95) {
-            setAnalysisStatus('Finalizing analysis...');
-            return prev + 0.3; // Slightly faster (increased from 0.2)
+            return prev + 2; // Still fairly quick
+          } else if (prev < 30) {
+            // After 30%, we'll rely more on the actual progress updates from the server
+            return prev + 0.5;
           }
-          return prev;
+          // After 30%, only make tiny increments to show the system is still working
+          return Math.min(prev + 0.1, 95); // Never reach 100% through simulation
         });
-      }, 200); // Update progress more frequently (reduced from 250ms)
+      }, 200); // Update frequently at first for responsive UI
+
+      // Set up real progress checking every 5 seconds
+      const progressCheckInterval = setInterval(() => {
+        checkAnalysisProgress(
+          project.clientWebsite!,
+          progressInterval,
+          analysisTimeout
+        );
+      }, 5000); // Check every 5 seconds
 
       // First perform a test to make sure the Edge Function is accessible
       const testResult = await FirecrawlService.testWebsiteAnalysis();
       
       if (!testResult.success) {
         clearInterval(progressInterval);
+        clearInterval(progressCheckInterval);
         clearTimeout(analysisTimeout);
         setIsAnalyzing(false);
-        setError(`Edge Function unavailable: ${testResult.error || 'API keys not configured'}. Using sample insights instead.`);
+        setError(`API setup issue: ${testResult.error || 'Connection failed'}. Using sample insights instead.`);
         
         // Generate and use fallback insights
         const fallbackInsights = generateFallbackWebsiteInsights(project);
@@ -148,7 +202,7 @@ export const useWebsiteAnalysis = (
         
         toast({
           title: "Analysis Setup Issue",
-          description: "Using sample insights. In production, this would connect to AI services.",
+          description: "API connection failed. Check logs for details.",
           variant: "destructive"
         });
         return;
@@ -157,14 +211,16 @@ export const useWebsiteAnalysis = (
       // Add a faster progress boost after successful connection test
       setAnalysisProgress(prev => Math.min(prev + 10, 40));
       
-      // Call the Firecrawl service via Supabase Edge Function
+      // Call the Firecrawl service via our Next.js API route
       const result = await FirecrawlService.analyzeWebsiteViaSupabase(
         project.clientWebsite,
         project.clientName || "",
         project.clientIndustry || "technology"
       );
 
+      // Clear all intervals and timeouts as we have a response
       clearInterval(progressInterval);
+      clearInterval(progressCheckInterval);
       clearTimeout(analysisTimeout);
       
       // Ensure the progress shows completion
@@ -197,24 +253,19 @@ export const useWebsiteAnalysis = (
         const errorMessage = result?.error || "No insights returned from website analysis. The API may have failed to extract meaningful content.";
         setError(errorMessage);
         
-        // Generate fallback insights
-        const fallbackInsights = generateFallbackWebsiteInsights(project);
-        
-        // Add disclaimer that these are fallback insights with clearer messaging
-        if (result.error) {
-          setError(result.error);
-        } else {
-          setError("Using sample insights for this demo. With valid API keys in production, this would analyze your actual website content.");
+        // Generate fallback insights if we don't have any
+        if (!result.insights || result.insights.length === 0) {
+          const fallbackInsights = generateFallbackWebsiteInsights(project);
+          
+          // Add the fallback insights
+          setWebsiteInsights(fallbackInsights);
+          addInsights(fallbackInsights);
         }
         
-        // Add the fallback insights
-        setWebsiteInsights(fallbackInsights);
-        addInsights(fallbackInsights);
-        
         toast({
-          title: "Demo Mode",
-          description: "Using sample insights. This would work with valid API keys in production.",
-          variant: "default"  // Changed from destructive to default to avoid alarm
+          title: "Analysis Note",
+          description: "Analysis completed with limited results. See details for more information.",
+          variant: "default"
         });
       }
     } catch (error) {
@@ -239,13 +290,13 @@ export const useWebsiteAnalysis = (
       
       toast({
         title: "Website Analysis Error",
-        description: "Using sample insights due to an error. This would work with configured API keys in production.",
+        description: "An error occurred during analysis. See details for more information.",
         variant: "destructive"
       });
     } finally {
       setIsAnalyzing(false);
     }
-  }, [project, addInsights, setError, toast, isValidWebsiteUrl]);
+  }, [project, addInsights, setError, toast, isValidWebsiteUrl, checkAnalysisProgress]);
 
   return {
     isAnalyzing,
