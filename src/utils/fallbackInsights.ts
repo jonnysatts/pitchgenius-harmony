@@ -1,5 +1,5 @@
 
-import { Project, StrategicInsight } from "@/lib/types";
+import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -29,7 +29,7 @@ export function generateFallbackWebsiteInsights(project: Project): StrategicInsi
     },
     {
       id: uuidv4(),
-      category: "audience_insights",
+      category: "gaming_audience_opportunity",
       content: {
         title: `${industry} Customer Gaming Engagement Patterns`,
         summary: `${clientName}'s customers show characteristics that align with specific gaming demographics.`,
@@ -44,7 +44,7 @@ export function generateFallbackWebsiteInsights(project: Project): StrategicInsi
     },
     {
       id: uuidv4(),
-      category: "competitive_positioning",
+      category: "competitive_landscape",
       content: {
         title: `Competitive Differentiation Through Gaming`,
         summary: `${clientName} can differentiate from competitors by being an early adopter of gaming partnerships.`,
@@ -59,7 +59,7 @@ export function generateFallbackWebsiteInsights(project: Project): StrategicInsi
     },
     {
       id: uuidv4(),
-      category: "growth_opportunities",
+      category: "strategic_activation_pathways",
       content: {
         title: `${industry} Gamification Growth Strategy`,
         summary: `Implementing gamification elements into ${clientName}'s products or services could drive growth.`,
@@ -124,7 +124,7 @@ export function generateFallbackWebsiteInsights(project: Project): StrategicInsi
   } else if (industry === "finance" || industry === "banking") {
     insights.push({
       id: uuidv4(),
-      category: "audience_insights",
+      category: "gaming_audience_opportunity",
       content: {
         title: "Financial Education Through Gaming",
         summary: `${clientName} could use gamification to improve financial literacy among younger customers.`,
