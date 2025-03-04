@@ -1,32 +1,99 @@
 
-import { StrategicInsight } from "@/lib/types";
-import { v4 as uuidv4 } from 'uuid';
+import { StrategicInsight, InsightCategory } from "@/lib/types";
+import { v4 as uuidv4 } from "uuid";
 
 /**
- * Extracts key insights from document analysis
+ * Extract strategic insights from analysis results
+ * 
+ * This function converts the raw analysis results from Claude into
+ * properly structured StrategicInsight objects that can be used
+ * throughout the application.
  */
-export const extractInsightsFromAnalysis = (analysisResults: any[]): StrategicInsight[] => {
-  // Transformation logic here - this would convert raw API data into our insight format
-  return analysisResults.map(result => {
-    const insightId = uuidv4();
+export const extractInsightsFromAnalysis = (analysisResults: any[]): StrategicInsight[] | null => {
+  try {
+    console.log("Extracting insights from analysis results:", analysisResults);
     
-    // Basic structure conversion
-    return {
-      id: insightId,
-      category: result.category || 'business_challenges',
-      content: {
-        title: result.title || 'Strategic Insight',
-        summary: result.summary || 'Key strategic finding',
-        details: result.details || undefined,
-        evidence: result.evidence || undefined,
-        recommendations: result.recommendations || undefined,
-        dataPoints: result.dataPoints || undefined,
-        sources: result.sources || undefined,
-        impact: result.impact || undefined
-      },
-      confidence: result.confidence || 75,
-      needsReview: result.needsReview !== undefined ? result.needsReview : true,
-      source: 'document'
-    };
-  });
+    if (!analysisResults || !Array.isArray(analysisResults) || analysisResults.length === 0) {
+      console.error("No valid analysis results to extract insights from");
+      return null;
+    }
+    
+    const insights: StrategicInsight[] = analysisResults.map(result => {
+      // Determine the appropriate category
+      const category = mapToInsightCategory(result.category || "gaming_opportunities");
+      
+      // Create a strategic insight with required fields
+      const insight: StrategicInsight = {
+        id: uuidv4(),
+        category: category,
+        confidence: result.confidence || Math.random() * 0.4 + 0.6, // Default to high confidence if not provided
+        needsReview: result.needsReview !== false, // Default to requiring review
+        source: 'document',
+        priorityLevel: result.priority || Math.floor(Math.random() * 3) + 1,
+        content: {
+          title: result.title || "Untitled Insight",
+          summary: result.summary || result.description || "No summary provided",
+          details: result.details || result.content || "",
+          evidence: result.evidence || "",
+          recommendations: result.recommendations || "",
+          dataPoints: result.dataPoints || [],
+          sources: result.sources || [],
+          impact: result.impact || ""
+        }
+      };
+      
+      console.log(`Created insight: ${insight.content.title} (${insight.category})`);
+      return insight;
+    });
+    
+    console.log(`Successfully extracted ${insights.length} insights from analysis results`);
+    return insights;
+  } catch (error) {
+    console.error("Error extracting insights from analysis:", error);
+    return null;
+  }
+};
+
+/**
+ * Map raw category strings to proper InsightCategory enum values
+ */
+const mapToInsightCategory = (rawCategory: string): InsightCategory => {
+  const categoryMap: Record<string, InsightCategory> = {
+    'business_challenges': 'business_challenges',
+    'audience_gaps': 'audience_gaps',
+    'competitive_threats': 'competitive_threats',
+    'gaming_opportunities': 'gaming_opportunities',
+    'strategic_recommendations': 'strategic_recommendations',
+    'key_narratives': 'key_narratives',
+    // Add fallbacks for common variations
+    'business': 'business_challenges',
+    'audience': 'audience_gaps',
+    'competitive': 'competitive_threats',
+    'gaming': 'gaming_opportunities',
+    'recommendations': 'strategic_recommendations',
+    'narratives': 'key_narratives',
+    'opportunities': 'gaming_opportunities',
+    'strategy': 'strategic_recommendations',
+    'challenges': 'business_challenges',
+    'threats': 'competitive_threats',
+    'gaps': 'audience_gaps'
+  };
+  
+  const normalized = rawCategory.toLowerCase().trim();
+  
+  // Try direct match first
+  if (normalized in categoryMap) {
+    return categoryMap[normalized];
+  }
+  
+  // Try partial match
+  for (const [key, value] of Object.entries(categoryMap)) {
+    if (normalized.includes(key)) {
+      return value;
+    }
+  }
+  
+  // Default fallback
+  console.warn(`Unknown insight category: ${rawCategory}, defaulting to gaming_opportunities`);
+  return 'gaming_opportunities';
 };

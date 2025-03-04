@@ -13,10 +13,19 @@ export const analyzeDocuments = async (
   try {
     console.log(`Analyzing ${documents.length} documents for project ${projectId}`);
     
+    if (!documents || documents.length === 0) {
+      console.error("No documents provided for analysis");
+      return {
+        success: false,
+        message: 'No documents provided for analysis.'
+      };
+    }
+    
     // Prepare documents for analysis - this extracts text content
     const documentsContent = prepareDocumentContents(documents);
     
     if (documentsContent.length === 0) {
+      console.error("No content could be extracted from documents");
       return {
         success: false,
         message: 'No document content could be extracted. Please check the document formats.'
@@ -41,26 +50,32 @@ export const analyzeDocuments = async (
       status: "in_progress" // Optional but added for completeness
     };
     
+    console.log("Calling Claude API with mock project:", mockProject.id);
+    
     // Actually call the API to analyze the documents
     const apiResult = await callClaudeApi(mockProject, documents, documentsContent);
+    console.log("Claude API result received:", apiResult ? "success" : "failure");
     
     // Check if we got valid insights
     if (apiResult.insights && apiResult.insights.length > 0) {
+      console.log(`Success: Received ${apiResult.insights.length} insights from Claude API`);
       return {
         success: true,
         message: `Successfully analyzed ${documents.length} documents.`,
         analysisResults: apiResult.insights
       };
     } else if (apiResult.error) {
+      console.error("Claude API returned an error:", apiResult.error);
       return {
         success: false,
         message: apiResult.error
       };
     }
     
+    console.log("Claude API call succeeded but no insights were returned");
     return {
       success: true,
-      message: `Successfully prepared ${documents.length} documents for analysis.`
+      message: `Successfully prepared ${documents.length} documents for analysis, but no insights were generated.`
     };
   } catch (error) {
     console.error('Error analyzing documents:', error);

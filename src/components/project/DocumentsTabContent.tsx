@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
 import DocumentList from "@/components/project/DocumentList";
@@ -38,13 +38,17 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   websiteUrl,
   error
 }) => {
+  const [isButtonClicked, setIsButtonClicked] = useState(false);
+  
   // Only disable the Analyze button if:
   // 1. There are no documents OR
   // 2. AI processing is currently happening OR
-  // 3. Documents are currently being loaded/uploaded
+  // 3. Documents are currently being loaded/uploaded OR
+  // 4. The button was just clicked (to prevent double clicks)
   const analyzeButtonDisabled = documents.length === 0 || 
                                (aiStatus && aiStatus.status === 'processing') || 
-                               isLoading;
+                               isLoading ||
+                               isButtonClicked;
   
   // Determine if Claude is in the intensive processing phase
   const isClaudeProcessing = aiStatus && 
@@ -56,7 +60,15 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   const handleAnalyzeClick = () => {
     if (!analyzeButtonDisabled) {
       console.log("Analyze button clicked, triggering document analysis");
+      setIsButtonClicked(true);
+      
+      // Call the analyze function
       onAnalyzeDocuments();
+      
+      // Reset button state after a delay (for better UX)
+      setTimeout(() => {
+        setIsButtonClicked(false);
+      }, 2000);
     } else {
       console.log("Analyze button is disabled, ignoring click");
     }
@@ -104,10 +116,10 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
           <Button 
             onClick={handleAnalyzeClick}
             disabled={analyzeButtonDisabled}
-            className="flex items-center gap-2"
+            className={`flex items-center gap-2 ${isButtonClicked ? 'bg-brand-blue/80' : ''}`}
             aria-label="Analyze documents with AI"
           >
-            {aiStatus && aiStatus.status === 'processing' ? (
+            {(aiStatus && aiStatus.status === 'processing') || isButtonClicked ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Brain size={16} />
