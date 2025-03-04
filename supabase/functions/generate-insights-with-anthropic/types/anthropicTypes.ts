@@ -1,56 +1,83 @@
 
 /**
- * Type definitions for Anthropic API integration
+ * Type definitions for Anthropic Claude API
  */
 
+/**
+ * Options for Anthropic API calls
+ */
 export interface AnthropicApiOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
+  retries?: number;
 }
 
-export interface DocumentContent {
-  id?: string;
-  title?: string;
-  content: string;
-  type?: string;
-  fileName?: string;
+/**
+ * Structure for Anthropic API Request
+ */
+export interface AnthropicApiRequest {
+  model: string;
+  messages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+  }>;
+  system?: string;
+  max_tokens: number;
+  temperature: number;
+  stream?: boolean;
 }
 
-export interface InsightContent {
-  title: string;
-  summary: string;
-  details?: string;
-  recommendations?: string;
-  evidence?: string;
-  impact?: string;
-  dataPoints?: string[];
-  sources?: string[];
-}
-
-export interface StrategicInsight {
+/**
+ * Structure for Anthropic API Response
+ */
+export interface AnthropicApiResponse {
   id: string;
-  category: string;
+  content: Array<{
+    type: string;
+    text: string;
+  }>;
+  type: string;
+  role: 'assistant';
+  model: string;
+  stop_reason: string;
+  stop_sequence?: string | null;
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+}
+
+/**
+ * Structure for Insight categories
+ */
+export type InsightCategory = 
+  | 'business_challenges'
+  | 'audience_gaps'
+  | 'competitive_threats'
+  | 'gaming_opportunities'
+  | 'strategic_recommendations'
+  | 'key_narratives'
+  | 'business_imperatives';
+
+/**
+ * Structure for a strategic insight from Claude
+ */
+export interface RawInsight {
+  id: string;
+  category: InsightCategory;
+  title: string;
+  content: string;
   confidence: number;
-  needsReview: boolean;
-  content: InsightContent;
 }
 
-export interface GenerateInsightsRequest {
-  projectId: string;
-  documentIds?: string[];
-  documentContents?: DocumentContent[];
-  clientIndustry?: string;
-  clientWebsite?: string;
-  projectTitle?: string;
-  processingMode?: 'comprehensive' | 'focused' | 'quick';
-  systemPrompt?: string;
-  includeComprehensiveDetails?: boolean;
-  maximumResponseTime?: number;
-}
-
-export interface GenerateInsightsResponse {
-  insights: StrategicInsight[];
-  error?: string;
-  insufficientContent?: boolean;
+/**
+ * Error response from API
+ */
+export interface AnthropicErrorResponse {
+  error: {
+    type: string;
+    message: string;
+  };
 }
