@@ -1,193 +1,65 @@
 
 import React from "react";
-import { Project, StrategicInsight, WebsiteInsightCategory } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
-import { websiteInsightCategories } from "@/components/project/insights/constants";
-import {
-  WebsiteUrlCard,
-  NoWebsiteCard,
-  NoInsightsEmptyState,
-  WebInsightsTabs,
-  WebInsightsHeader
-} from "@/components/project/web-insights";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { Box } from "lucide-react";
+import { Project } from "@/lib/types";
+import ApiConnectionTest from "@/components/project/ApiConnectionTest";
+import ClaudeApiTester from "@/components/project/ClaudeApiTester";
+import WebsiteUrlCard from "@/components/project/web-insights/WebsiteUrlCard";
+import NoWebsiteCard from "@/components/project/web-insights/NoWebsiteCard";
+import WebInsightsTabs from "@/components/project/web-insights/WebInsightsTabs";
+import WebsiteAnalysisControls from "@/components/project/web-insights/WebsiteAnalysisControls";
+import { useWebsiteAnalysis } from "@/hooks/ai/website";
 
 interface WebInsightsTabContentProps {
   project: Project;
-  websiteInsights: StrategicInsight[];
-  reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
-  isAnalyzingWebsite?: boolean;
-  error?: string | null;
-  onAnalyzeWebsite?: () => void;
-  onAcceptInsight: (insightId: string) => void;
-  onRejectInsight: (insightId: string) => void;
-  onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
-  onNavigateToInsights: () => void;
-  onRetryAnalysis?: () => void;
-  aiStatus: any; // Add this prop to receive aiStatus
 }
 
-const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
-  project,
-  websiteInsights,
-  reviewedInsights,
-  isAnalyzingWebsite = false,
-  error,
-  onAnalyzeWebsite,
-  onAcceptInsight,
-  onRejectInsight,
-  onUpdateInsight,
-  onNavigateToInsights,
-  onRetryAnalysis,
-  aiStatus
-}) => {
-  const { toast } = useToast();
-  const [showDebugInfo, setShowDebugInfo] = React.useState(false);
-  
-  // Check if there's a website URL available
-  const hasWebsiteUrl = !!project.clientWebsite;
-  
-  // Filter for website-specific error messages
-  const websiteError = error && (error.includes('website analysis') || error.includes('Website analysis'))
-    ? error
-    : null;
+const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({ project }) => {
+  const {
+    websiteUrl,
+    websiteInsights,
+    analysisPhase,
+    analysisError,
+    startWebsiteAnalysis,
+    isAnalyzing,
+    hasWebsiteUrl
+  } = useWebsiteAnalysis(project);
 
-  // Debugging logs to help trace the issue
-  console.log("WebInsightsTabContent: websiteInsights count:", websiteInsights.length);
-  console.log("WebInsightsTabContent: Source property present?", 
-    websiteInsights.map(i => i.source).join(', '));
-  
-  // Ensure we have website insights before trying to render them
-  const hasWebsiteInsights = websiteInsights.length > 0;
-  
-  // Handle showing debug info
-  const toggleDebugInfo = () => {
-    setShowDebugInfo(!showDebugInfo);
-  };
-  
-  // Group insights by category with proper type checking and fallbacks
-  const insightsByCategory = websiteInsights.reduce((acc, insight) => {
-    // Add a fallback for category - default to "business_imperatives" if not set
-    // Make sure category is a valid WebsiteInsightCategory
-    let category = (insight.category || "business_imperatives") as WebsiteInsightCategory;
-    
-    // Validate that the category exists in our defined categories, if not use default
-    if (!websiteInsightCategories.some(cat => cat.id === category)) {
-      console.warn(`Invalid category ${category} for insight ${insight.id}, defaulting to business_imperatives`);
-      category = "business_imperatives";
-    }
-    
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    
-    acc[category].push(insight);
-    return acc;
-  }, {} as Record<WebsiteInsightCategory, StrategicInsight[]>);
-  
-  // Make sure every category has an array, even if empty
-  websiteInsightCategories.forEach(category => {
-    const categoryId = category.id as WebsiteInsightCategory;
-    if (!insightsByCategory[categoryId]) {
-      insightsByCategory[categoryId] = [];
-    }
-  });
-  
-  // Function to retry website analysis with debug toast
-  const handleRetryWithDebug = () => {
-    if (onAnalyzeWebsite) {
-      toast({
-        title: "Retrying with debug mode",
-        description: "Attempting website analysis with additional logging",
-      });
-      onAnalyzeWebsite();
-    }
-  };
-  
   return (
-    <div className="bg-white p-6 rounded-lg border">
-      {/* Header with proper props including aiStatus */}
-      <WebInsightsHeader 
-        websiteUrl={project.clientWebsite}
-        hasWebsiteUrl={hasWebsiteUrl}
-        isAnalyzing={isAnalyzingWebsite}
-        onAnalyzeWebsite={onAnalyzeWebsite}
-        hasInsights={hasWebsiteInsights}
-        aiStatus={aiStatus}
-      />
-      
-      {/* Debug Info Section */}
-      <div className="mb-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={toggleDebugInfo}
-          className="text-xs"
-        >
-          {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
-        </Button>
-        
-        {showDebugInfo && (
-          <div className="mt-2 p-3 bg-slate-50 rounded text-xs font-mono">
-            <p>Website URL: {project.clientWebsite || "None"}</p>
-            <p>Insights Count: {websiteInsights.length}</p>
-            <p>Is Analyzing: {isAnalyzingWebsite ? "Yes" : "No"}</p>
-            <p>Has Error: {error ? "Yes" : "No"}</p>
-            <p>Error: {error || "None"}</p>
-            <p>AI Status: {aiStatus ? `${aiStatus.status} (${aiStatus.progress}%)` : "Not available"}</p>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleRetryWithDebug}
-              className="mt-2 text-xs"
-            >
-              Force Retry Analysis
-            </Button>
-          </div>
-        )}
-      </div>
-      
-      {/* Error display for website analysis */}
-      <InsightsErrorAlert 
-        error={websiteError} 
-        onRetryAnalysis={onRetryAnalysis}
-      />
-      
-      {/* Website URL display */}
-      {hasWebsiteUrl && <WebsiteUrlCard websiteUrl={project.clientWebsite} />}
-      
-      {/* No website URL provided */}
-      {!hasWebsiteUrl && <NoWebsiteCard />}
-      
-      {/* Website Insights */}
-      {hasWebsiteInsights ? (
-        <>
-          <WebInsightsTabs
-            insightsByCategory={insightsByCategory}
-            reviewedInsights={reviewedInsights}
-            onAcceptInsight={onAcceptInsight}
-            onRejectInsight={onRejectInsight}
-            onUpdateInsight={onUpdateInsight}
-            totalInsightsCount={websiteInsights.length}
-          />
+    <div className="pt-4 space-y-4">
+      <div className="lg:flex justify-between items-start">
+        <div className="w-full lg:w-2/3 lg:pr-4">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center">
+            <Box className="mr-2 h-5 w-5" />
+            Website Analysis
+          </h2>
           
-          <div className="flex justify-end mt-8">
-            <Button
-              variant="outline"
-              onClick={onNavigateToInsights}
-              className="flex items-center gap-2"
-            >
-              View Document Insights
-            </Button>
-          </div>
-        </>
-      ) : (
-        <NoInsightsEmptyState
-          hasWebsiteUrl={hasWebsiteUrl}
-          isAnalyzing={isAnalyzingWebsite}
-          onAnalyzeWebsite={onAnalyzeWebsite}
-        />
+          {/* Added Claude API Tester component */}
+          <ClaudeApiTester />
+          
+          {hasWebsiteUrl ? (
+            <WebsiteUrlCard websiteUrl={websiteUrl} />
+          ) : (
+            <NoWebsiteCard />
+          )}
+        </div>
+        
+        <div className="w-full lg:w-1/3 mt-4 lg:mt-0">
+          <ApiConnectionTest />
+          {hasWebsiteUrl && (
+            <WebsiteAnalysisControls
+              onStartAnalysis={startWebsiteAnalysis}
+              isAnalyzing={isAnalyzing}
+              analysisPhase={analysisPhase}
+              error={analysisError}
+            />
+          )}
+        </div>
+      </div>
+
+      {websiteInsights.length > 0 && (
+        <WebInsightsTabs insights={websiteInsights} />
       )}
     </div>
   );
