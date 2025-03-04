@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, ArrowDown, MessageSquare } from "lucide-react";
+import { Loader2, Send, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InsightRefineDialogProps {
   isOpen: boolean;
@@ -33,6 +34,16 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [aiConversationMode, setAIConversationMode] = useState(false);
+  
+  // Ref for auto-scrolling chat container
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll when new messages are added
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleRefine = () => {
     setIsRefining(true);
@@ -47,28 +58,67 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
     }, 500);
   };
 
-  const startAIConversation = () => {
+  const startAIConversation = async () => {
     setAIConversationMode(true);
     setIsLoadingAI(true);
     
-    // Initial AI message to start the conversation
-    const initialAIMessage = {
-      role: 'ai' as const,
-      content: `I'll help you refine the insight about "${insightTitle}". What specific aspects would you like to improve? For example:
-      - Make it more actionable
-      - Provide more specific data points
-      - Focus on a particular audience segment
-      - Reframe for executive presentation`
-    };
-    
-    // Simulate AI response delay
-    setTimeout(() => {
-      setMessages([initialAIMessage]);
+    try {
+      // Call the Claude API via Edge Function to start the conversation
+      const initialPrompt = `Help me refine this insight about "${insightTitle}". 
+The current content is: "${insightContent}"
+
+You are an expert consultant from Games Age, a gaming consultancy that helps businesses integrate gaming into their strategy. Your job is to help refine strategic insights and make them more impactful.
+
+Start by offering some ways I might want to improve this insight, for example:
+- Make it more actionable
+- Provide more specific data points
+- Focus on a particular audience segment
+- Reframe for executive presentation`;
+
+      const { data, error } = await supabase.functions.invoke('refine-insight-with-anthropic', {
+        body: { 
+          prompt: initialPrompt,
+          insightTitle,
+          insightContent
+        }
+      });
+      
+      if (error) {
+        console.error("Error calling Claude API:", error);
+        // Add a fallback message if the API call fails
+        const fallbackMessage = {
+          role: 'ai' as const,
+          content: `I'll help you refine the insight about "${insightTitle}". What specific aspects would you like to improve? For example:
+          - Make it more actionable
+          - Provide more specific data points
+          - Focus on a particular audience segment
+          - Reframe for executive presentation
+
+Note: I'm currently operating in fallback mode due to a connection issue with the AI service.`
+        };
+        setMessages([fallbackMessage]);
+      } else {
+        // Add the AI response to the messages
+        const aiResponse = {
+          role: 'ai' as const,
+          content: data.response || `I'll help you refine the insight about "${insightTitle}". What specific aspects would you like to improve?`
+        };
+        setMessages([aiResponse]);
+      }
+    } catch (err) {
+      console.error("Error starting AI conversation:", err);
+      // Add a fallback message
+      const fallbackMessage = {
+        role: 'ai' as const,
+        content: `I'll help you refine the insight about "${insightTitle}". What specific aspects would you like to improve? (Note: I'm operating in fallback mode due to a connection issue.)`
+      };
+      setMessages([fallbackMessage]);
+    } finally {
       setIsLoadingAI(false);
-    }, 1000);
+    }
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!currentMessage.trim()) return;
     
     // Add user message
@@ -77,52 +127,71 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
     setCurrentMessage("");
     setIsLoadingAI(true);
     
-    // Simulate AI response
-    setTimeout(() => {
-      // Generate appropriate AI response based on conversation context
-      let aiResponse = "";
+    try {
+      // Prepare context from previous messages
+      const conversationContext = messages.map(msg => `${msg.role}: ${msg.content}`).join("\n\n");
       
-      // Check if this is the first user message
-      if (messages.length === 1) {
-        aiResponse = `Based on your request, here's a refined version of the insight:\n\n${refinedContent}\n\nI've enhanced it to be more actionable and specific. Would you like me to make any further adjustments?`;
+      // Call the Claude API via Edge Function
+      const { data, error } = await supabase.functions.invoke('refine-insight-with-anthropic', {
+        body: { 
+          prompt: currentMessage,
+          insightTitle,
+          insightContent: refinedContent,
+          conversationContext
+        }
+      });
+      
+      if (error) {
+        console.error("Error calling Claude API:", error);
+        // Add a fallback AI response
+        const fallbackResponse = generateFallbackResponse(currentMessage, refinedContent);
+        setMessages(prev => [...prev, { role: 'ai', content: fallbackResponse.message }]);
+        setRefinedContent(fallbackResponse.refinedContent);
       } else {
-        // For subsequent messages, provide more targeted refinements
-        aiResponse = `I've further refined the insight based on your feedback. Here's the updated version:\n\n${refinedContent}\n\nDoes this better address your needs? I can continue to refine it if needed.`;
+        // Add the AI response to messages
+        setMessages(prev => [...prev, { role: 'ai', content: data.response }]);
+        
+        // Update the refined content if the AI suggests changes
+        if (data.refinedContent) {
+          setRefinedContent(data.refinedContent);
+        }
       }
-      
-      // Update the refined content with the AI suggestion
-      const newRefinedContent = generateRefinedContent(currentMessage, refinedContent);
-      setRefinedContent(newRefinedContent);
-      
-      // Add AI response to messages
-      setMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
+    } catch (err) {
+      console.error("Error sending message to AI:", err);
+      // Add a fallback AI response
+      const fallbackResponse = generateFallbackResponse(currentMessage, refinedContent);
+      setMessages(prev => [...prev, { role: 'ai', content: fallbackResponse.message }]);
+      setRefinedContent(fallbackResponse.refinedContent);
+    } finally {
       setIsLoadingAI(false);
-    }, 1500);
+    }
   };
 
-  // Helper function to generate refined content based on user request
-  const generateRefinedContent = (userRequest: string, currentContent: string): string => {
-    // In a real implementation, this would call the Claude API
-    // For now, we'll simulate some basic refinements
-    
-    const lowerRequest = userRequest.toLowerCase();
+  // Helper function to generate fallback responses in case the API is unavailable
+  const generateFallbackResponse = (userMessage: string, currentContent: string): { message: string, refinedContent: string } => {
+    const lowerRequest = userMessage.toLowerCase();
+    let refinedContent = currentContent;
+    let message = "I've made some refinements based on your feedback. How does this look?";
     
     if (lowerRequest.includes("actionable")) {
-      return currentContent + "\n\nRecommended Actions:\n1. Conduct a focused audience survey to validate these insights\n2. Develop a prototype based on these findings\n3. Schedule a workshop with stakeholders to prioritize implementation";
+      refinedContent = currentContent + "\n\nRecommended Actions:\n1. Conduct a focused audience survey to validate these insights\n2. Develop a prototype based on these findings\n3. Schedule a workshop with stakeholders to prioritize implementation";
+      message = "I've added specific recommended actions to make the insight more actionable. Is there anything else you'd like me to refine?";
     } else if (lowerRequest.includes("specific") || lowerRequest.includes("data")) {
-      return currentContent.replace(/([0-9]+)%/g, (match) => {
-        // Replace percentages with more specific ones
+      refinedContent = currentContent.replace(/([0-9]+)%/g, (match) => {
         const num = parseInt(match);
         return `${num + 3}% based on Q1 2023 data`;
       });
+      message = "I've added specific data points with time references to make the insight more concrete. Would you like any other enhancements?";
     } else if (lowerRequest.includes("executive") || lowerRequest.includes("presentation")) {
-      // Make it more executive-friendly
-      return "Executive Summary: " + currentContent.split('.').slice(0, 2).join('.') + ".\n\nKey Business Impact: " + 
+      refinedContent = "Executive Summary: " + currentContent.split('.').slice(0, 2).join('.') + ".\n\nKey Business Impact: " + 
         currentContent.split('.').slice(2, 4).join('.');
+      message = "I've reformatted the insight to be more executive-friendly with a clear summary and business impact section. Does this meet your needs?";
     } else {
-      // Generic improvement - add strategic framing
-      return "Strategic Insight: " + currentContent + "\n\nThis presents a significant opportunity for differentiation in the market.";
+      refinedContent = "Strategic Insight: " + currentContent + "\n\nThis presents a significant opportunity for differentiation in the market.";
+      message = "I've enhanced the strategic framing of the insight. Is there a specific direction you'd like to take it now?";
     }
+    
+    return { message, refinedContent };
   };
 
   return (
@@ -167,7 +236,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden space-y-4 py-4">
-            <div className="flex-1 overflow-y-auto pr-2">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto pr-2">
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div 
