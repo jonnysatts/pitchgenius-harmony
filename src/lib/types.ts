@@ -108,3 +108,11 @@ export interface User {
 }
 
 export type UserRole = 'admin' | 'user' | 'guest' | 'standard';
+
+// Add the missing WebsiteAnalysisStatus interface
+export interface WebsiteAnalysisStatus {
+  status: 'pending' | 'in_progress' | 'completed' | 'error';
+  progress: number;
+  message: string;
+  error: string | null;
+}
