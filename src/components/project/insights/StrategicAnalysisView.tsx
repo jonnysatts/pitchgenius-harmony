@@ -1,101 +1,44 @@
-
-import React, { useState } from "react";
-import { StrategicInsight, InsightCategory } from "@/lib/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import InsightsCategoryGroup from "@/components/project/InsightsCategoryGroup";
+import React from 'react';
+import { StrategicInsight } from "@/lib/types";
+import { formatCategoryTitle } from "@/utils/insightUtils";
 import { groupInsightsByCategory } from "@/utils/insightUtils";
-
-interface StrategicCategoryDefinition {
-  id: InsightCategory;
-  label: string;
-  description: string;
-  icon: React.ElementType;
-}
 
 interface StrategicAnalysisViewProps {
   insights: StrategicInsight[];
-  reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
-  strategicCategories: StrategicCategoryDefinition[];
-  onAcceptInsight: (insightId: string) => void;
-  onRejectInsight: (insightId: string) => void;
-  onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
 }
 
-const StrategicAnalysisView: React.FC<StrategicAnalysisViewProps> = ({
-  insights,
-  reviewedInsights,
-  strategicCategories,
-  onAcceptInsight,
-  onRejectInsight,
-  onUpdateInsight
-}) => {
-  const [activeSection, setActiveSection] = useState<string>("all_insights");
-  const insightsByCategory = groupInsightsByCategory(insights);
+export const StrategicAnalysisView: React.FC<StrategicAnalysisViewProps> = ({ insights }) => {
+  // Group insights by category
+  const groupedInsights = groupInsightsByCategory(insights);
 
   return (
-    <Tabs defaultValue="all_insights" value={activeSection} onValueChange={setActiveSection}>
-      <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap">
-        <TabsTrigger value="all_insights" className="whitespace-nowrap">
-          All Insights
-        </TabsTrigger>
-        {strategicCategories.map((category) => (
-          <TabsTrigger 
-            key={category.id} 
-            value={category.id}
-            className="whitespace-nowrap"
-          >
-            {category.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      
-      {/* Display the description of the current category */}
-      <div className="mb-6 px-4 py-3 bg-muted rounded-md">
-        <p className="text-sm text-muted-foreground">
-          {activeSection === "all_insights" 
-            ? "Review all strategic insights across categories" 
-            : strategicCategories.find(c => c.id === activeSection)?.description}
-        </p>
-      </div>
-      
-      <TabsContent value="all_insights" className="space-y-10">
-        {Object.entries(insightsByCategory).map(([category, categoryInsights]) => (
-          <InsightsCategoryGroup
-            key={category}
-            category={category}
-            insights={categoryInsights}
-            reviewedInsights={reviewedInsights}
-            onAcceptInsight={onAcceptInsight}
-            onRejectInsight={onRejectInsight}
-            onUpdateInsight={onUpdateInsight}
-            section="All Insights"
-          />
-        ))}
-      </TabsContent>
-      
-      {/* Create a tab content for each category */}
-      {strategicCategories.map((category) => (
-        <TabsContent key={category.id} value={category.id} className="space-y-10">
-          {insightsByCategory[category.id] && insightsByCategory[category.id].length > 0 ? (
-            <InsightsCategoryGroup
-              key={category.id}
-              category={category.id}
-              insights={insightsByCategory[category.id]}
-              reviewedInsights={reviewedInsights}
-              onAcceptInsight={onAcceptInsight}
-              onRejectInsight={onRejectInsight}
-              onUpdateInsight={onUpdateInsight}
-              section={category.label}
-            />
-          ) : (
-            <div className="text-center py-6">
-              <p className="text-muted-foreground">No insights found for this category.</p>
+    <div>
+      {Object.keys(groupedInsights).length === 0 ? (
+        <div className="text-gray-500 italic">No insights available.</div>
+      ) : (
+        Object.keys(groupedInsights).sort().map((category) => {
+          // Replace the empty object with empty array where insights are initialized
+          const categoryInsights = groupedInsights[category] || [];
+
+          return (
+            <div key={category} className="mb-6">
+              <h3 className="text-lg font-semibold mb-3">{formatCategoryTitle(category)}</h3>
+              {categoryInsights.length === 0 ? (
+                <div className="text-gray-500 italic">No insights in this category.</div>
+              ) : (
+                <ul>
+                  {categoryInsights.map((insight) => (
+                    <li key={insight.id} className="mb-4 p-4 rounded-md shadow-sm border border-gray-200 bg-white">
+                      <h4 className="font-medium">{insight.content.title}</h4>
+                      <p className="text-sm text-gray-700">{insight.content.summary}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          )}
-        </TabsContent>
-      ))}
-    </Tabs>
+          );
+        })
+      )}
+    </div>
   );
 };
-
-export default StrategicAnalysisView;

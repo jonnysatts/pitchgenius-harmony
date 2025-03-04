@@ -10,7 +10,7 @@ interface NoInsightsEmptyStateProps {
   onAnalyzeWebsite?: () => void;
 }
 
-const NoInsightsEmptyState = ({
+export const NoInsightsEmptyState = ({
   hasWebsiteUrl,
   isAnalyzing = false,
   onAnalyzeWebsite
@@ -64,5 +64,3 @@ const NoInsightsEmptyState = ({
     </div>
   );
 };
-
-export { NoInsightsEmptyState };

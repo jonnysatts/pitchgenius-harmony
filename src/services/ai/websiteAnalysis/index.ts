@@ -5,12 +5,13 @@
 
 // Re-export the service methods with correct names
 export { 
-  analyzeClientWebsite as analyzeWebsite, 
   analyzeClientWebsite, 
-  // Add missing exports
   getWebsiteAnalysisStatus,
   extractInsightsFromWebsiteData
 } from './websiteAnalysisService';
+
+// For backward compatibility
+export const analyzeWebsite = analyzeClientWebsite;
 
 // Export mock generators for testing
 export { generateMockWebsiteInsights } from './mockGenerator';

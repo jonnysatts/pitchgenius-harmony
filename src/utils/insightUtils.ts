@@ -1,13 +1,40 @@
-import { StrategicInsight } from "@/lib/types";
-// Remove the conflicting import
-// import { NarrativeSection } from "@/lib/types";
+import { StrategicInsight, InsightCategory } from "@/lib/types";
 
-// Make this the single declaration of NarrativeSection
+// Correctly define NarrativeSection as interface
 export interface NarrativeSection {
   id: string;
   title: string;
   content: string;
 }
+
+/**
+ * Format category string into readable title
+ */
+export const formatCategoryTitle = (category: string): string => {
+  return category
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+/**
+ * Group insights by category
+ */
+export const groupInsightsByCategory = (
+  insights: StrategicInsight[]
+): Record<string, StrategicInsight[]> => {
+  const groupedInsights: Record<string, StrategicInsight[]> = {};
+  
+  insights.forEach((insight) => {
+    const category = insight.category;
+    if (!groupedInsights[category]) {
+      groupedInsights[category] = [];
+    }
+    groupedInsights[category].push(insight);
+  });
+  
+  return groupedInsights;
+};
 
 /**
  * Generate a unique ID for insights
