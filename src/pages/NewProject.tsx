@@ -7,7 +7,7 @@ import { addNewProject } from '@/data/mockProjects';
 import { Project } from '@/lib/types';
 
 // Imports from UI components
-import { AppLayout } from '@/components/layout/AppLayout';
+import AppLayout from '@/components/layout/AppLayout';
 import { Heading } from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+import AppLayout from "@/components/layout/AppLayout";
 import { Project } from "@/lib/types";
 import { MOCK_PROJECTS } from "@/data/mockProjects";
 import ProjectFilters from "@/components/dashboard/ProjectFilters";

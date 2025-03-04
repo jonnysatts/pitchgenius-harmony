@@ -1,7 +1,7 @@
 
 import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+import AppLayout from "@/components/layout/AppLayout";
 import { findProjectById } from "@/data/mockProjects";
 import { useAuth } from "@/context/AuthContext";
 import { checkSupabaseConnection } from "@/services/ai";
