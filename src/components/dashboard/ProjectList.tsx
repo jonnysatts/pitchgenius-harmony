@@ -27,7 +27,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
           {projects.map(project => (
             <ProjectCard 
               key={project.id} 
-              project={project} 
+              project={project}
+              onClick={() => onProjectClick && onProjectClick(project.id)}
             />
           ))}
         </div>

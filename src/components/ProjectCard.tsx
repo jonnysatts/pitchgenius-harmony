@@ -1,6 +1,5 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,7 @@ import { ChevronRight, Image as ImageIcon } from "lucide-react";
 interface ProjectCardProps {
   project: Project;
   className?: string;
+  onClick?: () => void;
 }
 
 const statusColors = {
@@ -44,13 +44,13 @@ const fallbackImages: Record<string, string> = {
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({ 
   project, 
-  className 
+  className,
+  onClick 
 }) => {
-  const navigate = useNavigate();
-  
   const handleClick = () => {
-    console.log("Navigating to project:", project.id);
-    navigate(`/project/${project.id}`);
+    if (onClick) {
+      onClick();
+    }
   };
 
   // Determine the image to use - project cover image or fallback based on industry
@@ -59,9 +59,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <Card 
       className={cn(
-        "overflow-hidden transition-all duration-300 hover:shadow-md group",
+        "overflow-hidden transition-all duration-300 hover:shadow-md group cursor-pointer",
         className
       )}
+      onClick={handleClick}
     >
       <div 
         className="h-40 w-full overflow-hidden bg-gradient-to-r from-slate-200 to-slate-300 relative"
@@ -105,7 +106,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           variant="ghost" 
           size="sm" 
           className="text-brand-blue group-hover:text-brand-orange transition-colors"
-          onClick={handleClick}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent the card click
+            handleClick();
+          }}
         >
           View Project
           <ChevronRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />

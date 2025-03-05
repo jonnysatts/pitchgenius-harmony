@@ -12,56 +12,58 @@ const getNewProjects = (): Project[] => {
   }
 };
 
-// Base mock projects
+// Base mock projects with proper date objects
 const BASE_MOCK_PROJECTS: Project[] = [
   {
     id: "1",
     title: "MegaMart Gaming Strategy",
     clientName: "MegaMart Retail",
     clientIndustry: "retail",
-    createdAt: new Date(Date.now() - 86400000 * 7),
-    updatedAt: new Date(Date.now() - 86400000 * 2),
+    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
     ownerId: "1",
     description: "Gaming strategy for MegaMart retail chain",
     status: "in_progress",
     coverImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
     createdBy: "1",
-    collaborators: ["2"]
+    collaborators: ["2"],
+    clientWebsite: "megamart.example.com"
   },
   {
     id: "2",
     title: "NextGen Bank Gaming Activation",
     clientName: "NextGen Financial",
     clientIndustry: "finance",
-    createdAt: new Date(Date.now() - 86400000 * 14),
-    updatedAt: new Date(Date.now() - 86400000 * 5),
+    createdAt: new Date(Date.now() - 86400000 * 14).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
     ownerId: "1",
     description: "Gaming activation strategy for NextGen Financial",
     status: "draft",
     coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
     createdBy: "1",
-    collaborators: []
+    collaborators: [],
+    clientWebsite: "nextgen.example.com"
   },
   {
     id: "3",
     title: "TechCorp Gaming Launch",
     clientName: "TechCorp Inc.",
     clientIndustry: "technology",
-    createdAt: new Date(Date.now() - 86400000 * 30),
-    updatedAt: new Date(Date.now()),
+    createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
+    updatedAt: new Date(Date.now()).toISOString(),
     ownerId: "1",
     description: "Gaming launch strategy for TechCorp",
     status: "completed",
     coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
     createdBy: "1",
-    collaborators: ["2"]
+    collaborators: ["2"],
+    clientWebsite: "techcorp.example.com"
   }
 ];
 
 // Helper function to get all projects (including new ones)
 export const getAllProjects = (): Project[] => {
   const newProjects = getNewProjects();
-  console.log(`Retrieved ${newProjects.length} new projects from localStorage`);
   return [...newProjects, ...BASE_MOCK_PROJECTS];
 };
 
@@ -78,15 +80,13 @@ export const addNewProject = (project: Project): void => {
     if (existingIndex >= 0) {
       // Update existing project
       newProjects[existingIndex] = project;
-      console.log(`Updated existing project in localStorage: ${project.id}`);
     } else {
       // Add new project to beginning
       newProjects.unshift(project);
-      console.log(`Added new project to localStorage: ${project.id}`);
     }
     
     localStorage.setItem('newProjects', JSON.stringify(newProjects));
-    console.log(`Saved ${newProjects.length} projects to localStorage`);
+    console.log(`Saved ${newProjects.length} projects to localStorage, including: ${project.id}`);
   } catch (e) {
     console.error("Error saving project to localStorage:", e);
   }
@@ -101,18 +101,17 @@ export const findProjectById = (id: string): Project | undefined => {
   
   // Get all projects including new ones from storage
   const allProjects = getAllProjects();
-  console.log(`Looking for project with ID: ${id}`);
-  console.log(`Available project IDs:`, allProjects.map(p => p.id));
   
   // First check in all projects
   const project = allProjects.find(p => p.id === id);
   
   if (project) {
-    console.log(`Found project: ${project.title}`);
+    console.log(`Found project: ${project.title} (ID: ${id})`);
     return project;
   }
   
   // If not found, log debug info
   console.error(`Project not found with ID: ${id}`);
+  console.log("Available project IDs:", allProjects.map(p => p.id).join(', '));
   return undefined;
 };

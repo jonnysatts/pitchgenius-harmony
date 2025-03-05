@@ -1,12 +1,13 @@
 
 import React, { useEffect, useMemo } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { findProjectById } from "@/data/mockProjects";
 import { useAuth } from "@/context/AuthContext";
 import { checkSupabaseConnection } from "@/services/ai";
 import { Project } from "@/lib/types";
 import { calculateOverallConfidence } from "@/services/ai/insightAnalytics";
+import { toast } from "sonner";
 
 // Import hooks
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
@@ -20,6 +21,7 @@ import ProjectDetailContent from "@/components/project/ProjectDetailContent";
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   // Try to get projectId from different sources
@@ -52,6 +54,22 @@ const ProjectDetail = () => {
     return findProjectById(projectId);
   }, [projectId]);
   
+  // Redirect to dashboard with error message if project not found
+  useEffect(() => {
+    if (projectId && !project) {
+      console.error("Project not found, redirecting to dashboard");
+      toast.error("Project not found", {
+        description: "We couldn't find that project. You've been redirected to the dashboard."
+      });
+      navigate('/dashboard');
+    }
+  }, [project, projectId, navigate]);
+
+  // If no project is found, return null to prevent rendering with undefined project
+  if (!project) {
+    return null;
+  }
+  
   // Use the useProjectDetail hook
   const {
     activeTab,
@@ -81,10 +99,10 @@ const ProjectDetail = () => {
     isNewProject,
     isAnalyzingWebsite,
     handleAnalyzeWebsite
-  } = useProjectDetail(projectId, user?.id || '', project || {} as Project);
+  } = useProjectDetail(projectId, user?.id || '', project);
   
   // Set up the AI configuration
-  const { setUseRealAI } = useAiAnalysis(project || {} as Project);
+  const { setUseRealAI } = useAiAnalysis(project);
   
   useEffect(() => {
     const checkAiAvailability = async () => {
@@ -112,21 +130,6 @@ const ProjectDetail = () => {
   const confidenceToUse = useMemo(() => 
     overallConfidence || calculatedConfidence || 0, 
     [overallConfidence, calculatedConfidence]);
-  
-  if (!project) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto px-4 py-12">
-          <h1 className="text-2xl font-bold text-red-500">Project not found</h1>
-          <p className="mt-2">The project you're looking for doesn't exist or has been deleted.</p>
-          <p className="mt-2 text-sm text-gray-500">Project ID: {projectId}</p>
-          <p className="mt-2 text-sm text-gray-500">
-            If you just created this project, try returning to the dashboard and clicking on it again.
-          </p>
-        </div>
-      </AppLayout>
-    );
-  }
   
   return (
     <AppLayout>

@@ -5,14 +5,6 @@ import { StrategicInsight } from "@/lib/types";
 export const useInsightsReview = (insights: StrategicInsight[] = []) => {
   const [reviewedInsights, setReviewedInsights] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
 
-  // Reset state if insights are empty or not provided
-  useMemo(() => {
-    if (!insights || insights.length === 0) {
-      console.log("useInsightsReview: No insights provided, resetting state");
-      setReviewedInsights({});
-    }
-  }, [insights]);
-
   // Initialize the review status for new insights
   useMemo(() => {
     if (insights && insights.length > 0) {
@@ -32,7 +24,7 @@ export const useInsightsReview = (insights: StrategicInsight[] = []) => {
     }
   }, [insights, reviewedInsights]);
 
-  // Calculate count variables first - FIX: These were previously referenced before initialization
+  // Calculate counts from the current state
   const pendingCount = useMemo(() => {
     return Object.values(reviewedInsights).filter(status => status === 'pending').length;
   }, [reviewedInsights]);
@@ -49,10 +41,8 @@ export const useInsightsReview = (insights: StrategicInsight[] = []) => {
     return insights.filter(insight => insight.needsReview).length;
   }, [insights]);
 
-  // Calculate overall confidence after counts are defined
+  // Calculate overall confidence based on accepted insights
   const overallConfidence = useMemo(() => {
-    console.log(`Calculated counts - Pending: ${pendingCount}, Accepted: ${acceptedCount}, Rejected: ${rejectedCount}, Total: ${pendingCount + acceptedCount + rejectedCount}`);
-    
     // Get insights that have been accepted
     const acceptedInsights = insights.filter(insight => 
       reviewedInsights[insight.id] === 'accepted'
@@ -63,7 +53,7 @@ export const useInsightsReview = (insights: StrategicInsight[] = []) => {
     // Calculate average confidence of accepted insights
     const totalConfidence = acceptedInsights.reduce((sum, insight) => sum + insight.confidence, 0);
     return totalConfidence / acceptedInsights.length;
-  }, [insights, reviewedInsights, pendingCount, acceptedCount, rejectedCount]);
+  }, [insights, reviewedInsights]);
 
   // Get insights filtered by status
   const acceptedInsights = useMemo(() => {
