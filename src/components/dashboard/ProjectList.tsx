@@ -29,6 +29,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
     return acc;
   }, []);
   
+  console.log(`Rendering ${uniqueProjects.length} unique projects out of ${projects.length} total`);
+  
   return (
     <>
       {uniqueProjects.length > 0 ? (

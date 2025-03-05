@@ -1,9 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { Project } from "@/lib/types";
-import { MOCK_PROJECTS } from "@/data/mockProjects";
+import { getAllProjects } from "@/data/mockProjects";
 import ProjectFilters from "@/components/dashboard/ProjectFilters";
 import ProjectList from "@/components/dashboard/ProjectList";
 import CreateProjectDialog from "@/components/dashboard/CreateProjectDialog";
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [newProject, setNewProject] = useState<ProjectFormData>({
     title: "",
     clientName: "",
@@ -31,8 +32,15 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // Load projects when component mounts or when returning to dashboard
+  useEffect(() => {
+    const loadedProjects = getAllProjects();
+    console.log(`Dashboard loaded ${loadedProjects.length} projects`);
+    setProjects(loadedProjects);
+  }, []);
+  
   // Filter projects based on search term and status
-  const filteredProjects = MOCK_PROJECTS.filter(project => {
+  const filteredProjects = projects.filter(project => {
     const matchesSearch = 
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.clientName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -58,6 +66,9 @@ const Dashboard = () => {
     
     // Navigation is now handled in CreateProjectDialog component
     setIsCreateDialogOpen(false);
+    
+    // Refresh the project list after creating a new project
+    setProjects(getAllProjects());
   };
 
   // Handler function that properly updates the form data
