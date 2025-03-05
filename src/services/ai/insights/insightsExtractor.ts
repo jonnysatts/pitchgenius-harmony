@@ -22,7 +22,7 @@ export const extractInsightsFromAnalysis = (analysisResults: any[]): StrategicIn
       // Determine the appropriate category
       const category = mapToInsightCategory(result.category || "gaming_opportunities");
       
-      // Check if source is explicitly provided
+      // Check if source is explicitly provided, default to 'document' for document insights
       const sourceType = result.source || 'document';
       
       // Create a strategic insight with required fields

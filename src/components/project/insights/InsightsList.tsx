@@ -31,7 +31,11 @@ const InsightsList: React.FC<InsightsListProps> = ({
       {insights.map(insight => (
         <StrategicInsightCard
           key={insight.id}
-          insight={insight}
+          insight={{
+            ...insight,
+            // Ensure document insights don't show the website-derived label
+            source: insight.source === 'document' ? 'document' : insight.source
+          }}
           reviewStatus={reviewedInsights[insight.id] || 'pending'}
           onAccept={() => onAcceptInsight(insight.id)}
           onReject={() => onRejectInsight(insight.id)}

@@ -24,6 +24,9 @@ const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({
 }) => {
   // Determine if we should add review controls
   const showReviewControls = !!onAccept && !!onReject && reviewStatus === 'pending';
+  
+  // Modify the insight source display - don't show [Website-derived] for document insights
+  const displaySource = insight.source === 'document' ? null : (insight.source === 'website' ? 'Website-derived' : insight.source);
 
   return (
     <Card className={insight.needsReview ? "border-amber-300" : ""}>
@@ -39,6 +42,7 @@ const StrategicInsightCard: React.FC<StrategicInsightCardProps> = ({
             needsReview={insight.needsReview}
             reviewStatus={reviewStatus}
             confidence={insight.confidence}
+            sourceLabel={displaySource}
           />
         </div>
       </CardHeader>

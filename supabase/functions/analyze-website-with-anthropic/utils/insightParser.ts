@@ -60,7 +60,7 @@ export function parseClaudeResponse(response: string): any[] {
       
       console.log(`Successfully parsed ${insights.length} insights from JSON`);
       
-      // Add source field to each insight
+      // Add source field to each insight - explicitly mark website insights
       const enhancedInsights = insights.map(insight => {
         const validatedInsight = validateAndFixInsight(insight);
         return {
