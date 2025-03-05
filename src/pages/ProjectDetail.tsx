@@ -64,8 +64,8 @@ const ProjectDetail = () => {
     aiError,
     usingFallbackInsights,
     needsReviewCount,
-    pendingCount,         // Destructure these count properties
-    acceptedCount,        // from the useProjectDetail hook
+    pendingCount,
+    acceptedCount,
     rejectedCount,
     overallConfidence,
     acceptedInsights,
@@ -141,8 +141,8 @@ const ProjectDetail = () => {
         aiStatus={aiStatus}
         overallConfidence={confidenceToUse}
         needsReviewCount={needsReviewCount}
-        pendingCount={pendingCount}         // Pass these count properties
-        acceptedCount={acceptedCount}       // to the ProjectDetailContent component
+        pendingCount={pendingCount}
+        acceptedCount={acceptedCount}
         rejectedCount={rejectedCount}
         usingFallbackInsights={usingFallbackInsights}
         isNewProject={isNewProject}

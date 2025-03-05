@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCw, RotateCcw } from "lucide-react";
 import { Heading } from "@/components/ui/heading";
 import {
   Dialog,
@@ -17,7 +17,7 @@ import {
 interface InsightsTabHeaderProps {
   hasInsights: boolean;
   onRetryAnalysis?: () => void;
-  onRefreshInsights?: () => void; // Add refresh function
+  onRefreshInsights?: () => void;
 }
 
 const InsightsTabHeader: React.FC<InsightsTabHeaderProps> = ({ 
@@ -26,23 +26,24 @@ const InsightsTabHeader: React.FC<InsightsTabHeaderProps> = ({
   onRefreshInsights
 }) => {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <div>
-        <Heading size="md" className="mb-1">Document Insights</Heading>
+        <Heading size="md" className="text-slate-800 mb-1">Document Insights</Heading>
         <p className="text-slate-500 text-sm">
           Strategic insights generated from analyzing the client documents
         </p>
       </div>
       
-      <div className="mt-4 md:mt-0 flex items-center gap-2">
+      <div className="flex items-center gap-2">
         {hasInsights && onRefreshInsights && (
           <Button 
             variant="outline" 
+            size="sm"
             className="flex items-center gap-2"
             onClick={onRefreshInsights}
           >
-            <RefreshCcw size={16} />
-            Refresh View
+            <RefreshCw size={16} />
+            <span>Refresh View</span>
           </Button>
         )}
         
@@ -51,10 +52,11 @@ const InsightsTabHeader: React.FC<InsightsTabHeaderProps> = ({
             <DialogTrigger asChild>
               <Button 
                 variant="outline" 
+                size="sm"
                 className="flex items-center gap-2"
               >
-                <RefreshCcw size={16} />
-                Rerun Analysis
+                <RotateCcw size={16} />
+                <span>Rerun Analysis</span>
               </Button>
             </DialogTrigger>
             <DialogContent>

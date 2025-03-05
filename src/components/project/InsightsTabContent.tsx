@@ -1,8 +1,8 @@
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StrategicInsight, Project, AIProcessingStatus } from "@/lib/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"; 
 
 // Import components from the correct path
 import InsightsList from "@/components/project/insights/InsightsList";
@@ -135,62 +135,97 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
       )}
       
       {hasInsights && !isAnalyzing && (
-        <Tabs defaultValue="all" className="w-full" onValueChange={setActiveFilter}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="all">
-              All Insights ({insights.length})
-            </TabsTrigger>
-            <TabsTrigger value="pending">
-              Needs Review ({pendingCount})
-            </TabsTrigger>
-            <TabsTrigger value="accepted">
-              Accepted ({acceptedCount})
-            </TabsTrigger>
-            <TabsTrigger value="rejected">
-              Rejected ({rejectedCount})
-            </TabsTrigger>
-          </TabsList>
+        <div>
+          <div className="bg-slate-50 p-4 rounded-lg mb-6 flex flex-wrap gap-3 justify-between items-center">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center px-3 py-1.5 bg-white rounded-md border border-slate-200 shadow-sm">
+                <span className="text-sm font-medium text-slate-600">All:</span>
+                <span className="ml-1.5 font-semibold text-slate-900">{insights.length}</span>
+              </div>
+              <div className="flex items-center px-3 py-1.5 bg-white rounded-md border border-slate-200 shadow-sm">
+                <span className="text-sm font-medium text-yellow-600">Pending:</span>
+                <span className="ml-1.5 font-semibold text-yellow-700">{pendingCount}</span>
+              </div>
+              <div className="flex items-center px-3 py-1.5 bg-white rounded-md border border-slate-200 shadow-sm">
+                <span className="text-sm font-medium text-green-600">Accepted:</span>
+                <span className="ml-1.5 font-semibold text-green-700">{acceptedCount}</span>
+              </div>
+              <div className="flex items-center px-3 py-1.5 bg-white rounded-md border border-slate-200 shadow-sm">
+                <span className="text-sm font-medium text-red-600">Rejected:</span>
+                <span className="ml-1.5 font-semibold text-red-700">{rejectedCount}</span>
+              </div>
+            </div>
+          </div>
           
-          <TabsContent value="all" className="mt-0">
-            <InsightsList 
-              insights={renderedInsights}
-              reviewedInsights={reviewedInsights}
-              onAcceptInsight={onAcceptInsight}
-              onRejectInsight={onRejectInsight}
-              onUpdateInsight={onUpdateInsight}
-            />
-          </TabsContent>
-          
-          <TabsContent value="pending" className="mt-0">
-            <InsightsList 
-              insights={renderedInsights}
-              reviewedInsights={reviewedInsights}
-              onAcceptInsight={onAcceptInsight}
-              onRejectInsight={onRejectInsight}
-              onUpdateInsight={onUpdateInsight}
-            />
-          </TabsContent>
-          
-          <TabsContent value="accepted" className="mt-0">
-            <InsightsList 
-              insights={renderedInsights}
-              reviewedInsights={reviewedInsights}
-              onAcceptInsight={onAcceptInsight}
-              onRejectInsight={onRejectInsight}
-              onUpdateInsight={onUpdateInsight}
-            />
-          </TabsContent>
-          
-          <TabsContent value="rejected" className="mt-0">
-            <InsightsList 
-              insights={renderedInsights}
-              reviewedInsights={reviewedInsights}
-              onAcceptInsight={onAcceptInsight}
-              onRejectInsight={onRejectInsight}
-              onUpdateInsight={onUpdateInsight}
-            />
-          </TabsContent>
-        </Tabs>
+          <Tabs defaultValue="all" className="w-full" onValueChange={setActiveFilter}>
+            <TabsList className="mb-4 inline-flex h-10 w-full gap-1 rounded-md bg-slate-100 p-1">
+              <TabsTrigger 
+                value="all"
+                className="flex-1 rounded-sm px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              >
+                All Insights
+              </TabsTrigger>
+              <TabsTrigger 
+                value="pending"
+                className="flex-1 rounded-sm px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              >
+                Needs Review
+              </TabsTrigger>
+              <TabsTrigger 
+                value="accepted"
+                className="flex-1 rounded-sm px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              >
+                Accepted
+              </TabsTrigger>
+              <TabsTrigger 
+                value="rejected" 
+                className="flex-1 rounded-sm px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              >
+                Rejected
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="all" className="mt-0">
+              <InsightsList 
+                insights={renderedInsights}
+                reviewedInsights={reviewedInsights}
+                onAcceptInsight={onAcceptInsight}
+                onRejectInsight={onRejectInsight}
+                onUpdateInsight={onUpdateInsight}
+              />
+            </TabsContent>
+            
+            <TabsContent value="pending" className="mt-0">
+              <InsightsList 
+                insights={renderedInsights}
+                reviewedInsights={reviewedInsights}
+                onAcceptInsight={onAcceptInsight}
+                onRejectInsight={onRejectInsight}
+                onUpdateInsight={onUpdateInsight}
+              />
+            </TabsContent>
+            
+            <TabsContent value="accepted" className="mt-0">
+              <InsightsList 
+                insights={renderedInsights}
+                reviewedInsights={reviewedInsights}
+                onAcceptInsight={onAcceptInsight}
+                onRejectInsight={onRejectInsight}
+                onUpdateInsight={onUpdateInsight}
+              />
+            </TabsContent>
+            
+            <TabsContent value="rejected" className="mt-0">
+              <InsightsList 
+                insights={renderedInsights}
+                reviewedInsights={reviewedInsights}
+                onAcceptInsight={onAcceptInsight}
+                onRejectInsight={onRejectInsight}
+                onUpdateInsight={onUpdateInsight}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       )}
     </div>
   );

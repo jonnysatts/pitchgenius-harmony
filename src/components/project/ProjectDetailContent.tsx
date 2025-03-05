@@ -1,5 +1,5 @@
+
 import React, { useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, StrategicInsight } from "@/lib/types";
 import ProjectHeader from "@/components/project/ProjectHeader";
 import DocumentsTabContent from "@/components/project/DocumentsTabContent";
@@ -8,6 +8,7 @@ import HelpTabContent from "@/components/project/HelpTabContent";
 import PresentationTabContent from "@/components/project/PresentationTabContent";
 import WebInsightsTabContent from "@/components/project/WebInsightsTabContent";
 import ProjectWelcomeAlert from "@/components/project/ProjectWelcomeAlert";
+import { ModernTabNav } from "@/components/project/navigation/ModernTabNav";
 
 interface ProjectDetailContentProps {
   project: Project;
@@ -83,10 +84,18 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
     handleAnalyzeWebsite();
   };
   
+  // Create navigation data for the tabs
+  const navItems = [
+    { id: "documents", label: "Documents", count: documents.length },
+    { id: "insights", label: "Insights", count: documentInsights.length },
+    { id: "webinsights", label: "Web Insights", count: websiteInsights.length },
+    { id: "presentation", label: "Presentation", count: null },
+  ];
+  
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 max-w-screen-xl">
       <ProjectHeader 
-        project={project} 
+        project={project}
         insights={insights}
         isNewProject={isNewProject}
         setActiveTab={setActiveTab}
@@ -98,16 +107,14 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
       )}
       
       <div className="mt-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-5 mb-8">
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="insights">Insights</TabsTrigger>
-            <TabsTrigger value="webinsights">Web Insights</TabsTrigger>
-            <TabsTrigger value="presentation">Presentation</TabsTrigger>
-            <TabsTrigger value="help" className="hidden lg:block">Help</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="documents">
+        <ModernTabNav 
+          items={navItems} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+        />
+        
+        <div className="mt-4 min-h-[500px] bg-white rounded-lg shadow-sm border border-slate-100 p-6">
+          {activeTab === "documents" && (
             <DocumentsTabContent 
               project={project}
               documents={documents}
@@ -121,9 +128,9 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
               isAnalyzingWebsite={isAnalyzingWebsite}
               websiteUrl={project.clientWebsite}
             />
-          </TabsContent>
+          )}
           
-          <TabsContent value="insights">
+          {activeTab === "insights" && (
             <InsightsTabContent 
               project={project}
               insights={documentInsights}
@@ -143,9 +150,9 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
               onRetryAnalysis={onRetryAnalysis}
               onRefreshInsights={onRefreshInsights}
             />
-          </TabsContent>
+          )}
           
-          <TabsContent value="webinsights">
+          {activeTab === "webinsights" && (
             <WebInsightsTabContent 
               websiteUrl={project.clientWebsite}
               isAnalyzingWebsite={isAnalyzingWebsite}
@@ -160,20 +167,20 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
               onUpdateInsight={handleUpdateInsight}
               aiStatus={aiStatus}
             />
-          </TabsContent>
+          )}
           
-          <TabsContent value="presentation">
+          {activeTab === "presentation" && (
             <PresentationTabContent 
               project={project}
               insights={insights}
               acceptedInsights={acceptedInsights}
             />
-          </TabsContent>
+          )}
           
-          <TabsContent value="help">
+          {activeTab === "help" && (
             <HelpTabContent />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
     </div>
   );
