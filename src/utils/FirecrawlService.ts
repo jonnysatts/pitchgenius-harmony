@@ -55,7 +55,6 @@ export class FirecrawlService {
       // Normalize the URL format - ensure proper protocol
       let normalizedUrl = websiteUrl.trim();
       
-      // Check if the URL is valid
       try {
         // First try to construct a URL object to validate
         // If it fails with a relative URL, we'll add the protocol in the next step
@@ -76,9 +75,14 @@ export class FirecrawlService {
       console.log(`Normalized URL: ${normalizedUrl}`);
       
       // First, check the analysis progress (also confirms the Edge Function is responsive)
-      const progressCheck = await this.checkAnalysisProgress(normalizedUrl);
-      if (!progressCheck.success) {
-        console.warn("Progress check failed, but continuing with analysis attempt");
+      try {
+        const progressCheck = await this.checkAnalysisProgress(normalizedUrl);
+        if (!progressCheck.success) {
+          console.warn("Progress check failed, but continuing with analysis attempt");
+        }
+      } catch (error) {
+        console.warn("Progress check failed with error:", error);
+        // Continue anyway as this is just a preliminary check
       }
       
       // Call the Supabase Edge Function for website analysis with increased timeout
@@ -95,11 +99,50 @@ export class FirecrawlService {
       
       if (error) {
         console.error('Error from Edge Function:', error);
+        
+        // If we get edge function error but the error body contains insights
+        // This can happen when the function returns a non-200 status but still has data
+        if (error.message && error.message.includes('non-2xx status code')) {
+          try {
+            // Try to parse the error message as JSON to extract data
+            const errorData = typeof error.message === 'string' ? 
+              JSON.parse(error.message) : error;
+              
+            if (errorData && errorData.insights && Array.isArray(errorData.insights)) {
+              console.log("Extracted insights from error message");
+              
+              // Check if these are actually fallback insights
+              const allFallbacks = errorData.insights.every((insight: any) => 
+                insight.id && insight.id.includes('fallback_')
+              );
+              
+              if (allFallbacks || errorData.usingFallback === true) {
+                console.log("Insights from error response are fallbacks, returning error instead");
+                return {
+                  success: false,
+                  error: errorData.error || "Failed to extract meaningful content from website",
+                  insights: [] // Return empty array to prevent fallbacks from showing as real insights
+                };
+              }
+              
+              // Return the insights if they don't appear to be fallbacks
+              return {
+                success: true,
+                insights: errorData.insights
+              };
+            }
+          } catch (parseError) {
+            console.error("Error parsing error message as JSON:", parseError);
+          }
+        }
+        
+        // Return the original error if we couldn't extract data
         return {
           success: false,
           error: error.message || `API error: ${error.code || 'unknown'}`,
           // Don't set retriableError for edge function errors - these need to be fixed
-          retriableError: false
+          retriableError: false,
+          insights: [] // Ensure an empty array is returned
         };
       }
       
@@ -121,11 +164,19 @@ export class FirecrawlService {
           data.error.includes('429') || 
           data.error.includes('529')
         );
+        
+        // Check if this response includes fallback insights
+        const hasFallbacks = data.insights && 
+                           Array.isArray(data.insights) && 
+                           data.insights.some((insight: any) => insight.id && insight.id.includes('fallback_'));
+        
+        // If these are fallback insights, don't return them as real ones
+        const insightsToReturn = hasFallbacks || data.usingFallback ? [] : (data.insights || []);
             
         return {
           success: false,
           error: data.error,
-          insights: data.insights || [],
+          insights: insightsToReturn, // Empty if fallbacks, or whatever was returned
           retriableError: isRetriable
         };
       }
@@ -151,12 +202,17 @@ export class FirecrawlService {
           "Core Brand Narratives"
         ];
         
+        // Check for fallback insights by ID pattern
+        const hasFallbackInsights = data.insights.some((insight: any) => 
+          insight.id && insight.id.includes('fallback_')
+        );
+        
         // Check if all insights have error-related titles or are marked as fallbacks
-        const allErrorInsights = data.insights.every(insight => {
+        const allErrorInsights = data.insights.every((insight: any) => {
           const title = insight.content?.title || '';
           const id = insight.id || '';
           
-          // Check if it's a fallback insight (they typically have IDs like fallback_1)
+          // Check if it's a fallback insight
           const isFallbackInsight = id.includes('fallback_');
           
           // Check if title matches any error patterns
@@ -177,16 +233,16 @@ export class FirecrawlService {
           "Without access to the website"
         ];
         
-        const hasErrorContent = data.insights.some(insight => {
+        const hasErrorContent = data.insights.some((insight: any) => {
           const details = insight.content?.details || '';
           return errorContentPatterns.some(pattern => details.includes(pattern));
         });
         
-        if (allErrorInsights || hasErrorContent || data.usingFallback === true) {
+        if (allErrorInsights || hasErrorContent || data.usingFallback === true || hasFallbackInsights) {
           // Even though we got insights, they're all error-related or fallbacks
           const errorMessage = data.error || 
                             data.insights[0]?.content?.details || 
-                            "Unable to extract meaningful content from website";
+                            "Failed to extract meaningful content from website. Try a different website.";
           
           return {
             success: false,
@@ -204,7 +260,7 @@ export class FirecrawlService {
       // Fallback to basic error handling
       return {
         success: false,
-        error: data?.error || "Received a valid response but no insights were found.",
+        error: data?.error || "Failed to extract meaningful content from website. Try a different website.",
         insights: []
       };
     } catch (error) {

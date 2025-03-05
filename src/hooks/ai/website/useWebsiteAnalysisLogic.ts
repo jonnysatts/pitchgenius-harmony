@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { FirecrawlService } from '@/utils/FirecrawlService';
@@ -110,15 +111,20 @@ export const useWebsiteAnalysisLogic = (
 
     // Check if we got any actual insights and they are not error placeholders
     if (result && result.success && result.insights && result.insights.length > 0) {
-      // Double-check if the insights are all error-related
-      if (areAllErrorInsights(result.insights)) {
+      // Double-check if the insights are all error-related or fallbacks
+      if (areAllErrorInsights(result.insights) || result.usingFallback === true) {
         console.log("Only error-related insights were found or fallback insights returned");
+        
+        // Clear any intervals that might still be running
+        clearInterval(progressInterval);
+        clearInterval(progressCheckInterval);
         
         // Extract error message from first insight or use provided error
         const errorDetail = result.error || result.insights[0]?.content?.details || 
-                          "The website could not be analyzed correctly.";
+                          "The website could not be analyzed correctly. Try a different website.";
         
         setError(errorDetail);
+        // Important: set empty insights to prevent fallbacks from showing as real
         setWebsiteInsights([]);
         
         toast({
@@ -136,6 +142,7 @@ export const useWebsiteAnalysisLogic = (
         source: 'website' as const
       }));
 
+      // Clear any fallback or error-related insights
       setWebsiteInsights(formattedInsights);
       addInsights(formattedInsights);
 
@@ -145,7 +152,7 @@ export const useWebsiteAnalysisLogic = (
       });
     } else {
       // Handle failure - extract error message
-      const errorMessage = result?.error || "No insights returned from website analysis. The API may have failed to extract meaningful content.";
+      const errorMessage = result?.error || "Failed to extract meaningful content. Try a different website.";
       const isRetriable = result?.retriableError === true;
       
       setError(errorMessage);

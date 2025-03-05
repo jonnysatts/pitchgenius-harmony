@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { AlertCircle, Globe } from 'lucide-react';
+import { AlertCircle, Globe, Info, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NoInsightsEmptyStateProps {
   hasWebsiteUrl: boolean;
@@ -32,12 +33,17 @@ export const NoInsightsEmptyState = ({
     const isCorsError = error.includes('CORS') || error.includes('cross-origin');
     const isTimeoutError = error.includes('timeout') || error.includes('timed out');
     const isEdgeFunctionError = error.includes('Edge Function') || error.includes('non-2xx status code');
+    const isContentExtractionError = error.includes('extract meaningful content') || 
+                                    error.includes('content extraction') || 
+                                    error.includes('insufficient content');
     
     // Set title and explanation based on error type
     let errorTitle = isClaudeOverloaded 
       ? "Claude API Temporarily Unavailable" 
       : isEdgeFunctionError
       ? "Server Connection Failed"
+      : isContentExtractionError
+      ? "Content Extraction Failed"
       : "Website Analysis Failed";
       
     let errorExplanation = "";
@@ -52,6 +58,8 @@ export const NoInsightsEmptyState = ({
       errorExplanation = "The connection to the website timed out. The site may be slow or temporarily unavailable.";
     } else if (isEdgeFunctionError) {
       errorExplanation = "The server-side function needed to analyze websites is currently unavailable. This is likely a temporary issue.";
+    } else if (isContentExtractionError) {
+      errorExplanation = "We couldn't extract meaningful content from the website. This often happens with sites that use heavy JavaScript, have anti-scraping measures, or serve primarily visual content.";
     } else {
       errorExplanation = "We encountered an issue when analyzing the website. This often happens due to website access restrictions, CORS policies, or the site being temporarily unavailable.";
     }
@@ -61,16 +69,47 @@ export const NoInsightsEmptyState = ({
         <AlertCircle className="h-10 w-10 text-amber-500 mb-4" />
         <h3 className="font-semibold text-lg mb-2">{errorTitle}</h3>
         <p className="text-gray-700 max-w-md mb-4">{errorExplanation}</p>
+        
         <div className="p-3 bg-white rounded border border-amber-200 text-left text-sm text-amber-700 max-w-md mb-3">
           <p><strong>Error:</strong> {error}</p>
         </div>
-        <p className="text-gray-500 text-sm">
-          {isClaudeOverloaded 
-            ? "Please wait a few minutes and try again when the service is less busy."
-            : isEdgeFunctionError
-            ? "Try again in a few minutes. If the problem persists, check your internet connection."
-            : "Try a different website URL or check that the URL format is correct. Some websites actively block analysis tools."}
-        </p>
+        
+        <div className="text-gray-700 text-sm bg-white p-3 rounded border border-amber-200 max-w-md mb-4">
+          <p className="font-medium flex items-center gap-1.5">
+            <Info className="h-4 w-4" />
+            Suggestions:
+          </p>
+          <ul className="list-disc pl-5 mt-1.5 space-y-1.5">
+            {isHttpError || isCorsError || isContentExtractionError ? (
+              <>
+                <li>Try a different website that doesn't have strict security measures</li>
+                <li>Use a simpler website with less JavaScript complexity</li>
+                <li>Check that the website URL format is correct</li>
+              </>
+            ) : isClaudeOverloaded ? (
+              <li>Wait a few minutes and try again when the AI service is less busy</li>
+            ) : (
+              <>
+                <li>Try a different website URL</li>
+                <li>Check your internet connection</li>
+                <li>Try again in a few minutes</li>
+              </>
+            )}
+          </ul>
+        </div>
+        
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+          
+          <Button variant="outline" size="sm" asChild>
+            <a href="/diagnostics" target="_blank" className="flex items-center gap-1.5">
+              Run Diagnostics
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </Button>
+        </div>
       </div>
     );
   }
