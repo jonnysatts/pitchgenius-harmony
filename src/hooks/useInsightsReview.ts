@@ -32,11 +32,7 @@ export const useInsightsReview = (insights: StrategicInsight[] = []) => {
     }
   }, [insights, reviewedInsights]);
 
-  // Initialize count variables first
-  const needsReviewCount = useMemo(() => {
-    return insights.filter(insight => insight.needsReview).length;
-  }, [insights]);
-
+  // Calculate count variables first - FIX: These were previously referenced before initialization
   const pendingCount = useMemo(() => {
     return Object.values(reviewedInsights).filter(status => status === 'pending').length;
   }, [reviewedInsights]);
@@ -48,6 +44,10 @@ export const useInsightsReview = (insights: StrategicInsight[] = []) => {
   const rejectedCount = useMemo(() => {
     return Object.values(reviewedInsights).filter(status => status === 'rejected').length;
   }, [reviewedInsights]);
+
+  const needsReviewCount = useMemo(() => {
+    return insights.filter(insight => insight.needsReview).length;
+  }, [insights]);
 
   // Calculate overall confidence after counts are defined
   const overallConfidence = useMemo(() => {

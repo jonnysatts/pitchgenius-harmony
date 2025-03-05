@@ -80,6 +80,13 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
     }
   }, [isAnalyzingWebsite, setActiveTab]);
   
+  useEffect(() => {
+    // For new projects, set the active tab to documents to help users get started
+    if (isNewProject && documents.length === 0 && activeTab !== "documents") {
+      setActiveTab("documents");
+    }
+  }, [isNewProject, documents.length, activeTab, setActiveTab]);
+  
   const handleAnalyzeAndNavigate = () => {
     handleAnalyzeWebsite();
   };
@@ -92,6 +99,8 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
     { id: "presentation", label: "Presentation", count: null },
     { id: "help", label: "Help", count: null },
   ];
+  
+  console.log("Rendering ProjectDetailContent, isNewProject:", isNewProject);
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-screen-xl">
