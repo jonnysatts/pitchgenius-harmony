@@ -23,9 +23,12 @@ export const insertDocumentRecord = async (
   try {
     console.log(`Inserting document record for: ${fileName}`);
     
+    // Generate a unique local ID for the document
+    const docId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     // Create new document object
     const newDoc: Document = {
-      id: `local_${Math.random().toString(36).substr(2, 9)}`,
+      id: docId,
       name: fileName,
       size: fileSize,
       type: fileType,
@@ -87,7 +90,7 @@ export const insertDocumentRecord = async (
         
         // Update localStorage with the Supabase ID
         const updatedDocuments = documents.map(doc => 
-          doc.id === newDoc.id ? {...doc, id: data.id} : doc
+          doc.id === docId ? {...doc, id: data.id} : doc
         );
         localStorage.setItem(storageKey, JSON.stringify(updatedDocuments));
       }

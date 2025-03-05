@@ -9,13 +9,13 @@ export const getMockDocuments = (projectId: string): Document[] => {
   const storageKey = `project_documents_${projectId}`;
   const existingDocs = localStorage.getItem(storageKey);
   
-  // If we have stored documents, return them instead of mock documents
+  // If we have stored documents, DO NOT return mock documents
   if (existingDocs) {
     try {
       const parsedDocs = JSON.parse(existingDocs);
       if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
-        console.log("Using real documents instead of mocks");
-        return parsedDocs; // Return the actual stored documents instead of mocks
+        console.log(`Using ${parsedDocs.length} real documents for project ${projectId}`);
+        return []; // Return empty array since real documents will be handled separately
       }
     } catch (e) {
       console.error("Error parsing stored documents:", e);

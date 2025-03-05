@@ -5,7 +5,7 @@ import { getFileCategory, sortDocumentsByPriority } from "@/services/documentSer
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { File, FileText, Download, Star, Trash2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 
 interface DocumentListProps {
   documents: Document[];
@@ -32,58 +32,79 @@ const DocumentList: React.FC<DocumentListProps> = ({
   
   return (
     <div className="space-y-4">
-      {sortedDocuments.map((document) => (
-        <div 
-          key={document.id} 
-          className="flex items-center justify-between p-4 border rounded-lg bg-white hover:shadow-sm transition-shadow"
-        >
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-slate-100 rounded">
-              <File className="h-6 w-6 text-slate-500" />
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-slate-900 truncate">
-                {document.name}
-              </h4>
-              <div className="flex items-center mt-1 space-x-2">
-                <Badge variant="outline">
-                  {getFileCategory(document.type)}
-                </Badge>
-                <span className="text-xs text-slate-500">
-                  {(document.size / 1024 / 1024).toFixed(2)} MB
-                </span>
-                {document.uploadedAt && (
+      {sortedDocuments.map((document) => {
+        // Handle document date formatting
+        let uploadTimeDisplay = "Unknown date";
+        if (document.uploadedAt) {
+          try {
+            const uploadDate = typeof document.uploadedAt === 'string' 
+              ? parseISO(document.uploadedAt) 
+              : new Date(document.uploadedAt);
+            uploadTimeDisplay = formatDistanceToNow(uploadDate, { addSuffix: true });
+          } catch (e) {
+            console.error("Error formatting date:", e);
+          }
+        }
+        
+        // Determine file type for display
+        const fileType = document.type ? getFileCategory(document.type) : 
+                         document.name.endsWith('.pdf') ? 'PDF' :
+                         document.name.endsWith('.docx') ? 'Word' :
+                         document.name.endsWith('.xlsx') ? 'Excel' : 'Document';
+                         
+        return (
+          <div 
+            key={document.id} 
+            className="flex items-center justify-between p-4 border rounded-lg bg-white hover:shadow-sm transition-shadow"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-slate-100 rounded">
+                <File className="h-6 w-6 text-slate-500" />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-slate-900 truncate">
+                  {document.name}
+                </h4>
+                <div className="flex items-center mt-1 space-x-2">
+                  <Badge variant="outline">
+                    {fileType}
+                  </Badge>
                   <span className="text-xs text-slate-500">
-                    {formatDistanceToNow(new Date(document.uploadedAt), { addSuffix: true })}
+                    {(document.size / 1024 / 1024).toFixed(2)} MB
                   </span>
-                )}
-                {document.priority && document.priority > 0 && (
-                  <div className="flex items-center text-amber-500">
-                    <Star size={12} className="mr-1" />
-                    <span className="text-xs">Priority {document.priority}</span>
-                  </div>
-                )}
+                  <span className="text-xs text-slate-500">
+                    {uploadTimeDisplay}
+                  </span>
+                  {document.priority && document.priority > 0 && (
+                    <div className="flex items-center text-amber-500">
+                      <Star size={12} className="mr-1" />
+                      <span className="text-xs">Priority {document.priority}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+            
+            <div className="flex items-center space-x-2">
+              {document.url && !document.url.startsWith('blob:') && (
+                <Button variant="ghost" size="icon" asChild>
+                  <a href={document.url} download={document.name} target="_blank" rel="noopener noreferrer">
+                    <Download size={18} />
+                  </a>
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => onRemoveDocument(document.id)}
+              >
+                <Trash2 size={18} className="text-slate-400 hover:text-red-500" />
+              </Button>
+            </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" asChild>
-              <a href={document.url} download={document.name}>
-                <Download size={18} />
-              </a>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onRemoveDocument(document.id)}
-            >
-              <Trash2 size={18} className="text-slate-400 hover:text-red-500" />
-            </Button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

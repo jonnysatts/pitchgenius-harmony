@@ -28,7 +28,12 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({
 }) => {
   const [isButtonClicked, setIsButtonClicked] = useState(false);
   
-  const analyzeButtonDisabled = documents.length === 0 || 
+  // Filter out any mock documents if real documents exist
+  const realDocuments = documents.filter(doc => !doc.id.startsWith('mock_') || documents.length === 3);
+  const hasRealDocuments = realDocuments.length > 0;
+  const displayedDocuments = hasRealDocuments ? realDocuments : documents;
+  
+  const analyzeButtonDisabled = displayedDocuments.length === 0 || 
                               (aiStatus && aiStatus.status === 'processing') || 
                               isLoading ||
                               isButtonClicked;
@@ -109,16 +114,16 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({
         </div>
       )}
       
-      {!isLoading && documents.length > 0 && (
+      {!isLoading && displayedDocuments.length > 0 && (
         <div className="mb-4 text-sm">
           <p className="text-slate-600">
-            <span className="font-semibold">{documents.length}</span> document{documents.length !== 1 ? 's' : ''} uploaded. 
+            <span className="font-semibold">{displayedDocuments.length}</span> document{displayedDocuments.length !== 1 ? 's' : ''} uploaded. 
             All documents will be analyzed in detail when you click "Analyze with AI".
           </p>
         </div>
       )}
       
-      {!isLoading && documents.length === 0 && (
+      {!isLoading && displayedDocuments.length === 0 && (
         <div className="flex items-center justify-center py-8 flex-col">
           <AlertCircle className="h-8 w-8 text-slate-400 mb-2" />
           <p className="text-slate-600 text-center">
@@ -136,7 +141,7 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({
       
       {!isLoading && (
         <DocumentList 
-          documents={documents}
+          documents={displayedDocuments}
           onRemoveDocument={onRemoveDocument}
         />
       )}

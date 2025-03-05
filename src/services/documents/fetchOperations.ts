@@ -28,11 +28,9 @@ export const fetchProjectDocumentsFromApi = async (projectId: string): Promise<D
     if (storedDocsJson) {
       try {
         const storedDocs = JSON.parse(storedDocsJson);
-        console.log('Found stored documents:', storedDocs.length);
         
         if (Array.isArray(storedDocs) && storedDocs.length > 0) {
-          // Return stored documents if they exist
-          console.log('Using stored documents from localStorage');
+          console.log(`Found ${storedDocs.length} stored documents for project ${projectId}`);
           return storedDocs.map(convertApiDocumentToModel);
         }
       } catch (parseError) {
@@ -40,9 +38,16 @@ export const fetchProjectDocumentsFromApi = async (projectId: string): Promise<D
       }
     }
     
-    // Only use mock documents if no stored documents exist
-    console.log('No stored documents found, using mock documents');
+    // Only get mock documents if no stored documents exist
+    console.log('No stored documents found, checking for mock documents');
     const mockDocuments = getMockDocuments(projectId);
+    
+    if (mockDocuments.length > 0) {
+      console.log(`Using ${mockDocuments.length} mock documents for project ${projectId}`);
+    } else {
+      console.log('No documents found for project:', projectId);
+    }
+    
     return mockDocuments.map(convertApiDocumentToModel);
   } catch (error) {
     console.error('Error fetching documents:', error);
