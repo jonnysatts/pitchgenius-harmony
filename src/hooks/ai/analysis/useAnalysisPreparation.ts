@@ -38,7 +38,7 @@ export const useAnalysisPreparation = () => {
   }, []);
 
   const handleAnalysisSuccess = useCallback((numInsights: number) => {
-    toast({
+    uiToast({
       title: "Analysis Completed",
       description: `Generated ${numInsights} insights from your documents.`,
       variant: "default"
@@ -50,10 +50,10 @@ export const useAnalysisPreparation = () => {
     });
     
     return true;
-  }, [toast]);
+  }, [uiToast]);
 
   const handleAnalysisError = useCallback(() => {
-    toast({
+    uiToast({
       title: "Analysis Error",
       description: "An error occurred. Using fallback insights instead.",
       variant: "destructive"
@@ -65,7 +65,7 @@ export const useAnalysisPreparation = () => {
     });
     
     return false;
-  }, [toast]);
+  }, [uiToast]);
 
   return {
     prepareAnalysisStart,
