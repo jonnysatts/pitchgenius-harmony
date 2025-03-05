@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAIConversation } from "@/hooks/ai/useAIConversation";
 import { 
   ChatMessages, 
@@ -21,6 +21,9 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
   refinedContent,
   setRefinedContent
 }) => {
+  // State for prefilled message text when using quick replies
+  const [prefilledText, setPrefilledText] = useState("");
+  
   // Use the custom hook for AI conversation logic
   const {
     messages,
@@ -69,8 +72,30 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
     }
   }, [messages, setRefinedContent, refinedContent]);
 
+  // Handle sending a message
   const handleSendMessage = (message: string) => {
     sendMessage(message);
+    // Clear any prefilled text after sending
+    setPrefilledText("");
+  };
+
+  // Generate a quick reply message based on the section
+  const handleQuickReply = (section: string) => {
+    const sectionLabels: Record<string, string> = {
+      title: "Title",
+      summary: "Summary",
+      details: "Details", 
+      evidence: "Evidence",
+      impact: "Impact",
+      recommendations: "Recommendations"
+    };
+    
+    const currentContent = refinedContent[section] || "not yet provided";
+    
+    // Prefill a message that asks for improvement for the selected section
+    const message = `Can you help me improve the ${sectionLabels[section]} section? Currently it says: "${currentContent}". I'd like it to be more specific and impactful.`;
+    
+    setPrefilledText(message);
   };
 
   return (
@@ -78,7 +103,8 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       {/* Display Messages Area */}
       <ChatMessages 
         messages={messages} 
-        isLoadingAI={isLoadingAI} 
+        isLoadingAI={isLoadingAI}
+        onQuickReply={handleQuickReply}
       />
       
       {/* Current Refined Version */}
@@ -87,7 +113,8 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       {/* Input Area */}
       <MessageInput 
         isLoadingAI={isLoadingAI} 
-        onSendMessage={handleSendMessage} 
+        onSendMessage={handleSendMessage}
+        prefilledText={prefilledText}
       />
     </div>
   );

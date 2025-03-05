@@ -7,13 +7,22 @@ import { Send } from "lucide-react";
 interface MessageInputProps {
   isLoadingAI: boolean;
   onSendMessage: (message: string) => void;
+  prefilledText?: string;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({ 
   isLoadingAI, 
-  onSendMessage 
+  onSendMessage,
+  prefilledText = ""
 }) => {
-  const [currentMessage, setCurrentMessage] = useState("");
+  const [currentMessage, setCurrentMessage] = useState(prefilledText);
+
+  // Update the message when prefilled text changes
+  React.useEffect(() => {
+    if (prefilledText) {
+      setCurrentMessage(prefilledText);
+    }
+  }, [prefilledText]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
