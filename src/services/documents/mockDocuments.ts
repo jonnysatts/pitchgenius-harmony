@@ -15,7 +15,7 @@ export const getMockDocuments = (projectId: string): Document[] => {
       const parsedDocs = JSON.parse(existingDocs);
       if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
         console.log("Using real documents instead of mocks");
-        return [];
+        return parsedDocs; // Return the actual stored documents instead of mocks
       }
     } catch (e) {
       console.error("Error parsing stored documents:", e);

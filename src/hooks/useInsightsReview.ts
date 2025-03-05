@@ -25,13 +25,18 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     
     setReviewedInsights(initialReviewState);
     setUpdatedInsights(initialInsightsState);
+
+    // Log current insights count for debugging
+    console.log(`useInsightsReview: Processing ${insights.length} insights`);
   }, [insights]);
   
   // Count how many insights still need review - direct calculation to ensure accuracy
   const needsReviewCount = useMemo(() => {
-    return insights.filter(insight => 
+    const count = insights.filter(insight => 
       !reviewedInsights[insight.id] || reviewedInsights[insight.id] === 'pending'
     ).length;
+    console.log(`Calculated needsReviewCount: ${count} of ${insights.length} total insights`);
+    return count;
   }, [insights, reviewedInsights]);
   
   // Get overall confidence based on accepted insights
@@ -51,18 +56,22 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
   }, [insights, reviewedInsights]);
   
   // Get accepted insights - use the updated versions if available
-  const acceptedInsights = useMemo(() => 
-    insights
+  const acceptedInsights = useMemo(() => {
+    const accepted = insights
       .filter(insight => reviewedInsights[insight.id] === 'accepted')
-      .map(insight => updatedInsights[insight.id] || insight),
-    [insights, reviewedInsights, updatedInsights]
-  );
+      .map(insight => updatedInsights[insight.id] || insight);
+    console.log(`Calculated acceptedInsights: ${accepted.length} insights`);
+    return accepted;
+  }, [insights, reviewedInsights, updatedInsights]);
   
   // Get rejected insights
-  const rejectedInsights = useMemo(() => 
-    insights.filter(insight => reviewedInsights[insight.id] === 'rejected'),
-    [insights, reviewedInsights]
-  );
+  const rejectedInsights = useMemo(() => {
+    const rejected = insights.filter(insight => 
+      reviewedInsights[insight.id] === 'rejected'
+    );
+    console.log(`Calculated rejectedInsights: ${rejected.length} insights`);
+    return rejected;
+  }, [insights, reviewedInsights]);
   
   // Handler for accepting an insight
   const handleAcceptInsight = useCallback((insightId: string) => {

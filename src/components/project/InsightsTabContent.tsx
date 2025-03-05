@@ -62,6 +62,12 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const rejectedCount = insights.filter(insight => 
     reviewedInsights[insight.id] === 'rejected'
   ).length;
+
+  // Log counts for debugging
+  useEffect(() => {
+    console.log(`InsightsTabContent: Total insights: ${insights.length}`);
+    console.log(`InsightsTabContent: Pending: ${pendingCount}, Accepted: ${acceptedCount}, Rejected: ${rejectedCount}`);
+  }, [insights, pendingCount, acceptedCount, rejectedCount]);
   
   const handleRefreshInsights = useCallback(() => {
     queryClient.invalidateQueries({

@@ -78,35 +78,26 @@ export const useInsightsPersistence = (projectId: string) => {
       // Otherwise, intelligently merge based on source
       const existingInsights = loadInsights();
       
-      // Determine insight sources in the new dataset
-      const newInsightSources = Array.from(
-        new Set(insightData.insights.map(insight => insight.source || 'document'))
-      );
+      // Use a Map to prevent duplicates based on ID
+      const insightMap = new Map<string, StrategicInsight>();
       
-      let updatedInsights: StrategicInsight[] = [];
+      // Add existing insights to the map
+      existingInsights.forEach(insight => {
+        insightMap.set(insight.id, insight);
+      });
       
-      // Handle the different source scenarios
-      if (newInsightSources.length === 1) {
-        const newSource = newInsightSources[0];
-        
-        // Keep existing insights from other sources
-        const existingOtherSourceInsights = existingInsights.filter(
-          insight => (insight.source || 'document') !== newSource
-        );
-        
-        // Combine other source insights with new insights of this source
-        updatedInsights = [...existingOtherSourceInsights, ...insightData.insights];
-        
-        console.log(`Updated insights by source: kept ${existingOtherSourceInsights.length} existing insights with different source, added ${insightData.insights.length} new insights with source '${newSource}'`);
-      } else {
-        // If we have mixed sources in the new dataset, determine the best merge strategy
-        // For now, just append the new insights, avoiding duplicates by ID
-        const existingIds = new Set(existingInsights.map(insight => insight.id));
-        const newUniqueInsights = insightData.insights.filter(insight => !existingIds.has(insight.id));
-        
-        updatedInsights = [...existingInsights, ...newUniqueInsights];
-        console.log(`Added ${newUniqueInsights.length} unique new insights to ${existingInsights.length} existing insights`);
-      }
+      // Add or update with new insights
+      insightData.insights.forEach(insight => {
+        // Only add if we don't already have this insight
+        if (!insightMap.has(insight.id)) {
+          insightMap.set(insight.id, insight);
+        }
+      });
+      
+      // Convert map back to array
+      const updatedInsights = Array.from(insightMap.values());
+      
+      console.log(`Persistence - Existing: ${existingInsights.length}, New: ${insightData.insights.length}, Total unique: ${updatedInsights.length}`);
       
       const storageData: StoredInsightData = {
         projectId: projectId,

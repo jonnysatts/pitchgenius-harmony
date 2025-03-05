@@ -18,7 +18,7 @@ export const useAnalysisPreparation = () => {
   ) => {
     console.log("Starting document analysis with documents:", documents.length);
     
-    // Show toast notification
+    // Show only one toast notification
     toast.info("Analysis started", {
       description: "Your documents are being analyzed. You'll be redirected to see the progress."
     });
@@ -38,13 +38,7 @@ export const useAnalysisPreparation = () => {
   }, []);
 
   const handleAnalysisSuccess = useCallback((numInsights: number) => {
-    uiToast({
-      title: "Analysis Completed",
-      description: `Generated ${numInsights} insights from your documents.`,
-      variant: "default"
-    });
-    
-    // Also show in the newer toast system
+    // Use only one toast system for success (preferring sonner)
     toast.success("Analysis completed", {
       description: `Generated ${numInsights} insights from your documents.`
     });
@@ -53,13 +47,7 @@ export const useAnalysisPreparation = () => {
   }, [uiToast]);
 
   const handleAnalysisError = useCallback(() => {
-    uiToast({
-      title: "Analysis Error",
-      description: "An error occurred. Using fallback insights instead.",
-      variant: "destructive"
-    });
-    
-    // Also show in the newer toast system
+    // Use only one toast system for errors (preferring sonner)
     toast.error("Analysis error", {
       description: "An error occurred. Using fallback insights instead."
     });
