@@ -24,6 +24,7 @@ export const useQueryInsights = (project: Project) => {
     insights: insightsQuery.data || [],
     isLoading: insightsQuery.isLoading,
     error: insightsQuery.error,
+    refetchInsights: insightsQuery.refetch, // Export the refetch function
     
     // Mutations
     addInsights: (newInsights: StrategicInsight[]) => 

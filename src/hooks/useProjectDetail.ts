@@ -3,6 +3,7 @@ import { Project, Document } from "@/lib/types";
 import { useDocuments } from "@/hooks/documents/useDocuments";
 import { useAiAnalysis } from "@/hooks/useAiAnalysis";
 import useInsightsReview from "@/hooks/useInsightsReview";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const useProjectDetail = (projectId: string, userId: string, project: Project) => {
   const [activeTab, setActiveTab] = useState<string>("documents");
@@ -25,15 +26,17 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     insights,
     aiStatus,
     error: aiError,
+    useRealAI,
     processingComplete,
     usingFallbackInsights,
     insufficientContent,
+    setUseRealAI,
     handleAnalyzeDocuments,
     retryAnalysis,
-    // Add website analysis functionality
     isAnalyzingWebsite,
     websiteInsights,
-    analyzeWebsite
+    analyzeWebsite,
+    refetchInsights
   } = useAiAnalysis(project);
   
   // Handle insights review
@@ -116,6 +119,12 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     }
   }, [isAnalyzingWebsite]);
   
+  // Add refresh insights function
+  const handleRefreshInsights = useCallback(() => {
+    console.log('Refreshing insights data for project:', projectId);
+    refetchInsights();
+  }, [projectId, refetchInsights]);
+  
   return {
     activeTab,
     setActiveTab,
@@ -142,11 +151,10 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     handleUpdateInsight,
     handleRetryAnalysis,
     isNewProject,
-    // Add website analysis functionality
     isAnalyzingWebsite,
     websiteInsights,
     handleAnalyzeWebsite,
-    // Stable tab navigation functions
+    handleRefreshInsights,
     handleNavigateToDocuments,
     handleNavigateToPresentation,
     handleNavigateToWebInsights

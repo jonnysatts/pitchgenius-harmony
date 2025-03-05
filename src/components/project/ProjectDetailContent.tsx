@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, StrategicInsight } from "@/lib/types";
@@ -35,6 +34,7 @@ interface ProjectDetailContentProps {
   handleUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   navigateToPresentation: () => void;
   onRetryAnalysis: () => void;
+  onRefreshInsights?: () => void;
 }
 
 const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
@@ -61,9 +61,9 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   handleRejectInsight,
   handleUpdateInsight,
   navigateToPresentation,
-  onRetryAnalysis
+  onRetryAnalysis,
+  onRefreshInsights
 }) => {
-  // Filter insights by source for document insights vs website insights
   const documentInsights = insights.filter(insight => insight.source !== 'website');
   const websiteInsights = insights.filter(insight => insight.source === 'website');
   
@@ -118,6 +118,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
               onUpdateInsight={handleUpdateInsight}
               onNavigateToWebInsights={() => setActiveTab("webinsights")}
               onRetryAnalysis={onRetryAnalysis}
+              onRefreshInsights={onRefreshInsights}
             />
           </TabsContent>
           

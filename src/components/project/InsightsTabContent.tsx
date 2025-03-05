@@ -1,35 +1,26 @@
 
-import React from "react";
-import { Project, StrategicInsight, AIProcessingStatus } from "@/lib/types";
-import { Tabs } from "@/components/ui/tabs";
-import InsightsErrorAlert from "@/components/project/InsightsErrorAlert";
-import InsightsStats from "@/components/project/InsightsStats";
-import InsightsEmptyState from "@/components/project/InsightsEmptyState";
-import { 
-  InsightsTabHeader, 
-  InsightsCategoryNav, 
-  InsightsCategoryTabs,
-  groupInsightsByCategory,
-  getCategoriesWithInsights,
-  getCategoryName
-} from "@/components/project/insights-tab";
+import React, { useState, useCallback, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StrategicInsight, Project, AIProcessingStatus } from "@/lib/types";
+import InsightsList from "./insights/InsightsList";
+import NoInsightsPlaceholder from "./insights/NoInsightsPlaceholder";
+import AnalysisLoadingState from "./insights/AnalysisLoadingState";
+import InsightsTabHeader from "./insights-tab/InsightsTabHeader";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface InsightsTabContentProps {
   project: Project;
   insights: StrategicInsight[];
   reviewedInsights: Record<string, 'accepted' | 'rejected' | 'pending'>;
-  error?: string | null;
+  error: string | null;
+  aiStatus?: AIProcessingStatus;
   overallConfidence?: number;
   needsReviewCount?: number;
   usingFallbackInsights?: boolean;
-  aiStatus?: AIProcessingStatus;
-  insufficientContent?: boolean;
+  onNavigateToWebInsights?: () => void;
   onAcceptInsight: (insightId: string) => void;
   onRejectInsight: (insightId: string) => void;
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
-  onNavigateToDocuments?: () => void;
-  onNavigateToPresentation?: () => void;
-  onNavigateToWebInsights?: () => void;
   onRetryAnalysis?: () => void;
 }
 
@@ -38,88 +29,155 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   insights,
   reviewedInsights,
   error,
+  aiStatus,
   overallConfidence = 0,
   needsReviewCount = 0,
   usingFallbackInsights = false,
-  aiStatus,
-  insufficientContent = false,
+  onNavigateToWebInsights,
   onAcceptInsight,
   onRejectInsight,
   onUpdateInsight,
-  onNavigateToDocuments,
-  onNavigateToPresentation,
-  onNavigateToWebInsights,
   onRetryAnalysis
 }) => {
-  // Only show document insights, not website insights
-  const documentInsights = insights.filter(insight => insight.source === 'document');
-  const hasInsights = documentInsights.length > 0;
+  const queryClient = useQueryClient();
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [renderedInsights, setRenderedInsights] = useState<StrategicInsight[]>([]);
   
-  // Only set as fallback insights for display if there are insights and the flag is true
-  const showingFallbackInsights = hasInsights && usingFallbackInsights;
+  const hasInsights = insights && insights.length > 0;
+  const isAnalyzing = aiStatus && aiStatus.status === 'processing';
   
-  // Filter for document-specific error messages (that don't mention websites)
-  const docError = error && !error.includes('website') ? error : null;
+  // Handler for refreshing insights view
+  const handleRefreshInsights = useCallback(() => {
+    // Invalidate the insights query to force a refetch
+    queryClient.invalidateQueries({
+      queryKey: ['project', project.id, 'insights']
+    });
+    
+    // Force re-render with current insights
+    setRenderedInsights([...insights]);
+    
+    console.log('Manually refreshed insights view');
+  }, [queryClient, project.id, insights]);
   
-  // Count the insights that have been accepted
-  const acceptedCount = documentInsights.filter(
-    insight => reviewedInsights[insight.id] === 'accepted'
-  ).length;
-
-  // Group insights by category and get categories with insights
-  const insightsByCategory = groupInsightsByCategory(documentInsights);
-  const categoriesWithInsights = getCategoriesWithInsights(insightsByCategory);
+  // Filter insights based on active filter
+  useEffect(() => {
+    if (!insights) {
+      setRenderedInsights([]);
+      return;
+    }
+    
+    let filtered = [...insights];
+    
+    if (activeFilter === "pending") {
+      filtered = filtered.filter(insight => 
+        !reviewedInsights[insight.id] || reviewedInsights[insight.id] === 'pending'
+      );
+    } else if (activeFilter === "accepted") {
+      filtered = filtered.filter(insight => 
+        reviewedInsights[insight.id] === 'accepted'
+      );
+    } else if (activeFilter === "rejected") {
+      filtered = filtered.filter(insight => 
+        reviewedInsights[insight.id] === 'rejected'
+      );
+    }
+    
+    setRenderedInsights(filtered);
+  }, [insights, activeFilter, reviewedInsights]);
   
   return (
-    <div className="bg-white p-6 rounded-lg border">
+    <div className="space-y-6">
       <InsightsTabHeader 
         hasInsights={hasInsights} 
-        onRetryAnalysis={onRetryAnalysis} 
-      />
-      
-      <InsightsErrorAlert 
-        error={docError} 
         onRetryAnalysis={onRetryAnalysis}
+        onRefreshInsights={handleRefreshInsights} // Add refresh handler
       />
       
-      {hasInsights && (
-        <div className="mb-6">
-          <InsightsStats
-            insightCount={documentInsights.length}
-            acceptedCount={acceptedCount}
-            needsReviewCount={needsReviewCount || 0}
-            confidence={overallConfidence}
-            usingFallbackInsights={showingFallbackInsights}
-          />
+      {/* Show loading UI when analysis is in progress */}
+      {isAnalyzing && (
+        <AnalysisLoadingState aiStatus={aiStatus} />
+      )}
+      
+      {/* Show error message if there is one and not in analyzing state */}
+      {error && !isAnalyzing && (
+        <div className="p-4 mb-4 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-amber-800 font-medium">{error}</p>
+          
+          {usingFallbackInsights && (
+            <p className="text-amber-700 text-sm mt-1">
+              Using sample insights instead. For real AI analysis, please check your connection and API settings.
+            </p>
+          )}
         </div>
       )}
       
-      {hasInsights ? (
-        <div>
-          <Tabs defaultValue="all" className="w-full">
-            <InsightsCategoryNav 
-              categoriesWithInsights={categoriesWithInsights} 
-              getCategoryName={getCategoryName} 
-            />
-            
-            <InsightsCategoryTabs 
-              insightsByCategory={insightsByCategory}
-              categoriesWithInsights={categoriesWithInsights}
-              getCategoryName={getCategoryName}
+      {/* Show no insights placeholder if there are no insights and not analyzing */}
+      {!hasInsights && !isAnalyzing && (
+        <NoInsightsPlaceholder 
+          error={error}
+          onNavigateToWebInsights={onNavigateToWebInsights}
+          onRetryAnalysis={onRetryAnalysis}
+        />
+      )}
+      
+      {/* Show insights if available */}
+      {hasInsights && !isAnalyzing && (
+        <Tabs defaultValue="all" className="w-full" onValueChange={setActiveFilter}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="all">
+              All Insights ({insights.length})
+            </TabsTrigger>
+            <TabsTrigger value="pending">
+              Needs Review ({needsReviewCount})
+            </TabsTrigger>
+            <TabsTrigger value="accepted">
+              Accepted ({Object.values(reviewedInsights).filter(status => status === 'accepted').length})
+            </TabsTrigger>
+            <TabsTrigger value="rejected">
+              Rejected ({Object.values(reviewedInsights).filter(status => status === 'rejected').length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="all" className="mt-0">
+            <InsightsList 
+              insights={renderedInsights}
               reviewedInsights={reviewedInsights}
               onAcceptInsight={onAcceptInsight}
               onRejectInsight={onRejectInsight}
               onUpdateInsight={onUpdateInsight}
             />
-          </Tabs>
-        </div>
-      ) : (
-        <InsightsEmptyState 
-          onNavigateToDocuments={onNavigateToDocuments}
-          onRetryAnalysis={onRetryAnalysis}
-          onAnalyzeWebsite={onNavigateToWebInsights}
-          insufficientContent={insufficientContent}
-        />
+          </TabsContent>
+          
+          <TabsContent value="pending" className="mt-0">
+            <InsightsList 
+              insights={renderedInsights}
+              reviewedInsights={reviewedInsights}
+              onAcceptInsight={onAcceptInsight}
+              onRejectInsight={onRejectInsight}
+              onUpdateInsight={onUpdateInsight}
+            />
+          </TabsContent>
+          
+          <TabsContent value="accepted" className="mt-0">
+            <InsightsList 
+              insights={renderedInsights}
+              reviewedInsights={reviewedInsights}
+              onAcceptInsight={onAcceptInsight}
+              onRejectInsight={onRejectInsight}
+              onUpdateInsight={onUpdateInsight}
+            />
+          </TabsContent>
+          
+          <TabsContent value="rejected" className="mt-0">
+            <InsightsList 
+              insights={renderedInsights}
+              reviewedInsights={reviewedInsights}
+              onAcceptInsight={onAcceptInsight}
+              onRejectInsight={onRejectInsight}
+              onUpdateInsight={onUpdateInsight}
+            />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

@@ -12,7 +12,7 @@ export const useInsightsMutations = (projectId: string, insightsQueryKey: string
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
-  const { persistInsights } = useInsightsPersistence(projectId);
+  const { persistInsights, loadInsights } = useInsightsPersistence(projectId);
 
   // Mutation for adding new insights
   const addInsightsMutation = useMutation({
@@ -27,7 +27,8 @@ export const useInsightsMutations = (projectId: string, insightsQueryKey: string
         return queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || [];
       }
       
-      const currentInsights = queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || [];
+      // Get current insights from cache or load them if needed
+      const currentInsights = queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || loadInsights();
       let updatedInsights: StrategicInsight[] = [];
       
       // For website insights, remove existing website insights
@@ -105,6 +106,26 @@ export const useInsightsMutations = (projectId: string, insightsQueryKey: string
       insights: StrategicInsight[],
       usingFallback?: boolean
     }) => {
+      // Before setting new insights, check if we should preserve existing ones of different type
+      const existingInsights = loadInsights();
+      
+      if (existingInsights.length > 0 && insights.length > 0) {
+        const newInsightTypes = new Set(insights.map(i => i.source)); // e.g., 'document' or 'website'
+        
+        // If there are only document or only website insights in the new set, preserve the opposite type
+        if (newInsightTypes.size === 1) {
+          const newType = Array.from(newInsightTypes)[0];
+          const existingOfOtherType = existingInsights.filter(insight => 
+            insight.source !== newType
+          );
+          
+          if (existingOfOtherType.length > 0) {
+            console.log(`Preserving ${existingOfOtherType.length} existing insights of type not being replaced`);
+            return [...existingOfOtherType, ...insights];
+          }
+        }
+      }
+      
       return insights;
     },
     onSuccess: (newInsights, { usingFallback }) => {
@@ -142,7 +163,8 @@ export const useInsightsMutations = (projectId: string, insightsQueryKey: string
       insightId: string,
       updates: Partial<StrategicInsight>
     }) => {
-      const currentInsights = queryClient.getQueryData<StrategicInsight[]>(insightsQueryKey) || [];
+      // Get insights directly from localStorage to ensure we have the latest
+      const currentInsights = loadInsights();
       
       return currentInsights.map(insight => 
         insight.id === insightId 

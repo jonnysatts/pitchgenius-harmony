@@ -15,7 +15,8 @@ export const useAiResults = (project: Project) => {
     error,
     setInsights: setPersistentInsights,
     addInsights,
-    isLoading
+    isLoading,
+    refetchInsights
   } = useQueryInsights(project);
 
   // Show completion toast based on insight generation results
@@ -41,6 +42,7 @@ export const useAiResults = (project: Project) => {
     setInsights: setPersistentInsights,
     error,
     isLoading,
+    refetchInsights, // Add refetch function
     setError: () => {}, // Handled by React Query now
     handleCompletionToast,
     persistInsights: (insights: StrategicInsight[], usingFallback = false) => 

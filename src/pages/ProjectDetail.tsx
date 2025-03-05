@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
@@ -74,8 +73,8 @@ const ProjectDetail = () => {
     handleUpdateInsight,
     handleNavigateToPresentation,
     handleRetryAnalysis,
+    handleRefreshInsights,
     isNewProject,
-    // Add the website analysis functionality
     isAnalyzingWebsite,
     handleAnalyzeWebsite
   } = useProjectDetail(projectId, user?.id || '', project || {} as Project);
@@ -152,6 +151,7 @@ const ProjectDetail = () => {
         handleUpdateInsight={handleUpdateInsight}
         navigateToPresentation={handleNavigateToPresentation}
         onRetryAnalysis={handleRetryAnalysis}
+        onRefreshInsights={handleRefreshInsights}
       />
     </AppLayout>
   );
