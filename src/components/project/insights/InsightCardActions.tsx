@@ -39,7 +39,6 @@ const InsightCardActions: React.FC<InsightCardActionsProps> = ({
       console.log("Updating insight with refined content:", updatedContent);
       
       // Call the onUpdate function with the complete updated content object
-      // (not just updating the details field)
       onUpdate(updatedContent);
       
       // Close the dialog after applying changes

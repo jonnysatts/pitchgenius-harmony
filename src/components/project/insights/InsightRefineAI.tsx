@@ -42,27 +42,27 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       // Only process AI messages
       if (lastMessage.role === 'ai') {
         try {
-          // Look for JSON content in the AI message
+          // First, look for JSON content in the AI message
           const jsonMatch = lastMessage.content.match(/```json\n([\s\S]*?)\n```/);
           
           if (jsonMatch && jsonMatch[1]) {
             const parsedContent = JSON.parse(jsonMatch[1]);
             if (parsedContent && typeof parsedContent === 'object') {
               console.log('Found structured content in AI response:', parsedContent);
-              setRefinedContent(prev => ({
-                ...prev,
+              setRefinedContent({
+                ...initialContent,
                 ...parsedContent
-              }));
+              });
             }
           } else {
             // Try to parse insight sections without JSON blocks
-            const updatedContent = extractInsightSections(lastMessage.content, refinedContent);
+            const updatedContent = extractInsightSections(lastMessage.content, initialContent);
             if (updatedContent && Object.keys(updatedContent).length > 0) {
               console.log('Extracted content from AI response:', updatedContent);
-              setRefinedContent(prev => ({
-                ...prev,
+              setRefinedContent({
+                ...initialContent,
                 ...updatedContent
-              }));
+              });
             }
           }
         } catch (err) {
@@ -70,10 +70,11 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
         }
       }
     }
-  }, [messages, setRefinedContent, refinedContent]);
+  }, [messages, setRefinedContent, initialContent]);
 
   // Handle sending a message
   const handleSendMessage = (message: string) => {
+    console.log("Sending message to AI:", message);
     sendMessage(message);
     // Clear any prefilled text after sending
     setPrefilledText("");
@@ -90,7 +91,7 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       recommendations: "Recommendations"
     };
     
-    const currentContent = refinedContent[section] || "not yet provided";
+    const currentContent = refinedContent[section] || initialContent[section] || "not yet provided";
     
     // Prefill a message that asks for improvement for the selected section
     const message = `Can you help me improve the ${sectionLabels[section]} section? Currently it says: "${currentContent}". I'd like it to be more specific and impactful.`;
@@ -99,7 +100,7 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden py-2 space-y-2">
+    <div className="flex flex-col h-full overflow-hidden space-y-3">
       {/* Display Messages Area */}
       <ChatMessages 
         messages={messages} 

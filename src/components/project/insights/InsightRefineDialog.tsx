@@ -71,7 +71,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto min-h-[400px] max-h-[60vh]">
+        <div className="flex-1 overflow-y-auto min-h-[350px] max-h-[60vh] py-4">
           {!aiConversationMode ? (
             <ManualRefinementMode
               insightTitle={insightTitle}
@@ -89,7 +89,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
           )}
         </div>
         
-        <DialogFooter className="mt-4 pt-2 border-t border-slate-200">
+        <DialogFooter className="mt-4 pt-2 border-t border-slate-200 flex-shrink-0">
           <Button variant="outline" onClick={onClose} disabled={isRefining}>
             Cancel
           </Button>
