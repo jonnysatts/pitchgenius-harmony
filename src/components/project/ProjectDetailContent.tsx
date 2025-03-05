@@ -90,6 +90,7 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
     { id: "insights", label: "Insights", count: documentInsights.length },
     { id: "webinsights", label: "Web Insights", count: websiteInsights.length },
     { id: "presentation", label: "Presentation", count: null },
+    { id: "help", label: "Help", count: null },
   ];
   
   return (
