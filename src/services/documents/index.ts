@@ -5,8 +5,7 @@ export * from './mockDocuments';
 export * from './errors';
 
 // Re-export with proper names to match what the hooks are expecting
-import { fetchProjectDocumentsFromApi } from './fetchOperations';
-import { removeDocumentFromApi } from './fetchOperations';
+import { fetchProjectDocumentsFromApi, uploadDocumentToApi, removeDocumentFromApi } from './fetchOperations';
 
 // Export with the names used in the hooks
 export const fetchProjectDocuments = fetchProjectDocumentsFromApi;
@@ -23,7 +22,7 @@ export const insertDocumentRecord = async (
   priority: number,
   storagePath: string
 ) => {
-  console.log('Mock insertDocumentRecord called');
+  console.log('Mock insertDocumentRecord called with projectId:', projectId);
   // Use uploadDocumentToApi which is available
   return uploadDocumentToApi(projectId, new File([], name, { type }), priority);
 };
@@ -34,7 +33,7 @@ export const uploadDocumentToStorage = async (
   userId: string,
   projectId: string
 ) => {
-  console.log('Mock uploadDocumentToStorage called');
+  console.log('Mock uploadDocumentToStorage called with projectId:', projectId);
   const storagePath = `${projectId}/${Date.now()}_${file.name}`;
   const publicUrl = URL.createObjectURL(file);
   return { storagePath, publicUrl };
