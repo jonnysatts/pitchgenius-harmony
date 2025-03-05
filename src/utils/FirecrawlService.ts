@@ -54,6 +54,18 @@ export class FirecrawlService {
       
       // Normalize the URL format - ensure proper protocol
       let normalizedUrl = websiteUrl.trim();
+      
+      // Check if the URL is valid
+      try {
+        // First try to construct a URL object to validate
+        // If it fails with a relative URL, we'll add the protocol in the next step
+        new URL(normalizedUrl);
+      } catch (e) {
+        // URL constructor failed, it's likely missing a protocol
+        normalizedUrl = `https://${normalizedUrl}`;
+      }
+      
+      // Ensure protocol is present
       if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
         normalizedUrl = `https://${normalizedUrl}`;
       }
@@ -92,21 +104,23 @@ export class FirecrawlService {
       }
       
       // Check if the API returned a direct error message
-      if (data.error) {
+      if (data?.error) {
         console.error('Error from API response:', data.error);
         
         // Check for specific HTTP status errors
-        const isHttpError = data.error.includes('HTTP error') || 
-                            data.error.includes('403') || 
-                            data.error.includes('401');
+        const isHttpError = typeof data.error === 'string' && (
+          data.error.includes('HTTP error') || 
+          data.error.includes('403') || 
+          data.error.includes('401')
+        );
                             
         // Check if error is related to Claude being overloaded
-        const isRetriable = 
-          (typeof data.error === 'string' && 
-           (data.error.includes('overloaded') || 
-            data.error.includes('rate limit') || 
-            data.error.includes('429') || 
-            data.error.includes('529')));
+        const isRetriable = typeof data.error === 'string' && (
+          data.error.includes('overloaded') || 
+          data.error.includes('rate limit') || 
+          data.error.includes('429') || 
+          data.error.includes('529')
+        );
             
         return {
           success: false,
@@ -117,7 +131,7 @@ export class FirecrawlService {
       }
       
       // Check if the API returned proper insights
-      if (data.insights && Array.isArray(data.insights) && data.insights.length > 0) {
+      if (data?.insights && Array.isArray(data.insights) && data.insights.length > 0) {
         // Always check if insights are usable - sometimes we get error insights
         const errorTitles = [
           "Improve Website Accessibility",
@@ -128,21 +142,56 @@ export class FirecrawlService {
           "Unable to Identify",
           "Unable to Evaluate",
           "Unable to Provide",
-          "Placeholder Title"
+          "Placeholder Title",
+          "Essential Business Focus Areas",  // Match fallback titles
+          "Target Audience Analysis",
+          "Competitive Differentiation", 
+          "Growth Expansion Possibilities",
+          "Strategic Priorities",
+          "Core Brand Narratives"
         ];
         
-        const allErrorInsights = data.insights.every(insight => 
-          errorTitles.some(errorTitle => 
-            insight.content?.title?.includes(errorTitle)
-          )
-        );
+        // Check if all insights have error-related titles or are marked as fallbacks
+        const allErrorInsights = data.insights.every(insight => {
+          const title = insight.content?.title || '';
+          const id = insight.id || '';
+          
+          // Check if it's a fallback insight (they typically have IDs like fallback_1)
+          const isFallbackInsight = id.includes('fallback_');
+          
+          // Check if title matches any error patterns
+          const hasTitleMatch = errorTitles.some(errorTitle => title.includes(errorTitle));
+          
+          return hasTitleMatch || isFallbackInsight;
+        });
         
-        if (allErrorInsights) {
-          // Even though we got insights, they're all error-related
+        // Also check if insights have error-related content
+        const errorContentPatterns = [
+          "Failed to extract content",
+          "could not be accessed",
+          "HTTP error",
+          "accessibility issues",
+          "Website content could not be accessed",
+          "No specific evidence",
+          "Evidence would normally be extracted",
+          "Without access to the website"
+        ];
+        
+        const hasErrorContent = data.insights.some(insight => {
+          const details = insight.content?.details || '';
+          return errorContentPatterns.some(pattern => details.includes(pattern));
+        });
+        
+        if (allErrorInsights || hasErrorContent || data.usingFallback === true) {
+          // Even though we got insights, they're all error-related or fallbacks
+          const errorMessage = data.error || 
+                            data.insights[0]?.content?.details || 
+                            "Unable to extract meaningful content from website";
+          
           return {
             success: false,
-            error: data.insights[0]?.content?.details || "Unable to extract content from website",
-            insights: data.insights
+            error: errorMessage,
+            insights: [] // Return empty array to prevent fallback insights from appearing as real ones
           };
         }
         
@@ -155,7 +204,7 @@ export class FirecrawlService {
       // Fallback to basic error handling
       return {
         success: false,
-        error: "Received a valid response but no insights were found.",
+        error: data?.error || "Received a valid response but no insights were found.",
         insights: []
       };
     } catch (error) {
@@ -163,7 +212,8 @@ export class FirecrawlService {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error analyzing website",
-        retriableError: false
+        retriableError: false,
+        insights: [] // Ensure empty insights array to prevent fallbacks
       };
     }
   }

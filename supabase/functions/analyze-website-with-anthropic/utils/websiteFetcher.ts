@@ -20,6 +20,8 @@ export async function fetchWebsiteContentBasic(url: string): Promise<string> {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.5',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
     });
     
     // If that failed, try with a mobile user agent
@@ -29,6 +31,7 @@ export async function fetchWebsiteContentBasic(url: string): Promise<string> {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache'
       });
     }
     
@@ -38,6 +41,16 @@ export async function fetchWebsiteContentBasic(url: string): Promise<string> {
       response = await attemptFetch(urlWithProtocol, {
         'User-Agent': 'curl/7.64.1',
         'Accept': '*/*',
+      });
+    }
+    
+    // Try one more time with Googlebot user agent (some sites allow this)
+    if (!response.ok) {
+      console.log(`Third attempt failed with status ${response.status}, trying with Googlebot user agent`);
+      response = await attemptFetch(urlWithProtocol, {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
       });
     }
     

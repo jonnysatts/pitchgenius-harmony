@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { FirecrawlService } from '@/utils/FirecrawlService';
@@ -19,6 +18,8 @@ export const useWebsiteAnalysisLogic = (
 
   // Enhanced helper function to check if insights are all error-related
   const areAllErrorInsights = useCallback((insights: StrategicInsight[]) => {
+    if (!insights || insights.length === 0) return true;
+    
     // Common patterns in error insight titles
     const errorTitles = [
       "Improve Website Accessibility",
@@ -46,7 +47,8 @@ export const useWebsiteAnalysisLogic = (
       "accessibility issues",
       "Website content could not be accessed",
       "No specific evidence",
-      "Evidence would normally be extracted"
+      "Evidence would normally be extracted",
+      "Without access to the website"
     ];
     
     // Check if any insights have error-related content
@@ -73,8 +75,8 @@ export const useWebsiteAnalysisLogic = (
   }, []);
 
   const handleAnalysisTimeout = useCallback((
-    progressInterval: NodeJS.Timeout,
-    progressCheckInterval: NodeJS.Timeout
+    progressInterval: NodeJS.Timeout | null,
+    progressCheckInterval: NodeJS.Timeout | null
   ) => {
     console.log("Website analysis timed out - clearing all insights");
     setError("Analysis timed out. Please try a different website or check your internet connection.");
@@ -106,37 +108,24 @@ export const useWebsiteAnalysisLogic = (
     
     console.log("Website analysis results:", result);
 
-    // Check if we got any actual insights
-    if (result && result.insights && result.insights.length > 0) {
-      // Check if the insights are all error-related
+    // Check if we got any actual insights and they are not error placeholders
+    if (result && result.success && result.insights && result.insights.length > 0) {
+      // Double-check if the insights are all error-related
       if (areAllErrorInsights(result.insights)) {
         console.log("Only error-related insights were found or fallback insights returned");
         
-        // If result indicates using fallbacks, extract that information
-        const usingFallback = result.usingFallback === true;
-        
         // Extract error message from first insight or use provided error
-        const errorDetail = usingFallback 
-          ? "The Claude API is currently overloaded or returned insufficient content." 
-          : (result.error || result.insights[0]?.content?.details || "The website could not be analyzed correctly.");
+        const errorDetail = result.error || result.insights[0]?.content?.details || 
+                          "The website could not be analyzed correctly.";
         
         setError(errorDetail);
         setWebsiteInsights([]);
         
-        // Different toast messages based on the error type
-        if (usingFallback || (result.error && result.error.includes('overloaded'))) {
-          toast({
-            title: "Claude API Temporarily Unavailable",
-            description: "Claude AI is currently overloaded. Please try again in a few minutes.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Website Analysis Failed",
-            description: "We couldn't extract meaningful content from the website.",
-            variant: "destructive"
-          });
-        }
+        toast({
+          title: "Website Analysis Failed",
+          description: "We couldn't extract meaningful content from the website.",
+          variant: "destructive"
+        });
         
         return;
       }
@@ -155,6 +144,7 @@ export const useWebsiteAnalysisLogic = (
         description: `Generated ${formattedInsights.length} insights from ${project.clientWebsite}`,
       });
     } else {
+      // Handle failure - extract error message
       const errorMessage = result?.error || "No insights returned from website analysis. The API may have failed to extract meaningful content.";
       const isRetriable = result?.retriableError === true;
       
@@ -175,6 +165,7 @@ export const useWebsiteAnalysisLogic = (
 
   return {
     handleAnalysisTimeout,
-    processAnalysisResult
+    processAnalysisResult,
+    areAllErrorInsights
   };
 };

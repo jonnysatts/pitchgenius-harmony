@@ -31,10 +31,13 @@ export const NoInsightsEmptyState = ({
     const isHttpError = error.includes('HTTP error') || error.includes('403') || error.includes('401');
     const isCorsError = error.includes('CORS') || error.includes('cross-origin');
     const isTimeoutError = error.includes('timeout') || error.includes('timed out');
+    const isEdgeFunctionError = error.includes('Edge Function') || error.includes('non-2xx status code');
     
     // Set title and explanation based on error type
     let errorTitle = isClaudeOverloaded 
       ? "Claude API Temporarily Unavailable" 
+      : isEdgeFunctionError
+      ? "Server Connection Failed"
       : "Website Analysis Failed";
       
     let errorExplanation = "";
@@ -47,6 +50,8 @@ export const NoInsightsEmptyState = ({
       errorExplanation = "The website has Cross-Origin Resource Sharing (CORS) restrictions that prevent our tools from accessing it.";
     } else if (isTimeoutError) {
       errorExplanation = "The connection to the website timed out. The site may be slow or temporarily unavailable.";
+    } else if (isEdgeFunctionError) {
+      errorExplanation = "The server-side function needed to analyze websites is currently unavailable. This is likely a temporary issue.";
     } else {
       errorExplanation = "We encountered an issue when analyzing the website. This often happens due to website access restrictions, CORS policies, or the site being temporarily unavailable.";
     }
@@ -62,6 +67,8 @@ export const NoInsightsEmptyState = ({
         <p className="text-gray-500 text-sm">
           {isClaudeOverloaded 
             ? "Please wait a few minutes and try again when the service is less busy."
+            : isEdgeFunctionError
+            ? "Try again in a few minutes. If the problem persists, check your internet connection."
             : "Try a different website URL or check that the URL format is correct. Some websites actively block analysis tools."}
         </p>
       </div>
