@@ -1,0 +1,49 @@
+
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Send } from "lucide-react";
+
+interface MessageInputProps {
+  isLoadingAI: boolean;
+  onSendMessage: (message: string) => void;
+}
+
+export const MessageInput: React.FC<MessageInputProps> = ({ 
+  isLoadingAI, 
+  onSendMessage 
+}) => {
+  const [currentMessage, setCurrentMessage] = useState("");
+
+  const handleSendMessage = () => {
+    if (!currentMessage.trim()) return;
+    onSendMessage(currentMessage);
+    setCurrentMessage("");
+  };
+
+  return (
+    <div className="flex items-center space-x-2 mt-1">
+      <Textarea
+        value={currentMessage}
+        onChange={(e) => setCurrentMessage(e.target.value)}
+        placeholder="Ask the AI how to refine this insight..."
+        className="min-h-[60px] resize-none"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+          }
+        }}
+        disabled={isLoadingAI}
+      />
+      <Button 
+        size="icon" 
+        onClick={handleSendMessage} 
+        disabled={!currentMessage.trim() || isLoadingAI}
+        className="flex-shrink-0"
+      >
+        <Send className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};

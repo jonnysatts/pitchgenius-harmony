@@ -1,9 +1,12 @@
 
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
+import React, { useEffect } from "react";
 import { useAIConversation } from "@/hooks/ai/useAIConversation";
+import { 
+  ChatMessages, 
+  RefinedContentView, 
+  MessageInput,
+  extractInsightSections
+} from "./AIConversation";
 
 interface AIConversationModeProps {
   insightTitle: string;
@@ -18,9 +21,6 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
   refinedContent,
   setRefinedContent
 }) => {
-  const [currentMessage, setCurrentMessage] = useState("");
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  
   // Use the custom hook for AI conversation logic
   const {
     messages,
@@ -31,13 +31,6 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
     insightContent: initialContent
   });
   
-  // Auto-scroll when new messages are added
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
   // Check for AI responses that might contain updated content
   useEffect(() => {
     if (messages.length > 0) {
@@ -76,127 +69,26 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
     }
   }, [messages, setRefinedContent, refinedContent]);
 
-  const handleSendMessage = () => {
-    if (!currentMessage.trim()) return;
-    sendMessage(currentMessage);
-    setCurrentMessage("");
+  const handleSendMessage = (message: string) => {
+    sendMessage(message);
   };
-
-  // Helper function to extract structured content from free-form text
-  const extractInsightSections = (text: string, currentContent: Record<string, any>) => {
-    const updates: Record<string, any> = {};
-    
-    // Look for common section headers in AI responses
-    const titleMatch = text.match(/Title:(.+?)(?=Summary:|Details:|Evidence:|Impact:|Recommendations:|$)/is);
-    if (titleMatch && titleMatch[1]?.trim()) {
-      updates.title = titleMatch[1].trim();
-    }
-    
-    const summaryMatch = text.match(/Summary:(.+?)(?=Details:|Evidence:|Impact:|Recommendations:|$)/is);
-    if (summaryMatch && summaryMatch[1]?.trim()) {
-      updates.summary = summaryMatch[1].trim();
-    }
-    
-    const detailsMatch = text.match(/Details:(.+?)(?=Evidence:|Impact:|Recommendations:|$)/is);
-    if (detailsMatch && detailsMatch[1]?.trim()) {
-      updates.details = detailsMatch[1].trim();
-    }
-    
-    const evidenceMatch = text.match(/Evidence:(.+?)(?=Impact:|Recommendations:|$)/is);
-    if (evidenceMatch && evidenceMatch[1]?.trim()) {
-      updates.evidence = evidenceMatch[1].trim();
-    }
-    
-    const impactMatch = text.match(/Impact:(.+?)(?=Recommendations:|$)/is);
-    if (impactMatch && impactMatch[1]?.trim()) {
-      updates.impact = impactMatch[1].trim();
-    }
-    
-    const recommendationsMatch = text.match(/Recommendations:(.+?)$/is);
-    if (recommendationsMatch && recommendationsMatch[1]?.trim()) {
-      updates.recommendations = recommendationsMatch[1].trim();
-    }
-    
-    return updates;
-  };
-
-  // Helper function to render the current state of each section
-  const renderCurrentSection = (title: string, fieldKey: string) => (
-    <div>
-      <h5 className="text-xs font-semibold text-slate-600">{title}</h5>
-      <p className="text-xs text-slate-700 whitespace-pre-wrap">
-        {refinedContent[fieldKey] || "Not provided"}
-      </p>
-    </div>
-  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden py-2 space-y-2">
       {/* Display Messages Area */}
-      <div 
-        ref={chatContainerRef} 
-        className="flex-1 overflow-y-auto pr-2 mb-2 max-h-[300px] min-h-[200px]"
-      >
-        <div className="space-y-3">
-          {messages.map((message, index) => (
-            <div 
-              key={index}
-              className={`p-3 rounded-lg ${
-                message.role === 'ai' 
-                  ? 'bg-slate-100 mr-8' 
-                  : 'bg-purple-100 ml-8'
-              }`}
-            >
-              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-            </div>
-          ))}
-          
-          {isLoadingAI && (
-            <div className="bg-slate-100 p-3 rounded-lg mr-8 flex items-center">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              <p className="text-sm">AI is thinking...</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <ChatMessages 
+        messages={messages} 
+        isLoadingAI={isLoadingAI} 
+      />
       
       {/* Current Refined Version */}
-      <div className="bg-slate-50 p-2 rounded border border-slate-200">
-        <h4 className="text-sm font-medium mb-1">Current Refined Version</h4>
-        <div className="grid gap-2 text-xs mb-2 max-h-[120px] overflow-y-auto p-2">
-          {renderCurrentSection("Title", "title")}
-          {renderCurrentSection("Summary", "summary")}
-          {renderCurrentSection("Details", "details")}
-          {renderCurrentSection("Evidence", "evidence")}
-          {renderCurrentSection("Impact", "impact")}
-          {renderCurrentSection("Recommendations", "recommendations")}
-        </div>
-      </div>
+      <RefinedContentView refinedContent={refinedContent} />
       
       {/* Input Area */}
-      <div className="flex items-center space-x-2 mt-1">
-        <Textarea
-          value={currentMessage}
-          onChange={(e) => setCurrentMessage(e.target.value)}
-          placeholder="Ask the AI how to refine this insight..."
-          className="min-h-[60px] resize-none"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isLoadingAI}
-        />
-        <Button 
-          size="icon" 
-          onClick={handleSendMessage} 
-          disabled={!currentMessage.trim() || isLoadingAI}
-          className="flex-shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+      <MessageInput 
+        isLoadingAI={isLoadingAI} 
+        onSendMessage={handleSendMessage} 
+      />
     </div>
   );
 };
