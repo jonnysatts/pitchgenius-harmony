@@ -9,7 +9,7 @@ export const getMockDocuments = (projectId: string): Document[] => {
   const storageKey = `project_documents_${projectId}`;
   const existingDocs = localStorage.getItem(storageKey);
   
-  // If we have stored documents, return an empty array to prevent mock documents from showing
+  // If we have stored documents, return them instead of mock documents
   if (existingDocs) {
     try {
       const parsedDocs = JSON.parse(existingDocs);

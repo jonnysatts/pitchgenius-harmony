@@ -1,13 +1,14 @@
 import { StoredInsightData, StrategicInsight } from "@/lib/types";
 import { useErrorHandler } from "@/hooks/error/useErrorHandler";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /**
  * Hook for persistence functions for insights
  */
 export const useInsightsPersistence = (projectId: string) => {
   const { handleError } = useErrorHandler();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   // Load insights from localStorage
   const loadInsights = (): StrategicInsight[] => {
@@ -88,9 +89,18 @@ export const useInsightsPersistence = (projectId: string) => {
       
       // Add or update with new insights
       insightData.insights.forEach(insight => {
-        // Only add if we don't already have this insight
+        // Only add if we don't already have this insight or if current insight has same ID but is from a different source
         if (!insightMap.has(insight.id)) {
           insightMap.set(insight.id, insight);
+        } else {
+          // If sources are different, keep both but modify the ID of the new one
+          const existingInsight = insightMap.get(insight.id);
+          if (existingInsight && existingInsight.source !== insight.source) {
+            // Create a new ID by appending source to avoid collision
+            const newId = `${insight.id}_${insight.source}`;
+            console.log(`Insight ID collision detected. Creating new ID: ${newId}`);
+            insightMap.set(newId, {...insight, id: newId});
+          }
         }
       });
       
@@ -114,10 +124,9 @@ export const useInsightsPersistence = (projectId: string) => {
       handleError(err, { context: 'persisting-insights', projectId: projectId });
       console.error('Error storing insights:', err);
       
-      toast({
-        title: "Failed to save insights",
-        description: "Your insights couldn't be saved to local storage",
-        variant: "destructive"
+      // Use sonner toast for consistency
+      toast.error("Failed to save insights", {
+        description: "Your insights couldn't be saved to local storage"
       });
     }
   };
