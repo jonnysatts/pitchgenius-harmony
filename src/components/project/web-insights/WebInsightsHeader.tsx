@@ -3,6 +3,7 @@ import React from 'react';
 import { AIProcessingStatus } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Globe, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface WebInsightsHeaderProps {
   websiteUrl?: string;
@@ -23,6 +24,9 @@ export const WebInsightsHeader: React.FC<WebInsightsHeaderProps> = ({
 }) => {
   const handleAnalyzeWebsite = () => {
     if (onAnalyzeWebsite) {
+      toast.info("Starting website analysis", {
+        description: "Analyzing website content to generate insights"
+      });
       onAnalyzeWebsite();
     }
   };

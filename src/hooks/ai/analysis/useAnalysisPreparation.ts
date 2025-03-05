@@ -23,6 +23,11 @@ export const useAnalysisPreparation = () => {
     // Start monitoring
     monitorProgress(setActiveTab);
     
+    // Immediately navigate to insights tab to show progress
+    setTimeout(() => {
+      setActiveTab("insights");
+    }, 300);
+    
     return { monitorProgress };
   }, []);
 

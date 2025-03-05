@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Document, Project, AIProcessingStatus } from "@/lib/types";
 import { FileUpload } from "@/components/file-upload";
 import DocumentList from "@/components/project/DocumentList";
@@ -8,6 +7,7 @@ import { Brain, Loader2, AlertCircle, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import WebsiteAnalysisCard from "@/components/project/WebsiteAnalysisCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from 'sonner';
 
 interface DocumentsTabContentProps {
   documents: Document[];
@@ -39,33 +39,34 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
   error
 }) => {
   const [isButtonClicked, setIsButtonClicked] = useState(false);
+  const [analysisStarted, setAnalysisStarted] = useState(false);
   
-  // Only disable the Analyze button if:
-  // 1. There are no documents OR
-  // 2. AI processing is currently happening OR
-  // 3. Documents are currently being loaded/uploaded OR
-  // 4. The button was just clicked (to prevent double clicks)
+  useEffect(() => {
+    setAnalysisStarted(false);
+  }, []);
+  
   const analyzeButtonDisabled = documents.length === 0 || 
                                (aiStatus && aiStatus.status === 'processing') || 
                                isLoading ||
                                isButtonClicked;
   
-  // Determine if Claude is in the intensive processing phase
   const isClaudeProcessing = aiStatus && 
                             aiStatus.status === 'processing' && 
                             aiStatus.progress >= 30 && 
                             aiStatus.progress < 60;
   
-  // Handle the analyze button click with visual feedback
   const handleAnalyzeClick = () => {
     if (!analyzeButtonDisabled) {
       console.log("Analyze button clicked, triggering document analysis");
       setIsButtonClicked(true);
+      setAnalysisStarted(true);
       
-      // Call the analyze function
+      toast.info("Analysis started", {
+        description: "Switching to insights tab to show analysis progress"
+      });
+      
       onAnalyzeDocuments();
       
-      // Reset button state after a delay (for better UX)
       setTimeout(() => {
         setIsButtonClicked(false);
       }, 2000);
@@ -101,7 +102,6 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
         />
       </div>
       
-      {/* Website Analysis Card - only shown if needed */}
       {(websiteUrl || project?.clientWebsite) && onAnalyzeWebsite && (
         <WebsiteAnalysisCard
           websiteUrl={websiteUrl || project?.clientWebsite}
@@ -146,6 +146,16 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({
                 : "Our AI is thoroughly analyzing all of your documents to extract strategic gaming opportunities..."}
             </p>
           </div>
+        )}
+        
+        {analysisStarted && (
+          <Alert className="mb-4 bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertTitle className="text-blue-700">Analysis in Progress</AlertTitle>
+            <AlertDescription className="text-blue-600">
+              We're now analyzing your documents. You will be redirected to the insights tab to view the progress.
+            </AlertDescription>
+          </Alert>
         )}
         
         {isLoading && (

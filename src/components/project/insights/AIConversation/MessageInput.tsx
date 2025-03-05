@@ -34,10 +34,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   useEffect(() => {
     if (textareaRef.current) {
       // Reset the height first to get the correct scrollHeight
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = '60px';
       
       // Set the height based on scrollHeight (with a maximum)
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 100);
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [currentMessage]);
@@ -49,18 +49,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     
     // Reset textarea height after sending
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = '60px';
     }
   };
 
   return (
-    <div className="flex items-start space-x-2 mt-2">
+    <div className="flex items-start space-x-2 mt-2 mb-2">
       <Textarea
         ref={textareaRef}
         value={currentMessage}
         onChange={(e) => setCurrentMessage(e.target.value)}
         placeholder="Ask the AI how to refine this insight..."
-        className="min-h-[60px] resize-none overflow-y-auto break-words"
+        className="min-h-[60px] max-h-[100px] resize-none overflow-y-auto"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

@@ -1,12 +1,13 @@
 
 import React, { useEffect } from 'react';
 import { Project, AIProcessingStatus } from '@/lib/types';
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   AnalysisProgressIndicator,
   AnalysisStatusAlert,
   AnalysisPhaseTimeline
 } from './analysis-controls';
+import { toast } from 'sonner';
 
 interface WebsiteAnalysisControlsProps {
   project: Project;
@@ -30,6 +31,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
   // Use the aiStatus for progress if available, otherwise use our simpler progress
   const [internalProgress, setInternalProgress] = React.useState(0);
   const [statusMessage, setStatusMessage] = React.useState('');
+  const [analysisCompleted, setAnalysisCompleted] = React.useState(false);
   
   // Determine which progress and message to show
   const progress = aiStatus?.progress ?? internalProgress;
@@ -49,6 +51,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
     if (isAnalyzing && !aiStatus) {
       setInternalProgress(0);
       setStatusMessage('Preparing to analyze website...');
+      setAnalysisCompleted(false);
       
       interval = setInterval(() => {
         setInternalProgress(prev => {
@@ -75,28 +78,26 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
         });
       }, 200); // Update more frequently
     } else if (!isAnalyzing) {
-      setInternalProgress(0);
-      setStatusMessage('');
+      // Check if we just completed an analysis
+      if (internalProgress > 90 && !analysisCompleted) {
+        setAnalysisCompleted(true);
+        
+        // Show toast notification when analysis completes
+        toast.success("Analysis Complete", {
+          description: "Website insights are now available for review"
+        });
+      }
+      
+      // Reset progress if not a completion
+      if (internalProgress === 0) {
+        setStatusMessage('');
+      }
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isAnalyzing, aiStatus]);
-
-  // Show a success message when analysis completes
-  useEffect(() => {
-    if (isAnalyzing === false && internalProgress > 90) {
-      setInternalProgress(0);
-      
-      if (!aiStatus) {
-        toast({
-          title: "Analysis Complete",
-          description: "Website insights are now available",
-        });
-      }
-    }
-  }, [isAnalyzing, internalProgress, aiStatus]);
+  }, [isAnalyzing, aiStatus, internalProgress, analysisCompleted]);
 
   // Only show controls when we're analyzing
   if (!isAnalyzing) {
@@ -104,7 +105,7 @@ export const WebsiteAnalysisControls: React.FC<WebsiteAnalysisControlsProps> = (
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 mb-6">
       {hasWebsiteUrl && (
         <div className="flex flex-col space-y-4">
           <div className="space-y-3">
