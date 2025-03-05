@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
@@ -63,6 +64,9 @@ const ProjectDetail = () => {
     aiError,
     usingFallbackInsights,
     needsReviewCount,
+    pendingCount,
+    acceptedCount,
+    rejectedCount,
     overallConfidence,
     acceptedInsights,
     handleFilesSelected,
@@ -137,6 +141,9 @@ const ProjectDetail = () => {
         aiStatus={aiStatus}
         overallConfidence={confidenceToUse}
         needsReviewCount={needsReviewCount}
+        pendingCount={pendingCount}
+        acceptedCount={acceptedCount}
+        rejectedCount={rejectedCount}
         usingFallbackInsights={usingFallbackInsights}
         isNewProject={isNewProject}
         isLoading={isLoading}

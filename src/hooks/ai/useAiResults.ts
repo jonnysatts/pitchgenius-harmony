@@ -1,12 +1,11 @@
 
 import { useCallback } from "react";
 import { Project, StrategicInsight } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useQueryInsights } from "./insights";
 import { useErrorHandler } from "@/hooks/error/useErrorHandler";
 
 export const useAiResults = (project: Project) => {
-  const { toast } = useToast();
   const { handleError } = useErrorHandler();
   
   // Use the query insights hook to manage insights state
@@ -16,33 +15,35 @@ export const useAiResults = (project: Project) => {
     setInsights: setPersistentInsights,
     addInsights,
     isLoading,
-    refetchInsights // Make sure this is destructured
+    refetchInsights
   } = useQueryInsights(project);
 
   // Show completion toast based on insight generation results
   const handleCompletionToast = useCallback((usingFallbackInsights: boolean) => {
-    if (insights.length > 0) {
-      if (usingFallbackInsights) {
-        toast({
-          title: "Analysis complete (with fallback)",
-          description: `Generated ${insights.length} sample insights due to API timeout`,
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: "Analysis complete",
-          description: `Generated ${insights.length} strategic insights`,
-        });
-      }
+    if (!insights || insights.length === 0) {
+      console.log('No insights to show completion toast for');
+      return;
     }
-  }, [insights.length, toast]);
+    
+    if (usingFallbackInsights) {
+      toast.info("Analysis complete (with fallback)", {
+        description: `Generated ${insights.length} sample insights due to API timeout`
+      });
+    } else {
+      toast.success("Analysis complete", {
+        description: `Generated ${insights.length} strategic insights`
+      });
+    }
+    
+    console.log(`Displayed completion toast for ${insights.length} insights (fallback: ${usingFallbackInsights})`);
+  }, [insights]);
 
   return {
     insights,
     setInsights: setPersistentInsights,
     error,
     isLoading,
-    refetchInsights, // Export the refetch function
+    refetchInsights,
     setError: () => {}, // Handled by React Query now
     handleCompletionToast,
     persistInsights: (insights: StrategicInsight[], usingFallback = false) => 

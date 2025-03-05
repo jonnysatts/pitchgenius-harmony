@@ -18,6 +18,9 @@ interface InsightsTabContentProps {
   aiStatus?: AIProcessingStatus;
   overallConfidence?: number;
   needsReviewCount?: number;
+  pendingCount?: number;
+  acceptedCount?: number;
+  rejectedCount?: number;
   usingFallbackInsights?: boolean;
   onNavigateToWebInsights?: () => void;
   onAcceptInsight: (insightId: string) => void;
@@ -35,6 +38,9 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   aiStatus,
   overallConfidence = 0,
   needsReviewCount = 0,
+  pendingCount = 0,
+  acceptedCount = 0,
+  rejectedCount = 0,
   usingFallbackInsights = false,
   onNavigateToWebInsights,
   onAcceptInsight,
@@ -50,23 +56,10 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const hasInsights = insights && insights.length > 0;
   const isAnalyzing = aiStatus && aiStatus.status === 'processing';
   
-  // Calculate counts based on the actual filtered data
-  const pendingCount = insights.filter(insight => 
-    !reviewedInsights[insight.id] || reviewedInsights[insight.id] === 'pending'
-  ).length;
-
-  const acceptedCount = insights.filter(insight => 
-    reviewedInsights[insight.id] === 'accepted'
-  ).length;
-
-  const rejectedCount = insights.filter(insight => 
-    reviewedInsights[insight.id] === 'rejected'
-  ).length;
-
   // Log counts for debugging
   useEffect(() => {
     console.log(`InsightsTabContent: Total insights: ${insights.length}`);
-    console.log(`InsightsTabContent: Pending: ${pendingCount}, Accepted: ${acceptedCount}, Rejected: ${rejectedCount}`);
+    console.log(`InsightsTabContent: Using provided counts - Pending: ${pendingCount}, Accepted: ${acceptedCount}, Rejected: ${rejectedCount}`);
   }, [insights, pendingCount, acceptedCount, rejectedCount]);
   
   const handleRefreshInsights = useCallback(() => {
@@ -106,6 +99,7 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
     }
     
     setRenderedInsights(filtered);
+    console.log(`InsightsTabContent: Applied filter '${activeFilter}', showing ${filtered.length} insights`);
   }, [insights, activeFilter, reviewedInsights]);
   
   return (

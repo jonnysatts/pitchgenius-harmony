@@ -15,7 +15,7 @@ export const useAnalysisPreparation = () => {
   ) => {
     console.log("Starting document analysis with documents:", documents.length);
     
-    // Show only one toast notification
+    // Show only one toast notification using Sonner
     toast.info("Analysis started", {
       description: "Your documents are being analyzed. You'll be redirected to see the progress."
     });
@@ -35,20 +35,22 @@ export const useAnalysisPreparation = () => {
   }, []);
 
   const handleAnalysisSuccess = useCallback((numInsights: number) => {
-    // Use only sonner toast system for success
+    // Use Sonner toast for success message
     toast.success("Analysis completed", {
       description: `Generated ${numInsights} insights from your documents.`
     });
     
+    console.log(`Analysis success: ${numInsights} insights generated`);
     return true;
   }, []);
 
   const handleAnalysisError = useCallback(() => {
-    // Use only sonner toast system for errors
+    // Use Sonner toast for error message
     toast.error("Analysis error", {
       description: "An error occurred. Using fallback insights instead."
     });
     
+    console.log("Analysis failed, using fallback insights");
     return false;
   }, []);
 
