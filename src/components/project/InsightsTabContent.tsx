@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StrategicInsight, Project, AIProcessingStatus } from "@/lib/types";
@@ -22,6 +21,7 @@ interface InsightsTabContentProps {
   onRejectInsight: (insightId: string) => void;
   onUpdateInsight: (insightId: string, updatedContent: Record<string, any>) => void;
   onRetryAnalysis?: () => void;
+  onRefreshInsights?: () => void;
 }
 
 const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
@@ -37,7 +37,8 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   onAcceptInsight,
   onRejectInsight,
   onUpdateInsight,
-  onRetryAnalysis
+  onRetryAnalysis,
+  onRefreshInsights
 }) => {
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -46,20 +47,20 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   const hasInsights = insights && insights.length > 0;
   const isAnalyzing = aiStatus && aiStatus.status === 'processing';
   
-  // Handler for refreshing insights view
   const handleRefreshInsights = useCallback(() => {
-    // Invalidate the insights query to force a refetch
     queryClient.invalidateQueries({
       queryKey: ['project', project.id, 'insights']
     });
     
-    // Force re-render with current insights
     setRenderedInsights([...insights]);
     
+    if (onRefreshInsights) {
+      onRefreshInsights();
+    }
+    
     console.log('Manually refreshed insights view');
-  }, [queryClient, project.id, insights]);
+  }, [queryClient, project.id, insights, onRefreshInsights]);
   
-  // Filter insights based on active filter
   useEffect(() => {
     if (!insights) {
       setRenderedInsights([]);
@@ -90,15 +91,13 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
       <InsightsTabHeader 
         hasInsights={hasInsights} 
         onRetryAnalysis={onRetryAnalysis}
-        onRefreshInsights={handleRefreshInsights} // Add refresh handler
+        onRefreshInsights={handleRefreshInsights}
       />
       
-      {/* Show loading UI when analysis is in progress */}
       {isAnalyzing && (
         <AnalysisLoadingState aiStatus={aiStatus} />
       )}
       
-      {/* Show error message if there is one and not in analyzing state */}
       {error && !isAnalyzing && (
         <div className="p-4 mb-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-amber-800 font-medium">{error}</p>
@@ -111,7 +110,6 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         </div>
       )}
       
-      {/* Show no insights placeholder if there are no insights and not analyzing */}
       {!hasInsights && !isAnalyzing && (
         <NoInsightsPlaceholder 
           error={error}
@@ -120,7 +118,6 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
         />
       )}
       
-      {/* Show insights if available */}
       {hasInsights && !isAnalyzing && (
         <Tabs defaultValue="all" className="w-full" onValueChange={setActiveFilter}>
           <TabsList className="mb-6">

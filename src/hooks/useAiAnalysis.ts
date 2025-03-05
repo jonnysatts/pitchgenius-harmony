@@ -24,7 +24,8 @@ export const useAiAnalysis = (project: Project) => {
     error,
     setError,
     persistInsights,
-    addInsights
+    addInsights,
+    refetchInsights // Make sure this is destructured
   } = useAiResults(project);
   
   const {
@@ -155,7 +156,7 @@ export const useAiAnalysis = (project: Project) => {
     retryAnalysis,
     setInsights,
     setError,
-    // Export the website analysis functionality
+    refetchInsights,
     isAnalyzingWebsite: isAnalyzing,
     websiteInsights,
     analyzeWebsite
