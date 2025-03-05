@@ -20,11 +20,20 @@ const ProjectList: React.FC<ProjectListProps> = ({
   statusFilter,
   onProjectClick
 }) => {
+  // Deduplicate projects based on their IDs
+  const uniqueProjects = projects.reduce((acc: Project[], current) => {
+    const isDuplicate = acc.find((item) => item.id === current.id);
+    if (!isDuplicate) {
+      return acc.concat([current]);
+    }
+    return acc;
+  }, []);
+  
   return (
     <>
-      {projects.length > 0 ? (
+      {uniqueProjects.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map(project => (
+          {uniqueProjects.map(project => (
             <ProjectCard 
               key={project.id} 
               project={project}

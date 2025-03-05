@@ -61,10 +61,24 @@ const BASE_MOCK_PROJECTS: Project[] = [
   }
 ];
 
-// Helper function to get all projects (including new ones)
+// Helper function to get all projects (including new ones) with deduplication
 export const getAllProjects = (): Project[] => {
   const newProjects = getNewProjects();
-  return [...newProjects, ...BASE_MOCK_PROJECTS];
+  
+  // Combine projects and ensure no duplicates based on ID
+  const allProjects = [...newProjects, ...BASE_MOCK_PROJECTS];
+  
+  // Create a map to deduplicate by ID, preferring newer projects from localStorage
+  const projectMap = new Map<string, Project>();
+  allProjects.forEach(project => {
+    // Only add if not already in the map (preference given to newProjects which come first)
+    if (!projectMap.has(project.id)) {
+      projectMap.set(project.id, project);
+    }
+  });
+  
+  // Convert map back to array
+  return Array.from(projectMap.values());
 };
 
 // Combine base mock projects with any new projects
