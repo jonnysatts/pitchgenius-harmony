@@ -4,7 +4,16 @@ import { useLocation } from "react-router-dom";
 import { Project, AIProcessingStatus, StrategicInsight } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, ArrowLeftRight, RefreshCw, FileText, PresentationIcon } from "lucide-react";
+import { Globe, PresentationIcon } from "lucide-react";
+
+// Industry-specific fallback images
+const industryImages: Record<string, string> = {
+  retail: "/lovable-uploads/6d7ce806-44e1-437e-8a15-81ec129c8d0b.png", // User's uploaded image
+  finance: "https://images.unsplash.com/photo-1638913662295-9630035ef770?q=80&w=2070",
+  technology: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+  entertainment: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2071",
+  other: "https://images.unsplash.com/photo-1561357747-a5b8151f2b9f?q=80&w=1986"
+};
 
 interface ProjectHeaderProps {
   project: Project;
@@ -35,9 +44,22 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
       navigateToPresentation();
     }
   };
+
+  // Determine the image to use - project cover image or fallback based on industry  
+  const coverImage = project.coverImage || industryImages[project.clientIndustry] || industryImages.other;
   
   return (
     <div className="space-y-4">
+      <div className="rounded-lg overflow-hidden mb-6 h-48 w-full bg-gradient-to-r from-slate-200 to-slate-300">
+        {coverImage && (
+          <img 
+            src={coverImage}
+            alt={project.title} 
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+      
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-1">

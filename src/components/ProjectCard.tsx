@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Image as ImageIcon } from "lucide-react";
 
 interface ProjectCardProps {
   project: Project;
@@ -33,12 +33,28 @@ const industryIcons: Record<string, string> = {
   other: "📊"
 };
 
-export const ProjectCard: React.FC<ProjectCardProps> = ({ project, className }) => {
+// Generic fallback images by industry
+const fallbackImages: Record<string, string> = {
+  retail: "/lovable-uploads/6d7ce806-44e1-437e-8a15-81ec129c8d0b.png", // User's uploaded image
+  finance: "https://images.unsplash.com/photo-1638913662295-9630035ef770?q=80&w=2070",
+  technology: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+  entertainment: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2071",
+  other: "https://images.unsplash.com/photo-1561357747-a5b8151f2b9f?q=80&w=1986"
+};
+
+export const ProjectCard: React.FC<ProjectCardProps> = ({ 
+  project, 
+  className 
+}) => {
   const navigate = useNavigate();
   
   const handleClick = () => {
+    console.log("Navigating to project:", project.id);
     navigate(`/project/${project.id}`);
   };
+
+  // Determine the image to use - project cover image or fallback based on industry
+  const coverImage = project.coverImage || fallbackImages[project.clientIndustry] || fallbackImages.other;
   
   return (
     <Card 
@@ -48,14 +64,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, className }) 
       )}
     >
       <div 
-        className="h-32 w-full overflow-hidden bg-gradient-to-r from-slate-200 to-slate-300"
+        className="h-40 w-full overflow-hidden bg-gradient-to-r from-slate-200 to-slate-300 relative"
       >
-        {project.coverImage && (
+        {coverImage ? (
           <img 
-            src={project.coverImage} 
+            src={coverImage} 
             alt={project.title} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500"
           />
+        ) : (
+          <div className="flex items-center justify-center h-full w-full bg-slate-200">
+            <ImageIcon className="h-12 w-12 text-slate-400" />
+          </div>
         )}
       </div>
       

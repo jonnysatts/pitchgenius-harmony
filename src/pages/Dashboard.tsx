@@ -51,6 +51,11 @@ const Dashboard = () => {
       clientWebsite: ""
     });
     
+    // Check for any errors before closing
+    if (isCreateDialogOpen) {
+      console.log("CreateProjectDialog was closed");
+    }
+    
     // Navigation is now handled in CreateProjectDialog component
     setIsCreateDialogOpen(false);
   };
@@ -58,6 +63,12 @@ const Dashboard = () => {
   // Handler function that properly updates the form data
   const updateProjectData = (data: ProjectFormData) => {
     setNewProject(data);
+  };
+  
+  // Handler for clicking directly on a project card
+  const handleProjectClick = (projectId: string) => {
+    console.log(`Navigating to project ${projectId}`);
+    navigate(`/project/${projectId}`);
   };
   
   return (
@@ -92,6 +103,7 @@ const Dashboard = () => {
           onCreateNew={() => setIsCreateDialogOpen(true)}
           searchTerm={searchTerm}
           statusFilter={statusFilter}
+          onProjectClick={handleProjectClick}
         />
       </div>
     </AppLayout>
