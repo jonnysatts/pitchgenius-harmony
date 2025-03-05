@@ -38,8 +38,11 @@ const InsightCardActions: React.FC<InsightCardActionsProps> = ({
     if (onUpdate && content) {
       console.log("Updating insight with refined content:", updatedContent);
       
+      // Merge the original content with the updated content
+      const mergedContent = { ...content, ...updatedContent };
+      
       // Ensure we call onUpdate with the complete updated content object
-      onUpdate(updatedContent);
+      onUpdate(mergedContent);
       
       // Close the dialog after applying changes
       setIsRefineDialogOpen(false);
