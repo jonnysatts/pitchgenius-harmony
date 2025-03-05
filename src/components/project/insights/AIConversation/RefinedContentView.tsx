@@ -12,7 +12,7 @@ export const RefinedContentView: React.FC<RefinedContentViewProps> = ({
   const renderCurrentSection = (title: string, fieldKey: string) => (
     <div>
       <h5 className="text-xs font-semibold text-slate-600">{title}</h5>
-      <p className="text-xs text-slate-700 whitespace-pre-wrap">
+      <p className="text-xs text-slate-700 whitespace-pre-wrap break-words overflow-visible">
         {refinedContent[fieldKey] || "Not provided"}
       </p>
     </div>

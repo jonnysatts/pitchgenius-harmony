@@ -27,7 +27,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         value={currentMessage}
         onChange={(e) => setCurrentMessage(e.target.value)}
         placeholder="Ask the AI how to refine this insight..."
-        className="min-h-[60px] resize-none"
+        className="min-h-[60px] resize-none overflow-y-auto break-words"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

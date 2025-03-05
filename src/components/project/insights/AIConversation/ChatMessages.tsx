@@ -36,7 +36,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 : 'bg-purple-100 ml-8'
             }`}
           >
-            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            <p className="text-sm whitespace-pre-wrap break-words overflow-visible w-full">
+              {message.content}
+            </p>
           </div>
         ))}
         
