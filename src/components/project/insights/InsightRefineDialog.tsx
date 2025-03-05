@@ -61,7 +61,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Refine Insight with AI Assistance</DialogTitle>
           <DialogDescription>
@@ -71,7 +71,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto min-h-[400px]">
+        <div className="flex-1 overflow-y-auto min-h-[400px] max-h-[60vh]">
           {!aiConversationMode ? (
             <ManualRefinementMode
               insightTitle={insightTitle}

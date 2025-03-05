@@ -131,13 +131,13 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full overflow-hidden py-4 space-y-4">
+    <div className="flex flex-col h-full overflow-hidden py-2 space-y-2">
       {/* Display Messages Area */}
       <div 
         ref={chatContainerRef} 
-        className="flex-1 overflow-y-auto pr-2 mb-4 max-h-[300px] min-h-[200px]"
+        className="flex-1 overflow-y-auto pr-2 mb-2 max-h-[300px] min-h-[200px]"
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           {messages.map((message, index) => (
             <div 
               key={index}
@@ -161,9 +161,9 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       </div>
       
       {/* Current Refined Version */}
-      <div className="mt-2 bg-slate-50 p-3 rounded border border-slate-200">
-        <h4 className="text-sm font-medium mb-2">Current Refined Version</h4>
-        <div className="grid gap-3 text-sm mb-4 max-h-[150px] overflow-y-auto p-2">
+      <div className="bg-slate-50 p-2 rounded border border-slate-200">
+        <h4 className="text-sm font-medium mb-1">Current Refined Version</h4>
+        <div className="grid gap-2 text-xs mb-2 max-h-[120px] overflow-y-auto p-2">
           {renderCurrentSection("Title", "title")}
           {renderCurrentSection("Summary", "summary")}
           {renderCurrentSection("Details", "details")}
@@ -174,12 +174,12 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       </div>
       
       {/* Input Area */}
-      <div className="flex items-center space-x-2 mt-2">
+      <div className="flex items-center space-x-2 mt-1">
         <Textarea
           value={currentMessage}
           onChange={(e) => setCurrentMessage(e.target.value)}
           placeholder="Ask the AI how to refine this insight..."
-          className="min-h-[60px]"
+          className="min-h-[60px] resize-none"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
