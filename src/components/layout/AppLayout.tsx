@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -40,16 +39,13 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="bg-white border-b sticky top-0 z-10">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/">
-              <Logo className="h-8 w-8" />
+        <div className="container flex h-16 items-center">
+          <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center">
+              <Logo className="h-8 w-auto" variant="full" />
             </Link>
-            <h1 className="text-xl font-semibold hidden sm:inline-block">
-              Strategic Insights
-            </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="ml-auto flex items-center gap-4">
             <Link to="/dashboard">
               <Button variant="ghost" size="sm">Dashboard</Button>
             </Link>

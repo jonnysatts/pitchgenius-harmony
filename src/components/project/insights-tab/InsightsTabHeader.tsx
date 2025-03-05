@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCcw } from "lucide-react";
+import { Heading } from "@/components/ui/heading";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,7 @@ const InsightsTabHeader: React.FC<InsightsTabHeaderProps> = ({
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Document Insights</h2>
+        <Heading size="md" className="mb-1">Document Insights</Heading>
         <p className="text-slate-500 text-sm">
           Strategic insights generated from analyzing the client documents
         </p>
