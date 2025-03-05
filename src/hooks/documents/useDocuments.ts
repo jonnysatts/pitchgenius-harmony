@@ -19,7 +19,7 @@ export const useDocuments = (projectId: string, userId: string) => {
     error,
     addDocuments,
     removeDocument,
-    refetch
+    refetchDocuments
   } = useQueryDocuments(projectId);
   
   // Check if we have real (non-mock) documents
@@ -31,10 +31,10 @@ export const useDocuments = (projectId: string, userId: string) => {
       // If we have real documents but also mock ones, refetch to clear mocks
       if (realDocs.length > 0 && realDocs.length !== documents.length) {
         console.log("Found real documents, clearing mock documents");
-        refetch();
+        refetchDocuments();
       }
     }
-  }, [documents, isLoading, refetch]);
+  }, [documents, isLoading, refetchDocuments]);
   
   // Handle file selection - wrapper around addDocuments
   const handleFilesSelected = (files: File[]) => {
@@ -47,7 +47,7 @@ export const useDocuments = (projectId: string, userId: string) => {
       
       // Force a refetch after adding documents to clear any mock documents
       setTimeout(() => {
-        refetch();
+        refetchDocuments();
       }, 500);
     } catch (err) {
       console.error("Error handling file selection:", err);
