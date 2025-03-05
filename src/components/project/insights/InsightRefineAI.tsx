@@ -147,7 +147,7 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
                   : 'bg-purple-100 ml-8'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
             </div>
           ))}
           
