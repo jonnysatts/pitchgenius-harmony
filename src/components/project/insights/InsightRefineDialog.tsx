@@ -42,6 +42,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
     // Reset the refining state but don't close the dialog here
     setTimeout(() => {
       setIsRefining(false);
+      onClose(); // Close dialog after successful refinement
     }, 500);
   };
 
@@ -60,7 +61,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Refine Insight with AI Assistance</DialogTitle>
           <DialogDescription>
@@ -70,23 +71,25 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        {!aiConversationMode ? (
-          <ManualRefinementMode
-            insightTitle={insightTitle}
-            insightContent={refinedContent}
-            setRefinedContent={setRefinedContent}
-            onStartAIConversation={startAIConversation}
-          />
-        ) : (
-          <AIConversationMode
-            insightTitle={insightTitle}
-            initialContent={insightContent}
-            refinedContent={refinedContent}
-            setRefinedContent={setRefinedContent}
-          />
-        )}
+        <div className="flex-1 overflow-y-auto min-h-[400px]">
+          {!aiConversationMode ? (
+            <ManualRefinementMode
+              insightTitle={insightTitle}
+              insightContent={refinedContent}
+              setRefinedContent={setRefinedContent}
+              onStartAIConversation={startAIConversation}
+            />
+          ) : (
+            <AIConversationMode
+              insightTitle={insightTitle}
+              initialContent={insightContent}
+              refinedContent={refinedContent}
+              setRefinedContent={setRefinedContent}
+            />
+          )}
+        </div>
         
-        <DialogFooter>
+        <DialogFooter className="mt-4 pt-2 border-t border-slate-200">
           <Button variant="outline" onClick={onClose} disabled={isRefining}>
             Cancel
           </Button>

@@ -48,7 +48,7 @@ export const useAIConversation = ({ insightTitle, insightContent }: UseAIConvers
         content: messageContent
       });
       
-      // Call the Supabase Edge Function instead of using fetch with a relative URL
+      // Call the Supabase Edge Function
       const response = await supabase.functions.invoke('refine-insight-with-anthropic', {
         body: {
           insightTitle,
@@ -63,6 +63,10 @@ export const useAIConversation = ({ insightTitle, insightContent }: UseAIConvers
       
       const data = response.data;
       console.log('AI response:', data);
+      
+      if (!data || (!data.response && !data.aiResponse)) {
+        throw new Error('Empty response from AI service');
+      }
       
       // Add AI response to messages
       setMessages(prev => [...prev, {

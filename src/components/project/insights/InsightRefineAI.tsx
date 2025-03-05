@@ -58,18 +58,66 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
                 ...parsedContent
               }));
             }
+          } else {
+            // Try to parse insight sections without JSON blocks
+            const updatedContent = extractInsightSections(lastMessage.content, refinedContent);
+            if (updatedContent && Object.keys(updatedContent).length > 0) {
+              console.log('Extracted content from AI response:', updatedContent);
+              setRefinedContent(prev => ({
+                ...prev,
+                ...updatedContent
+              }));
+            }
           }
         } catch (err) {
           console.error('Error parsing structured content from AI response:', err);
         }
       }
     }
-  }, [messages, setRefinedContent]);
+  }, [messages, setRefinedContent, refinedContent]);
 
   const handleSendMessage = () => {
     if (!currentMessage.trim()) return;
     sendMessage(currentMessage);
     setCurrentMessage("");
+  };
+
+  // Helper function to extract structured content from free-form text
+  const extractInsightSections = (text: string, currentContent: Record<string, any>) => {
+    const updates: Record<string, any> = {};
+    
+    // Look for common section headers in AI responses
+    const titleMatch = text.match(/Title:(.+?)(?=Summary:|Details:|Evidence:|Impact:|Recommendations:|$)/is);
+    if (titleMatch && titleMatch[1]?.trim()) {
+      updates.title = titleMatch[1].trim();
+    }
+    
+    const summaryMatch = text.match(/Summary:(.+?)(?=Details:|Evidence:|Impact:|Recommendations:|$)/is);
+    if (summaryMatch && summaryMatch[1]?.trim()) {
+      updates.summary = summaryMatch[1].trim();
+    }
+    
+    const detailsMatch = text.match(/Details:(.+?)(?=Evidence:|Impact:|Recommendations:|$)/is);
+    if (detailsMatch && detailsMatch[1]?.trim()) {
+      updates.details = detailsMatch[1].trim();
+    }
+    
+    const evidenceMatch = text.match(/Evidence:(.+?)(?=Impact:|Recommendations:|$)/is);
+    if (evidenceMatch && evidenceMatch[1]?.trim()) {
+      updates.evidence = evidenceMatch[1].trim();
+    }
+    
+    const impactMatch = text.match(/Impact:(.+?)(?=Recommendations:|$)/is);
+    if (impactMatch && impactMatch[1]?.trim()) {
+      updates.impact = impactMatch[1].trim();
+    }
+    
+    const recommendationsMatch = text.match(/Recommendations:(.+?)$/is);
+    if (recommendationsMatch && recommendationsMatch[1]?.trim()) {
+      updates.recommendations = recommendationsMatch[1].trim();
+    }
+    
+    return updates;
   };
 
   // Helper function to render the current state of each section
@@ -83,8 +131,12 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden space-y-4 py-4">
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto pr-2 mb-4">
+    <div className="flex flex-col h-full overflow-hidden py-4 space-y-4">
+      {/* Display Messages Area */}
+      <div 
+        ref={chatContainerRef} 
+        className="flex-1 overflow-y-auto pr-2 mb-4 max-h-[300px] min-h-[200px]"
+      >
         <div className="space-y-4">
           {messages.map((message, index) => (
             <div 
@@ -108,7 +160,8 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
         </div>
       </div>
       
-      <div className="mt-4 bg-slate-50 p-3 rounded border border-slate-200">
+      {/* Current Refined Version */}
+      <div className="mt-2 bg-slate-50 p-3 rounded border border-slate-200">
         <h4 className="text-sm font-medium mb-2">Current Refined Version</h4>
         <div className="grid gap-3 text-sm mb-4 max-h-[150px] overflow-y-auto p-2">
           {renderCurrentSection("Title", "title")}
@@ -120,7 +173,8 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
         </div>
       </div>
       
-      <div className="flex items-center space-x-2">
+      {/* Input Area */}
+      <div className="flex items-center space-x-2 mt-2">
         <Textarea
           value={currentMessage}
           onChange={(e) => setCurrentMessage(e.target.value)}
@@ -138,6 +192,7 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
           size="icon" 
           onClick={handleSendMessage} 
           disabled={!currentMessage.trim() || isLoadingAI}
+          className="flex-shrink-0"
         >
           <Send className="h-4 w-4" />
         </Button>
