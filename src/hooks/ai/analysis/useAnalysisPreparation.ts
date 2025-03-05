@@ -2,12 +2,13 @@
 import { useCallback } from "react";
 import { Document } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /**
  * Hook for preparation logic before starting analysis
  */
 export const useAnalysisPreparation = () => {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   const prepareAnalysisStart = useCallback((
     documents: Document[],
@@ -16,6 +17,11 @@ export const useAnalysisPreparation = () => {
     handleProcessingComplete: (setActiveTab: (tab: string) => void) => void
   ) => {
     console.log("Starting document analysis with documents:", documents.length);
+    
+    // Show toast notification
+    toast.info("Analysis started", {
+      description: "Your documents are being analyzed. You'll be redirected to see the progress."
+    });
     
     // Start processing and get monitoring function
     const monitorProgress = startProcessing(handleProcessingComplete);
@@ -37,6 +43,12 @@ export const useAnalysisPreparation = () => {
       description: `Generated ${numInsights} insights from your documents.`,
       variant: "default"
     });
+    
+    // Also show in the newer toast system
+    toast.success("Analysis completed", {
+      description: `Generated ${numInsights} insights from your documents.`
+    });
+    
     return true;
   }, [toast]);
 
@@ -46,6 +58,12 @@ export const useAnalysisPreparation = () => {
       description: "An error occurred. Using fallback insights instead.",
       variant: "destructive"
     });
+    
+    // Also show in the newer toast system
+    toast.error("Analysis error", {
+      description: "An error occurred. Using fallback insights instead."
+    });
+    
     return false;
   }, [toast]);
 
