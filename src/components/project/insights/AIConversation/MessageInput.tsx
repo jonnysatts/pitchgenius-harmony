@@ -31,12 +31,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="flex items-center space-x-2 mt-1">
+    <div className="flex items-start space-x-2 mt-2">
       <Textarea
         value={currentMessage}
         onChange={(e) => setCurrentMessage(e.target.value)}
         placeholder="Ask the AI how to refine this insight..."
-        className="min-h-[60px] resize-none overflow-y-auto break-words"
+        className="min-h-[60px] max-h-[120px] resize-none overflow-y-auto break-words"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -49,7 +49,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         size="icon" 
         onClick={handleSendMessage} 
         disabled={!currentMessage.trim() || isLoadingAI}
-        className="flex-shrink-0"
+        className="flex-shrink-0 mt-1"
       >
         <Send className="h-4 w-4" />
       </Button>

@@ -37,7 +37,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   return (
     <div 
       ref={chatContainerRef} 
-      className="flex-1 overflow-y-auto pr-2 mb-2 max-h-[300px] min-h-[150px]"
+      className="flex-1 overflow-y-auto pr-2 mb-2 max-h-[300px] min-h-[120px]"
     >
       <div className="space-y-3">
         {messages.map((message, index) => (

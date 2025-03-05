@@ -46,23 +46,36 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
           const jsonMatch = lastMessage.content.match(/```json\n([\s\S]*?)\n```/);
           
           if (jsonMatch && jsonMatch[1]) {
+            // Try to parse JSON content
             const parsedContent = JSON.parse(jsonMatch[1]);
             if (parsedContent && typeof parsedContent === 'object') {
               console.log('Found structured content in AI response:', parsedContent);
-              setRefinedContent({
+              
+              // Important: Merge with initial content to ensure all fields are preserved
+              const updatedContent = {
                 ...initialContent,
                 ...parsedContent
-              });
+              };
+              
+              // Update the refined content
+              setRefinedContent(updatedContent);
+              console.log('Updated refined content with JSON data:', updatedContent);
             }
           } else {
-            // Try to parse insight sections without JSON blocks
-            const updatedContent = extractInsightSections(lastMessage.content, initialContent);
-            if (updatedContent && Object.keys(updatedContent).length > 0) {
-              console.log('Extracted content from AI response:', updatedContent);
-              setRefinedContent({
+            // Try to extract sections from the AI message content
+            const extractedContent = extractInsightSections(lastMessage.content, initialContent);
+            if (extractedContent && Object.keys(extractedContent).length > 0) {
+              console.log('Extracted content from AI response:', extractedContent);
+              
+              // Important: Merge with initial content to ensure all fields are preserved
+              const updatedContent = {
                 ...initialContent,
-                ...updatedContent
-              });
+                ...extractedContent
+              };
+              
+              // Update the refined content
+              setRefinedContent(updatedContent);
+              console.log('Updated refined content with extracted data:', updatedContent);
             }
           }
         } catch (err) {
@@ -91,6 +104,7 @@ export const AIConversationMode: React.FC<AIConversationModeProps> = ({
       recommendations: "Recommendations"
     };
     
+    // Use the current content from refinedContent, falling back to initialContent
     const currentContent = refinedContent[section] || initialContent[section] || "not yet provided";
     
     // Prefill a message that asks for improvement for the selected section

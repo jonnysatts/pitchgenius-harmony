@@ -39,7 +39,7 @@ const InsightRefineDialog: React.FC<InsightRefineDialogProps> = ({
     // Call the onRefine callback with the full updated content
     onRefine(refinedContent);
     
-    // Reset the refining state but don't close the dialog here
+    // Reset the refining state and close the dialog
     setTimeout(() => {
       setIsRefining(false);
       onClose(); // Close dialog after successful refinement

@@ -19,9 +19,9 @@ export const RefinedContentView: React.FC<RefinedContentViewProps> = ({
   );
 
   return (
-    <div className="bg-slate-50 p-2 rounded border border-slate-200">
-      <h4 className="text-sm font-medium mb-1">Current Refined Version</h4>
-      <div className="grid gap-2 text-xs mb-2 max-h-[120px] overflow-y-auto p-2">
+    <div className="bg-slate-50 p-3 rounded border border-slate-200">
+      <h4 className="text-sm font-medium mb-2">Current Refined Version</h4>
+      <div className="grid gap-3 text-xs mb-2 max-h-[150px] overflow-y-auto p-2">
         {renderCurrentSection("Title", "title")}
         {renderCurrentSection("Summary", "summary")}
         {renderCurrentSection("Details", "details")}
