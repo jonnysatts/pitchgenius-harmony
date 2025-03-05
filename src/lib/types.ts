@@ -4,8 +4,8 @@ export interface Project {
   title: string;
   clientName: string;
   clientIndustry: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string | Date;
+  updatedAt: string | Date;
   ownerId: string;
   description: string;
   clientWebsite?: string;

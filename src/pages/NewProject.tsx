@@ -49,7 +49,7 @@ const NewProject: React.FC = () => {
     // Create a unique ID for the new project
     const newProjectId = `new_${Date.now()}_${uuidv4().substring(0, 8)}`;
     
-    // Create new project object
+    // Create new project object - using ISO strings for dates
     const newProject: Project = {
       id: newProjectId,
       title: projectTitle,
@@ -57,8 +57,8 @@ const NewProject: React.FC = () => {
       clientIndustry,
       clientWebsite,
       description,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       ownerId: user?.id || 'anonymous',
       status: 'draft',
     };

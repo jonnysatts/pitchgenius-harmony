@@ -12,7 +12,7 @@ const getNewProjects = (): Project[] => {
   }
 };
 
-// Base mock projects with proper date objects
+// Base mock projects with ISO string dates
 const BASE_MOCK_PROJECTS: Project[] = [
   {
     id: "1",
