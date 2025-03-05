@@ -52,11 +52,16 @@ export class FirecrawlService {
     try {
       console.log(`Analyzing website: ${websiteUrl}`);
       
-      // Normalize the URL format
-      let normalizedUrl = websiteUrl;
+      // Normalize the URL format - ensure proper protocol
+      let normalizedUrl = websiteUrl.trim();
       if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
         normalizedUrl = `https://${normalizedUrl}`;
       }
+      
+      // Remove trailing slashes for consistency
+      normalizedUrl = normalizedUrl.replace(/\/+$/, '');
+      
+      console.log(`Normalized URL: ${normalizedUrl}`);
       
       // First, check the analysis progress (also confirms the Edge Function is responsive)
       const progressCheck = await this.checkAnalysisProgress(normalizedUrl);
@@ -64,14 +69,15 @@ export class FirecrawlService {
         console.warn("Progress check failed, but continuing with analysis attempt");
       }
       
-      // Call the Supabase Edge Function for website analysis
+      // Call the Supabase Edge Function for website analysis with increased timeout
       const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
         body: {
           website_url: normalizedUrl,
           client_name: clientName,
           client_industry: clientIndustry,
-          timeout_seconds: 60,
-          max_pages: 10
+          timeout_seconds: 90, // Increased timeout
+          max_pages: 10,
+          bypass_cors: true // Signal to the edge function to use server-side fetch
         }
       });
       
@@ -89,6 +95,11 @@ export class FirecrawlService {
       if (data.error) {
         console.error('Error from API response:', data.error);
         
+        // Check for specific HTTP status errors
+        const isHttpError = data.error.includes('HTTP error') || 
+                            data.error.includes('403') || 
+                            data.error.includes('401');
+                            
         // Check if error is related to Claude being overloaded
         const isRetriable = 
           (typeof data.error === 'string' && 

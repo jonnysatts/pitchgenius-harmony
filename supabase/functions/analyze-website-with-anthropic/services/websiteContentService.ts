@@ -4,16 +4,18 @@
  */
 import { extractContentWithFirecrawl } from './firecrawlService.ts';
 import { fetchFirecrawlContent } from '../utils/firecrawlFetcher.ts';
+import { fetchWebsiteContentBasic } from '../utils/websiteFetcher.ts';
 
 /**
  * Extract content from a website using an appropriate method
  */
 export async function extractWebsiteContent(
   websiteUrl: string,
-  useFirecrawl: boolean = true
+  useFirecrawl: boolean = true,
+  bypassCors: boolean = true
 ): Promise<string> {
   console.log(`Extracting content from website: ${websiteUrl}`);
-  console.log(`Using Firecrawl: ${useFirecrawl ? 'yes' : 'no'}`);
+  console.log(`Using Firecrawl: ${useFirecrawl ? 'yes' : 'no'}, Bypass CORS: ${bypassCors ? 'yes' : 'no'}`);
   
   try {
     // Normalize URL format
@@ -23,7 +25,10 @@ export async function extractWebsiteContent(
       console.log(`Normalized URL to: ${normalizedUrl}`);
     }
     
-    // Try the improved firecrawlFetcher first which has its own fallbacks
+    // Try a series of different extraction methods
+    let extractionErrors = [];
+    
+    // 1. Try the improved firecrawlFetcher first which has its own fallbacks
     try {
       console.log('Using enhanced Firecrawl fetcher with fallbacks');
       const content = await fetchFirecrawlContent(normalizedUrl);
@@ -32,24 +37,43 @@ export async function extractWebsiteContent(
         return content;
       }
       console.log('Enhanced fetcher returned insufficient content, trying alternative methods');
+      extractionErrors.push("Firecrawl fetcher: insufficient content");
     } catch (fetcherError) {
       console.warn('Enhanced fetcher failed, trying alternative methods:', fetcherError);
+      extractionErrors.push(`Firecrawl fetcher error: ${fetcherError.message}`);
     }
     
-    // Use Firecrawl for enhanced content extraction if requested
+    // 2. Use Firecrawl for enhanced content extraction if requested
     if (useFirecrawl) {
       try {
         const content = await extractContentWithFirecrawl(normalizedUrl);
-        console.log(`Successfully extracted ${content.length} characters with Firecrawl`);
-        return content;
+        if (content && content.length > 100) {
+          console.log(`Successfully extracted ${content.length} characters with Firecrawl`);
+          return content;
+        }
+        extractionErrors.push("Firecrawl extraction: insufficient content");
       } catch (firecrawlError) {
         console.warn('Firecrawl extraction failed, falling back to basic method:', firecrawlError);
+        extractionErrors.push(`Firecrawl extraction error: ${firecrawlError.message}`);
       }
     }
     
-    // Fallback to basic fetch method
-    console.log('Falling back to basic extraction method');
-    return await extractContentWithBasicFetch(normalizedUrl);
+    // 3. Try basic fetch method with enhanced error handling
+    try {
+      console.log('Falling back to basic extraction method');
+      const content = await fetchWebsiteContentBasic(normalizedUrl);
+      if (content && content.length > 100) {
+        console.log(`Successfully extracted ${content.length} characters with basic fetch`);
+        return content;
+      }
+      extractionErrors.push("Basic fetch: insufficient content");
+    } catch (basicFetchError) {
+      console.error('Basic fetch extraction failed:', basicFetchError);
+      extractionErrors.push(`Basic fetch error: ${basicFetchError.message}`);
+    }
+    
+    // If we've reached here, all methods have failed
+    throw new Error(`All content extraction methods failed. Errors: ${extractionErrors.join('; ')}`);
   } catch (error) {
     console.error(`Error extracting website content: ${error instanceof Error ? error.message : String(error)}`);
     throw new Error(`Failed to extract content from ${websiteUrl}: ${error instanceof Error ? error.message : String(error)}`);

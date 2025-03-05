@@ -26,27 +26,43 @@ export const NoInsightsEmptyState = ({
   }
 
   if (error) {
-    // Show a more detailed error message for Claude API overload
+    // Determine specific error type for more helpful messaging
     const isClaudeOverloaded = error.includes('overloaded') || error.includes('Claude API');
+    const isHttpError = error.includes('HTTP error') || error.includes('403') || error.includes('401');
+    const isCorsError = error.includes('CORS') || error.includes('cross-origin');
+    const isTimeoutError = error.includes('timeout') || error.includes('timed out');
+    
+    // Set title and explanation based on error type
+    let errorTitle = isClaudeOverloaded 
+      ? "Claude API Temporarily Unavailable" 
+      : "Website Analysis Failed";
+      
+    let errorExplanation = "";
+    
+    if (isClaudeOverloaded) {
+      errorExplanation = "The Claude AI service is currently experiencing high demand. This is a temporary issue.";
+    } else if (isHttpError) {
+      errorExplanation = "The website is blocking access to automated tools. This is a common security measure many websites use.";
+    } else if (isCorsError) {
+      errorExplanation = "The website has Cross-Origin Resource Sharing (CORS) restrictions that prevent our tools from accessing it.";
+    } else if (isTimeoutError) {
+      errorExplanation = "The connection to the website timed out. The site may be slow or temporarily unavailable.";
+    } else {
+      errorExplanation = "We encountered an issue when analyzing the website. This often happens due to website access restrictions, CORS policies, or the site being temporarily unavailable.";
+    }
     
     return (
       <div className="flex flex-col items-center justify-center p-8 mt-4 bg-amber-50 rounded-lg border border-dashed border-amber-300 text-center">
         <AlertCircle className="h-10 w-10 text-amber-500 mb-4" />
-        <h3 className="font-semibold text-lg mb-2">
-          {isClaudeOverloaded ? "Claude API Temporarily Unavailable" : "Website Analysis Failed"}
-        </h3>
-        <p className="text-gray-700 max-w-md mb-4">
-          {isClaudeOverloaded 
-            ? "The Claude AI service is currently experiencing high demand. This is a temporary issue."
-            : "We encountered an issue when analyzing the website. This often happens due to website access restrictions, CORS policies, or the site being temporarily unavailable."}
-        </p>
+        <h3 className="font-semibold text-lg mb-2">{errorTitle}</h3>
+        <p className="text-gray-700 max-w-md mb-4">{errorExplanation}</p>
         <div className="p-3 bg-white rounded border border-amber-200 text-left text-sm text-amber-700 max-w-md mb-3">
           <p><strong>Error:</strong> {error}</p>
         </div>
         <p className="text-gray-500 text-sm">
           {isClaudeOverloaded 
             ? "Please wait a few minutes and try again when the service is less busy."
-            : "Try a different website URL or check that the URL format is correct."}
+            : "Try a different website URL or check that the URL format is correct. Some websites actively block analysis tools."}
         </p>
       </div>
     );
