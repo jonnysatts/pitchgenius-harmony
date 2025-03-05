@@ -25,6 +25,24 @@ export const NoInsightsEmptyState = ({
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 mt-4 bg-amber-50 rounded-lg border border-dashed border-amber-300 text-center">
+        <AlertCircle className="h-10 w-10 text-amber-500 mb-4" />
+        <h3 className="font-semibold text-lg mb-2">Website Analysis Failed</h3>
+        <p className="text-gray-700 max-w-md mb-4">
+          We encountered an issue when analyzing the website. This often happens due to website access restrictions, CORS policies, or the site being temporarily unavailable.
+        </p>
+        <div className="p-3 bg-white rounded border border-amber-200 text-left text-sm text-amber-700 max-w-md mb-3">
+          <p><strong>Error:</strong> {error}</p>
+        </div>
+        <p className="text-gray-500 text-sm">
+          Try a different website URL or check that the URL format is correct.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center p-8 mt-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center">
       <Globe className="h-10 w-10 text-gray-400 mb-4" />
@@ -44,14 +62,6 @@ export const NoInsightsEmptyState = ({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-xs text-gray-500 mt-2">
             <span className="font-medium">Note:</span> Website analysis uses the Firecrawl API to extract content and Claude AI to generate insights.
-          </p>
-        </div>
-      )}
-      
-      {error && !isAnalyzing && (
-        <div className="mt-4 p-3 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-          <p className="text-sm font-medium">
-            <span className="font-bold">Analysis Note:</span> {error}
           </p>
         </div>
       )}

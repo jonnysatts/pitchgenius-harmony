@@ -129,11 +129,51 @@ export const useWebsiteAnalysis = (
       if (result.error && result.error.includes('overloaded')) {
         setIsAnalyzing(false);
         notifyClaudeOverloaded();
-        handleFallbackInsights(`Claude API is currently overloaded. Using sample insights instead.`);
+        setError("Claude AI is currently overloaded. Please try again in a few minutes.");
+        
+        // Don't add fallback insights for this specific error
+        setWebsiteInsights([]);
         return;
       }
       
-      // Process the results
+      // Check if the result contains error-related insights
+      if (result.insights && result.insights.length > 0) {
+        const errorTitles = [
+          "Improve Website Accessibility",
+          "Website Accessibility Issue", 
+          "Website Unavailable",
+          "Prioritize Website Accessibility",
+          "Unable to Assess",
+          "Unable to Identify",
+          "Unable to Evaluate",
+          "Unable to Provide",
+          "Placeholder Title"
+        ];
+        
+        const hasOnlyErrorInsights = result.insights.every(insight => 
+          errorTitles.some(errorTitle => 
+            insight.content?.title?.includes(errorTitle)
+          )
+        );
+        
+        if (hasOnlyErrorInsights) {
+          setIsAnalyzing(false);
+          // Extract a more user-friendly error message from the first insight
+          const errorDetail = result.insights[0]?.content?.details || 
+                          result.error || 
+                          "The website could not be analyzed correctly.";
+          
+          setError(errorDetail);
+          
+          // Don't add error insights to the project
+          setWebsiteInsights([]);
+          
+          notifyAnalysisError("Website analysis failed");
+          return;
+        }
+      }
+      
+      // Process the results if we got here (no error-only insights)
       await processAnalysisResult(result, progressInterval, progressCheckInterval);
     } catch (error) {
       console.error("Error analyzing website:", error);
@@ -143,7 +183,7 @@ export const useWebsiteAnalysis = (
         : "Unknown error during website analysis";
       
       setError(errorMessage);
-      handleFallbackInsights(`Website analysis error: ${errorMessage}`);
+      setWebsiteInsights([]);
       notifyAnalysisError(errorMessage);
     } finally {
       setIsAnalyzing(false);
@@ -166,7 +206,8 @@ export const useWebsiteAnalysis = (
     checkAnalysisProgress,
     testApiConnection,
     processAnalysisResult,
-    handleFallbackInsights
+    setWebsiteInsights,
+    addInsights
   ]);
 
   return {

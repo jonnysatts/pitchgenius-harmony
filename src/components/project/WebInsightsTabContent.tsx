@@ -9,6 +9,8 @@ import { NoInsightsEmptyState } from "./web-insights/NoInsightsEmptyState";
 import { WebsiteAnalysisControls } from "./web-insights/WebsiteAnalysisControls";
 import { WebsiteInsightCategory, StrategicInsight, AIProcessingStatus, Project } from "@/lib/types";
 import { websiteInsightCategories } from "@/components/project/insights/constants";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface WebInsightsTabContentProps {
   websiteUrl?: string;
@@ -39,7 +41,35 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   onUpdateInsight,
   aiStatus
 }) => {
+  // Check if we have actual insights (not just error placeholders)
+  const hasRealInsights = useMemo(() => {
+    if (!insights || insights.length === 0) return false;
+    
+    // Consider insights with error-related titles as not real
+    const errorTitles = [
+      "Improve Website Accessibility",
+      "Website Accessibility Issue", 
+      "Website Unavailable",
+      "Prioritize Website Accessibility",
+      "Unable to Assess",
+      "Unable to Identify",
+      "Unable to Evaluate",
+      "Unable to Provide",
+      "Placeholder Title"
+    ];
+    
+    // If all insights have error titles, we don't have real insights
+    const nonErrorInsights = insights.filter(insight => 
+      !errorTitles.some(errorTitle => 
+        insight.content?.title?.includes(errorTitle)
+      )
+    );
+    
+    return nonErrorInsights.length > 0;
+  }, [insights]);
+  
   const hasInsights = insights && insights.length > 0;
+  const hasErrorInsights = hasInsights && !hasRealInsights;
   
   // Organize insights by category
   const insightsByCategory = useMemo(() => {
@@ -69,9 +99,8 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
     });
   }, [insightsByCategory]);
 
-  // Only show error in the main content area if we're not analyzing and we have insights
-  // This prevents duplicate error messages (one in the controls during analysis, one after)
-  const shouldShowErrorBanner = error && !isAnalyzingWebsite && hasInsights;
+  // Only show error in the main content area if we're not analyzing and we have error insights
+  const shouldShowErrorBanner = error && !isAnalyzingWebsite && hasErrorInsights;
 
   return (
     <div>
@@ -80,7 +109,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
         hasWebsiteUrl={!!websiteUrl}
         isAnalyzing={isAnalyzingWebsite}
         onAnalyzeWebsite={handleAnalyzeWebsite}
-        hasInsights={hasInsights}
+        hasInsights={hasRealInsights}
         aiStatus={aiStatus}
       />
       
@@ -107,7 +136,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
                 } as Project}
                 isAnalyzing={isAnalyzingWebsite}
                 onAnalyzeWebsite={handleAnalyzeWebsite}
-                hasInsights={hasInsights}
+                hasInsights={hasRealInsights}
                 aiStatus={aiStatus}
                 error={error}
               />
@@ -115,17 +144,19 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
           )}
 
           {shouldShowErrorBanner && (
-            <div className="mt-4 p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
-              <p>
-                <strong>Note:</strong> {error}
+            <Alert variant="destructive" className="mt-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Website Analysis Failed</AlertTitle>
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+              <p className="mt-2 text-sm">
+                Please try a different website URL or check the URL format. Common issues include website protection, CORS policies, or temporary site unavailability.
               </p>
-              <p className="text-xs mt-1 italic">
-                For demonstration purposes, sample insights are shown below.
-              </p>
-            </div>
+            </Alert>
           )}
 
-          {hasInsights ? (
+          {hasRealInsights ? (
             <WebInsightsTabs
               insightsByCategory={insightsByCategory}
               reviewedInsights={reviewedInsights}
@@ -139,6 +170,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             <NoInsightsEmptyState 
               hasWebsiteUrl={!!websiteUrl}
               isAnalyzing={isAnalyzingWebsite}
+              error={shouldShowErrorBanner ? error : null}
             />
           )}
         </>
