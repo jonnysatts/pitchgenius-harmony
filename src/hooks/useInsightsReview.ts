@@ -27,10 +27,12 @@ export const useInsightsReview = (insights: StrategicInsight[]) => {
     setUpdatedInsights(initialInsightsState);
   }, [insights]);
   
-  // Count how many insights still need review
+  // Count how many insights still need review - direct calculation to ensure accuracy
   const needsReviewCount = useMemo(() => {
-    return Object.values(reviewedInsights).filter(status => status === 'pending').length;
-  }, [reviewedInsights]);
+    return insights.filter(insight => 
+      !reviewedInsights[insight.id] || reviewedInsights[insight.id] === 'pending'
+    ).length;
+  }, [insights, reviewedInsights]);
   
   // Get overall confidence based on accepted insights
   const overallConfidence = useMemo(() => {

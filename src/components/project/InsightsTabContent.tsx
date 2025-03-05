@@ -2,11 +2,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StrategicInsight, Project, AIProcessingStatus } from "@/lib/types";
-import InsightsList from "./insights/InsightsList";
-import NoInsightsPlaceholder from "./insights/NoInsightsPlaceholder";
-import AnalysisLoadingState from "./insights/AnalysisLoadingState";
-import InsightsTabHeader from "./insights-tab/InsightsTabHeader";
 import { useQueryClient } from "@tanstack/react-query";
+
+// Import components from the correct path
+import InsightsList from "@/components/project/insights/InsightsList";
+import NoInsightsPlaceholder from "@/components/project/insights/NoInsightsPlaceholder";
+import AnalysisLoadingState from "@/components/project/insights/AnalysisLoadingState";
+import InsightsTabHeader from "@/components/project/insights-tab/InsightsTabHeader";
 
 interface InsightsTabContentProps {
   project: Project;
@@ -47,6 +49,19 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
   
   const hasInsights = insights && insights.length > 0;
   const isAnalyzing = aiStatus && aiStatus.status === 'processing';
+  
+  // Calculate counts based on the actual filtered data
+  const pendingCount = insights.filter(insight => 
+    !reviewedInsights[insight.id] || reviewedInsights[insight.id] === 'pending'
+  ).length;
+
+  const acceptedCount = insights.filter(insight => 
+    reviewedInsights[insight.id] === 'accepted'
+  ).length;
+
+  const rejectedCount = insights.filter(insight => 
+    reviewedInsights[insight.id] === 'rejected'
+  ).length;
   
   const handleRefreshInsights = useCallback(() => {
     queryClient.invalidateQueries({
@@ -126,13 +141,13 @@ const InsightsTabContent: React.FC<InsightsTabContentProps> = ({
               All Insights ({insights.length})
             </TabsTrigger>
             <TabsTrigger value="pending">
-              Needs Review ({needsReviewCount})
+              Needs Review ({pendingCount})
             </TabsTrigger>
             <TabsTrigger value="accepted">
-              Accepted ({Object.values(reviewedInsights).filter(status => status === 'accepted').length})
+              Accepted ({acceptedCount})
             </TabsTrigger>
             <TabsTrigger value="rejected">
-              Rejected ({Object.values(reviewedInsights).filter(status => status === 'rejected').length})
+              Rejected ({rejectedCount})
             </TabsTrigger>
           </TabsList>
           
