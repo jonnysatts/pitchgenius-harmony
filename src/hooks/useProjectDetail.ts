@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Project, Document } from "@/lib/types";
 import { useDocuments } from "@/hooks/documents/useDocuments";
@@ -43,6 +44,9 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
   const {
     reviewedInsights,
     needsReviewCount,
+    pendingCount,  // Explicitly destructure these count properties
+    acceptedCount,
+    rejectedCount,
     overallConfidence,
     acceptedInsights,
     rejectedInsights,
@@ -139,6 +143,9 @@ export const useProjectDetail = (projectId: string, userId: string, project: Pro
     insufficientContent,
     reviewedInsights,
     needsReviewCount,
+    pendingCount,     // Include these count properties in the return object
+    acceptedCount,    // to make them available to the ProjectDetail component
+    rejectedCount,
     overallConfidence,
     acceptedInsights,
     rejectedInsights,

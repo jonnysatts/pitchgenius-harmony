@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Project, StrategicInsight } from "@/lib/types";
@@ -21,6 +20,9 @@ interface ProjectDetailContentProps {
   aiStatus: any;
   overallConfidence: number;
   needsReviewCount: number;
+  pendingCount: number;
+  acceptedCount: number;
+  rejectedCount: number;
   acceptedInsights: StrategicInsight[];
   usingFallbackInsights: boolean;
   isNewProject: boolean;
@@ -49,6 +51,9 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   aiStatus,
   overallConfidence,
   needsReviewCount,
+  pendingCount,
+  acceptedCount,
+  rejectedCount,
   acceptedInsights,
   usingFallbackInsights,
   isNewProject,
@@ -68,17 +73,14 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
   const documentInsights = insights.filter(insight => insight.source !== 'website');
   const websiteInsights = insights.filter(insight => insight.source === 'website');
   
-  // Handle navigation to web insights tab when website analysis is started
   useEffect(() => {
     if (isAnalyzingWebsite) {
       setActiveTab("webinsights");
     }
   }, [isAnalyzingWebsite, setActiveTab]);
   
-  // Wrapper for handleAnalyzeWebsite that also navigates
   const handleAnalyzeAndNavigate = () => {
     handleAnalyzeWebsite();
-    // Navigation is handled by the effect above
   };
   
   return (
@@ -130,6 +132,9 @@ const ProjectDetailContent: React.FC<ProjectDetailContentProps> = ({
               aiStatus={aiStatus}
               overallConfidence={overallConfidence}
               needsReviewCount={needsReviewCount}
+              pendingCount={pendingCount}
+              acceptedCount={acceptedCount}
+              rejectedCount={rejectedCount}
               usingFallbackInsights={usingFallbackInsights}
               onAcceptInsight={handleAcceptInsight}
               onRejectInsight={handleRejectInsight}
