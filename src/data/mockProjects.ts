@@ -61,39 +61,47 @@ const BASE_MOCK_PROJECTS: Project[] = [
   }
 ];
 
-// Helper function to get all projects (including new ones) with improved deduplication
+// Get all projects with guaranteed deduplication
 export const getAllProjects = (): Project[] => {
-  const newProjects = getNewProjects();
-  
-  // Create a Map with project IDs as keys for effective deduplication
-  const projectMap = new Map<string, Project>();
-  
-  // Add new projects first (these take precedence over base projects)
-  newProjects.forEach(project => {
-    projectMap.set(project.id, project);
-  });
-  
-  // Add base projects only if they don't already exist in the map
-  BASE_MOCK_PROJECTS.forEach(project => {
-    if (!projectMap.has(project.id)) {
-      projectMap.set(project.id, project);
-    }
-  });
-  
-  // Convert map values to array
-  const deduplicatedProjects = Array.from(projectMap.values());
-  console.log(`getAllProjects: Returned ${deduplicatedProjects.length} unique projects`);
-  
-  return deduplicatedProjects;
+  try {
+    // Get new projects from localStorage
+    const newProjects = getNewProjects();
+    
+    // Create a Map with project IDs as keys for efficient deduplication
+    const projectMap = new Map<string, Project>();
+    
+    // Add new projects first (these take precedence over base projects)
+    newProjects.forEach(project => {
+      if (project && project.id) {
+        projectMap.set(project.id, project);
+      }
+    });
+    
+    // Then add base projects only if they don't already exist in the map
+    BASE_MOCK_PROJECTS.forEach(project => {
+      if (!projectMap.has(project.id)) {
+        projectMap.set(project.id, project);
+      }
+    });
+    
+    // Convert map values to array
+    const allProjects = Array.from(projectMap.values());
+    
+    // Log project count for debugging
+    console.log(`getAllProjects: Returned ${allProjects.length} unique projects from ${newProjects.length} new and ${BASE_MOCK_PROJECTS.length} base projects`);
+    
+    return allProjects;
+  } catch (e) {
+    console.error("Error in getAllProjects:", e);
+    return [...BASE_MOCK_PROJECTS]; // Fallback to base projects
+  }
 };
-
-// MOCK_PROJECTS is now a function to ensure we always get fresh data
-export const MOCK_PROJECTS = getAllProjects();
 
 // Helper function to add a new project
 export const addNewProject = (project: Project): void => {
   try {
     const newProjects = getNewProjects();
+    
     // Check if project with this ID already exists
     const existingIndex = newProjects.findIndex(p => p.id === project.id);
     
@@ -106,7 +114,7 @@ export const addNewProject = (project: Project): void => {
     }
     
     localStorage.setItem('newProjects', JSON.stringify(newProjects));
-    console.log(`Saved ${newProjects.length} projects to localStorage, including: ${project.id}`);
+    console.log(`Saved project to localStorage: ${project.id}`);
   } catch (e) {
     console.error("Error saving project to localStorage:", e);
   }

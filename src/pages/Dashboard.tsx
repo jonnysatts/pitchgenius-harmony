@@ -32,11 +32,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Load projects when component mounts or when returning to dashboard
+  // Load projects when component mounts or when dashboard is visited
+  const loadProjects = () => {
+    const freshProjects = getAllProjects();
+    console.log(`Dashboard loaded ${freshProjects.length} projects`);
+    setProjects(freshProjects);
+  };
+  
+  // Load projects on component mount
   useEffect(() => {
-    const loadedProjects = getAllProjects();
-    console.log(`Dashboard loaded ${loadedProjects.length} projects`);
-    setProjects(loadedProjects);
+    loadProjects();
   }, []);
   
   // Filter projects based on search term and status
@@ -64,11 +69,11 @@ const Dashboard = () => {
       console.log("CreateProjectDialog was closed");
     }
     
-    // Navigation is now handled in CreateProjectDialog component
+    // Close dialog
     setIsCreateDialogOpen(false);
     
     // Refresh the project list after creating a new project
-    setProjects(getAllProjects());
+    loadProjects();
   };
 
   // Handler function that properly updates the form data

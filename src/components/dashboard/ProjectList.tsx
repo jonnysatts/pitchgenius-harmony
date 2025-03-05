@@ -20,16 +20,18 @@ const ProjectList: React.FC<ProjectListProps> = ({
   statusFilter,
   onProjectClick
 }) => {
-  // Deduplicate projects based on their IDs
-  const uniqueProjects = projects.reduce((acc: Project[], current) => {
-    const isDuplicate = acc.find((item) => item.id === current.id);
-    if (!isDuplicate) {
-      return acc.concat([current]);
-    }
-    return acc;
-  }, []);
+  // Create a map to efficiently deduplicate by ID
+  const projectMap = new Map<string, Project>();
   
-  console.log(`Rendering ${uniqueProjects.length} unique projects out of ${projects.length} total`);
+  // Add each project to the map, which automatically handles duplicates
+  projects.forEach(project => {
+    projectMap.set(project.id, project);
+  });
+  
+  // Convert map back to array
+  const uniqueProjects = Array.from(projectMap.values());
+  
+  console.log(`ProjectList: Received ${projects.length} projects, displaying ${uniqueProjects.length} unique projects`);
   
   return (
     <>
