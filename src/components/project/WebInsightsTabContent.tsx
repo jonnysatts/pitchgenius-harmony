@@ -41,11 +41,11 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
   onUpdateInsight,
   aiStatus
 }) => {
-  // Check if we have actual insights (not just error placeholders)
-  const hasRealInsights = useMemo(() => {
+  // Check if insights contain error indicators or are fallbacks
+  const containsErrorsOrFallbacks = useMemo(() => {
     if (!insights || insights.length === 0) return false;
     
-    // Consider insights with error-related titles as not real
+    // Common patterns that indicate error insights or fallbacks
     const errorTitles = [
       "Improve Website Accessibility",
       "Website Accessibility Issue", 
@@ -53,23 +53,50 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
       "Prioritize Website Accessibility",
       "Unable to Assess",
       "Unable to Identify",
-      "Unable to Evaluate",
+      "Unable to Evaluate", 
       "Unable to Provide",
       "Placeholder Title"
     ];
     
-    // If all insights have error titles, we don't have real insights
-    const nonErrorInsights = insights.filter(insight => 
-      !errorTitles.some(errorTitle => 
+    const fallbackPatterns = [
+      "Essential Business Focus Areas",
+      "Target Audience Analysis",
+      "Competitive Differentiation",
+      "Growth Expansion Possibilities",
+      "Strategic Priorities",
+      "Core Brand Narratives"
+    ];
+    
+    // Look for fallback IDs (typically contain "fallback")
+    const hasFallbackIds = insights.some(insight => 
+      insight.id && insight.id.includes('fallback')
+    );
+    
+    // Check for error titles
+    const hasErrorTitles = insights.some(insight => 
+      errorTitles.some(errorTitle => 
         insight.content?.title?.includes(errorTitle)
       )
     );
     
-    return nonErrorInsights.length > 0;
+    // Check for fallback content patterns that typically appear in generated fallbacks
+    const hasGenericFallbackContent = insights.some(insight => {
+      const title = insight.content?.title || '';
+      const details = insight.content?.details || '';
+      
+      return fallbackPatterns.some(pattern => title.includes(pattern)) && 
+             (details.includes("Evidence would normally be extracted") || 
+              details.includes("No specific evidence"));
+    });
+    
+    return hasErrorTitles || hasFallbackIds || hasGenericFallbackContent;
   }, [insights]);
   
-  const hasInsights = insights && insights.length > 0;
-  const hasErrorInsights = hasInsights && !hasRealInsights;
+  // Check if we have actual meaningful insights (not error-related)
+  const hasRealInsights = useMemo(() => {
+    if (!insights || insights.length === 0) return false;
+    return !containsErrorsOrFallbacks;
+  }, [insights, containsErrorsOrFallbacks]);
   
   // Organize insights by category
   const insightsByCategory = useMemo(() => {
@@ -80,16 +107,19 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
       categories[category.id as WebsiteInsightCategory] = [];
     });
     
-    // Populate categories with insights
-    insights.forEach(insight => {
-      const category = insight.category as WebsiteInsightCategory;
-      if (categories[category]) {
-        categories[category].push(insight);
-      }
-    });
+    // Only populate categories if we have real insights
+    if (hasRealInsights) {
+      // Populate categories with insights
+      insights.forEach(insight => {
+        const category = insight.category as WebsiteInsightCategory;
+        if (categories[category]) {
+          categories[category].push(insight);
+        }
+      });
+    }
     
     return categories;
-  }, [insights]);
+  }, [insights, hasRealInsights]);
 
   // Get filtered categories that have insights
   const filteredCategories = useMemo(() => {
@@ -99,8 +129,27 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
     });
   }, [insightsByCategory]);
 
-  // Only show error in the main content area if we're not analyzing and we have error insights
-  const shouldShowErrorBanner = error && !isAnalyzingWebsite && hasErrorInsights;
+  // Show error in the main content area if we have error insights but no real error message
+  const shouldShowErrorBanner = useMemo(() => {
+    return (containsErrorsOrFallbacks && !hasRealInsights && !isAnalyzingWebsite) || 
+           (error !== null && error !== undefined);
+  }, [containsErrorsOrFallbacks, hasRealInsights, isAnalyzingWebsite, error]);
+
+  // Determine the appropriate error message to show
+  const errorMessage = useMemo(() => {
+    if (error) return error;
+    
+    if (containsErrorsOrFallbacks && !hasRealInsights) {
+      // Extract a potentially useful error message from insights
+      const firstInsight = insights[0];
+      if (firstInsight?.content?.details) {
+        return firstInsight.content.details;
+      }
+      return "We couldn't generate meaningful insights from this website. The site may have access restrictions or insufficient content.";
+    }
+    
+    return null;
+  }, [error, containsErrorsOrFallbacks, hasRealInsights, insights]);
 
   return (
     <div>
@@ -148,7 +197,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Website Analysis Failed</AlertTitle>
               <AlertDescription>
-                {error}
+                {errorMessage}
               </AlertDescription>
               <p className="mt-2 text-sm">
                 Please try a different website URL or check the URL format. Common issues include website protection, CORS policies, or temporary site unavailability.
@@ -170,7 +219,7 @@ const WebInsightsTabContent: React.FC<WebInsightsTabContentProps> = ({
             <NoInsightsEmptyState 
               hasWebsiteUrl={!!websiteUrl}
               isAnalyzing={isAnalyzingWebsite}
-              error={shouldShowErrorBanner ? error : null}
+              error={errorMessage}
             />
           )}
         </>

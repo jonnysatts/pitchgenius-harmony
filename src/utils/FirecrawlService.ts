@@ -25,6 +25,7 @@ export class FirecrawlService {
         
         return { success: true };
       } catch (error) {
+        console.error('Error in test connection:', error);
         if (error.name === 'AbortError') {
           return { 
             success: false, 
@@ -51,8 +52,14 @@ export class FirecrawlService {
     try {
       console.log(`Analyzing website: ${websiteUrl}`);
       
+      // Normalize the URL format
+      let normalizedUrl = websiteUrl;
+      if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+        normalizedUrl = `https://${normalizedUrl}`;
+      }
+      
       // First, check the analysis progress (also confirms the Edge Function is responsive)
-      const progressCheck = await this.checkAnalysisProgress(websiteUrl);
+      const progressCheck = await this.checkAnalysisProgress(normalizedUrl);
       if (!progressCheck.success) {
         console.warn("Progress check failed, but continuing with analysis attempt");
       }
@@ -60,7 +67,7 @@ export class FirecrawlService {
       // Call the Supabase Edge Function for website analysis
       const { data, error } = await supabase.functions.invoke('analyze-website-with-anthropic', {
         body: {
-          website_url: websiteUrl,
+          website_url: normalizedUrl,
           client_name: clientName,
           client_industry: clientIndustry,
           timeout_seconds: 60,
@@ -78,16 +85,11 @@ export class FirecrawlService {
         };
       }
       
-      // Check if the API returned proper insights
-      if (data.insights && Array.isArray(data.insights) && data.insights.length > 0) {
-        return {
-          success: true,
-          insights: data.insights
-        };
-      }
-      
-      // Check for retriable errors - Claude overload or rate limit
+      // Check if the API returned a direct error message
       if (data.error) {
+        console.error('Error from API response:', data.error);
+        
+        // Check if error is related to Claude being overloaded
         const isRetriable = 
           (typeof data.error === 'string' && 
            (data.error.includes('overloaded') || 
@@ -98,11 +100,48 @@ export class FirecrawlService {
         return {
           success: false,
           error: data.error,
-          insights: data.sample_insights || [],
+          insights: data.insights || [],
           retriableError: isRetriable
         };
       }
       
+      // Check if the API returned proper insights
+      if (data.insights && Array.isArray(data.insights) && data.insights.length > 0) {
+        // Always check if insights are usable - sometimes we get error insights
+        const errorTitles = [
+          "Improve Website Accessibility",
+          "Website Accessibility Issue", 
+          "Website Unavailable",
+          "Prioritize Website Accessibility",
+          "Unable to Assess",
+          "Unable to Identify",
+          "Unable to Evaluate",
+          "Unable to Provide",
+          "Placeholder Title"
+        ];
+        
+        const allErrorInsights = data.insights.every(insight => 
+          errorTitles.some(errorTitle => 
+            insight.content?.title?.includes(errorTitle)
+          )
+        );
+        
+        if (allErrorInsights) {
+          // Even though we got insights, they're all error-related
+          return {
+            success: false,
+            error: data.insights[0]?.content?.details || "Unable to extract content from website",
+            insights: data.insights
+          };
+        }
+        
+        return {
+          success: true,
+          insights: data.insights
+        };
+      }
+      
+      // Fallback to basic error handling
       return {
         success: false,
         error: "Received a valid response but no insights were found.",
@@ -118,7 +157,7 @@ export class FirecrawlService {
     }
   }
   
-  // Check progress of analysis - now public instead of private
+  // Check progress of analysis
   static async checkAnalysisProgress(
     websiteUrl: string
   ): Promise<{success: boolean, progress?: number, error?: string}> {

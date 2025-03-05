@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { Project, StrategicInsight } from '@/lib/types';
 import { FirecrawlService } from '@/utils/FirecrawlService';
@@ -16,8 +17,9 @@ export const useWebsiteAnalysisLogic = (
 ) => {
   const { toast } = useToast();
 
-  // Helper function to check if insights are all error-related
+  // Enhanced helper function to check if insights are all error-related
   const areAllErrorInsights = useCallback((insights: StrategicInsight[]) => {
+    // Common patterns in error insight titles
     const errorTitles = [
       "Improve Website Accessibility",
       "Website Accessibility Issue", 
@@ -27,14 +29,47 @@ export const useWebsiteAnalysisLogic = (
       "Unable to Identify",
       "Unable to Evaluate",
       "Unable to Provide",
-      "Placeholder Title"
+      "Placeholder Title",
+      "Essential Business Focus Areas",  // Match fallback titles
+      "Target Audience Analysis",
+      "Competitive Differentiation", 
+      "Growth Expansion Possibilities",
+      "Strategic Priorities",
+      "Core Brand Narratives"
     ];
     
-    return insights.every(insight => 
-      errorTitles.some(errorTitle => 
-        insight.content?.title?.includes(errorTitle)
-      )
-    );
+    // Error patterns in content details
+    const errorContentPatterns = [
+      "Failed to extract content",
+      "could not be accessed",
+      "HTTP error",
+      "accessibility issues",
+      "Website content could not be accessed",
+      "No specific evidence",
+      "Evidence would normally be extracted"
+    ];
+    
+    // Check if any insights have error-related content
+    const hasErrorContent = insights.some(insight => {
+      const details = insight.content?.details || '';
+      return errorContentPatterns.some(pattern => details.includes(pattern));
+    });
+    
+    // Check if all insights have error-related titles or are marked as fallbacks
+    const allErrorTitles = insights.every(insight => {
+      const title = insight.content?.title || '';
+      const id = insight.id || '';
+      
+      // Check if it's a fallback insight (they typically have IDs like fallback_1)
+      const isFallbackInsight = id.includes('fallback_');
+      
+      // Check if title matches any error patterns
+      const hasTitleMatch = errorTitles.some(errorTitle => title.includes(errorTitle));
+      
+      return hasTitleMatch || isFallbackInsight;
+    });
+    
+    return hasErrorContent || allErrorTitles;
   }, []);
 
   const handleAnalysisTimeout = useCallback((
@@ -58,7 +93,7 @@ export const useWebsiteAnalysisLogic = (
       description: "Analysis took too long to complete. Try again or use a simpler website.",
       variant: "destructive"
     });
-  }, [project, setError, setWebsiteInsights, setAnalysisProgress, setAnalysisStatus, setIsAnalyzing, toast]);
+  }, [setError, setWebsiteInsights, setAnalysisProgress, setAnalysisStatus, setIsAnalyzing, toast]);
 
   const processAnalysisResult = useCallback(async (
     result: any,
@@ -71,24 +106,37 @@ export const useWebsiteAnalysisLogic = (
     
     console.log("Website analysis results:", result);
 
+    // Check if we got any actual insights
     if (result && result.insights && result.insights.length > 0) {
       // Check if the insights are all error-related
       if (areAllErrorInsights(result.insights)) {
-        console.log("Only error-related insights were found");
+        console.log("Only error-related insights were found or fallback insights returned");
         
-        // Extract error message from first insight
-        const errorDetail = result.insights[0]?.content?.details || 
-                          result.error || 
-                          "The website could not be analyzed correctly.";
+        // If result indicates using fallbacks, extract that information
+        const usingFallback = result.usingFallback === true;
+        
+        // Extract error message from first insight or use provided error
+        const errorDetail = usingFallback 
+          ? "The Claude API is currently overloaded or returned insufficient content." 
+          : (result.error || result.insights[0]?.content?.details || "The website could not be analyzed correctly.");
         
         setError(errorDetail);
         setWebsiteInsights([]);
         
-        toast({
-          title: "Website Analysis Failed",
-          description: "We couldn't extract meaningful content from the website.",
-          variant: "destructive"
-        });
+        // Different toast messages based on the error type
+        if (usingFallback || (result.error && result.error.includes('overloaded'))) {
+          toast({
+            title: "Claude API Temporarily Unavailable",
+            description: "Claude AI is currently overloaded. Please try again in a few minutes.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Website Analysis Failed",
+            description: "We couldn't extract meaningful content from the website.",
+            variant: "destructive"
+          });
+        }
         
         return;
       }
