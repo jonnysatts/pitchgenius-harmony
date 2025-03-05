@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Document } from "@/lib/types";
-import { fetchProjectDocuments } from "@/services/documents";
+import { fetchProjectDocuments, uploadDocumentToApi, removeDocumentFromApi } from "@/services/documents";
 import { useToast } from "@/hooks/use-toast";
 import { useErrorHandler } from "@/hooks/error/useErrorHandler";
 
@@ -21,6 +22,7 @@ export const useQueryDocuments = (projectId: string) => {
     queryFn: async () => {
       try {
         if (!projectId) return [];
+        console.log(`Fetching documents for project: ${projectId}`);
         return await fetchProjectDocuments(projectId);
       } catch (err) {
         // Transform error using error handler but still throw for React Query
@@ -39,26 +41,29 @@ export const useQueryDocuments = (projectId: string) => {
   // Add documents mutation
   const addDocumentsMutation = useMutation({
     mutationFn: async (files: File[]): Promise<Document[]> => {
-      // This would normally call an API
-      // For now, it'll create mock documents
-      const newDocuments: Document[] = files.map(file => ({
-        id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-        projectId,
-        createdAt: new Date(),
-        uploadedBy: 'anonymous',
-        uploadedAt: new Date().toISOString(),
-        priority: 0
-      }));
+      // Create a new array to hold all the uploaded documents
+      const uploadedDocuments: Document[] = [];
       
       // Get current documents
       const currentDocs = queryClient.getQueryData<Document[]>(documentsQueryKey) || [];
       
+      // Process each file
+      for (const file of files) {
+        try {
+          // Upload the document
+          const newDoc = await uploadDocumentToApi(projectId, file);
+          if (newDoc) {
+            uploadedDocuments.push(newDoc);
+            console.log(`Successfully uploaded document: ${newDoc.name}`);
+          }
+        } catch (err) {
+          console.error(`Error uploading document ${file.name}:`, err);
+          // Continue with other files even if one fails
+        }
+      }
+      
       // Return the combined list
-      return [...currentDocs, ...newDocuments];
+      return [...currentDocs, ...uploadedDocuments];
     },
     onSuccess: (newDocumentsList) => {
       // Update query cache
@@ -85,6 +90,9 @@ export const useQueryDocuments = (projectId: string) => {
   // Remove document mutation
   const removeDocumentMutation = useMutation({
     mutationFn: async (documentId: string) => {
+      // Remove from API/storage
+      await removeDocumentFromApi(documentId);
+      
       // Get current documents
       const currentDocs = queryClient.getQueryData<Document[]>(documentsQueryKey) || [];
       
