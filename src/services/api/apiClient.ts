@@ -1,7 +1,23 @@
-
 import { Project, Document, StrategicInsight } from "@/lib/types";
-import { fetchProjectDocumentsFromApi, uploadDocumentToApi } from "@/services/documents/fetchOperations";
-import { analyzeDocuments } from "@/services/ai/document/documentAnalyzer";
+import { callEdgeFunction } from "./requestHandler";
+import { storage, apiCache } from "./storageAdapter";
+import { API_CONFIG, STORAGE_KEYS } from "./config";
+import { documentService, DocumentWithLifecycle } from "../documents/documentService";
+import { insightService, InsightWithDocuments } from "../insights/insightService";
+import { errorService, ErrorType } from "../error/errorService";
+
+// Define API input/output types for type safety
+interface WebsiteAnalysisInput {
+  websiteUrl: string;
+  projectId: string;
+  clientIndustry: string;
+}
+
+interface WebsiteAnalysisOutput {
+  analysis: any;
+  insights?: StrategicInsight[];
+  error?: string;
+}
 
 /**
  * API client for handling data fetching operations
@@ -10,46 +26,138 @@ export const apiClient = {
   // Document operations
   documents: {
     fetchProjectDocuments: async (projectId: string): Promise<Document[]> => {
-      return fetchProjectDocumentsFromApi(projectId);
+      try {
+        const cacheKey = `documents-${projectId}`;
+        
+        // Try to get from cache first
+        const cached = apiCache.get<Document[]>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+        
+        // Use the document service to fetch documents
+        const documents = await documentService.fetchProjectDocuments(projectId);
+        
+        // Cache the response
+        apiCache.set(cacheKey, documents);
+        
+        return documents;
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "fetch-project-documents",
+          projectId
+        });
+        return [];
+      }
     },
     
     uploadDocument: async (projectId: string, file: File, priority: number = 0): Promise<Document | null> => {
-      return uploadDocumentToApi(projectId, file, priority);
+      try {
+        // Use the document service to upload document
+        const result = await documentService.uploadDocument(projectId, file, priority);
+        
+        // Invalidate document cache for this project upon successful upload
+        if (result) {
+          apiCache.invalidate(`documents-${projectId}`);
+        }
+        
+        return result;
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "upload-document",
+          projectId,
+          fileName: file.name
+        });
+        return null;
+      }
     },
     
     removeDocument: async (documentId: string): Promise<boolean> => {
-      // This is currently mocked in localStorage
       try {
-        // Get all projects from localStorage
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('project_documents_'));
+        // Use the document service to remove document
+        const success = await documentService.removeDocument(documentId);
+        
+        if (success) {
+          // Since we don't know which project the document belonged to,
+          // we need to invalidate all document caches
+          apiCache.invalidate(`documents-`);
+        }
+        
+        return success;
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "remove-document",
+          documentId
+        });
+        return false;
+      }
+    },
+    
+    updateDocumentStatus: async (documentId: string, status: string, error?: string): Promise<boolean> => {
+      try {
+        // Find which project this document belongs to
+        const allProjectIds: string[] = [];
+        const keys = await storage.getAllKeys('project_documents_');
         
         for (const key of keys) {
-          const storedDocsJson = localStorage.getItem(key);
-          if (storedDocsJson) {
-            try {
-              const storedDocs = JSON.parse(storedDocsJson);
-              if (Array.isArray(storedDocs)) {
-                // Filter out the document to remove
-                const filteredDocs = storedDocs.filter((doc: Document) => doc.id !== documentId);
-                
-                // If we removed something, update localStorage
-                if (filteredDocs.length !== storedDocs.length) {
-                  localStorage.setItem(key, JSON.stringify(filteredDocs));
-                  console.log(`Removed document ${documentId} from ${key}`);
-                  return true;
-                }
-              }
-            } catch (e) {
-              console.error('Error parsing stored documents:', e);
+          const projectId = key.replace('project_documents_', '');
+          allProjectIds.push(projectId);
+          
+          // Get documents for this project
+          const docs = await storage.getItem<Document[]>(key) || [];
+          
+          // Check if document exists in this project
+          if (docs.some(doc => doc.id === documentId)) {
+            // Update document status
+            const success = await documentService.updateDocumentStatus(
+              documentId,
+              status as any,
+              error
+            );
+            
+            if (success) {
+              // Invalidate cache for this project
+              apiCache.invalidate(`documents-${projectId}`);
+              return true;
             }
           }
         }
         
-        console.warn(`Document ${documentId} not found in any project`);
+        // If document wasn't found in any project, invalidate all caches
+        // as a precaution
+        apiCache.invalidate(`documents-`);
+        
         return false;
       } catch (error) {
-        console.error('Error removing document:', error);
+        errorService.handleError(error, {
+          context: "update-document-status",
+          documentId,
+          status
+        });
         return false;
+      }
+    },
+    
+    cleanupOldDocuments: async (projectId: string, maxAgeMs?: number): Promise<number> => {
+      try {
+        // Use the document service to clean up old documents
+        const documentsRemoved = await documentService.cleanupProjectDocuments(
+          projectId,
+          maxAgeMs || 30 * 24 * 60 * 60 * 1000 // Default: 30 days
+        );
+        
+        if (documentsRemoved > 0) {
+          // Invalidate cache for this project
+          apiCache.invalidate(`documents-${projectId}`);
+        }
+        
+        return documentsRemoved;
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "cleanup-old-documents",
+          projectId
+        });
+        return 0;
       }
     }
   },
@@ -57,38 +165,73 @@ export const apiClient = {
   // AI Analysis operations
   analysis: {
     analyzeDocuments: async (documents: Document[], projectId: string) => {
-      return analyzeDocuments(documents, projectId);
+      try {
+        const result = await callEdgeFunction(
+          'analyze-documents',
+          {
+            documents,
+            projectId
+          },
+          {
+            timeoutMs: API_CONFIG.timeouts.long
+          }
+        );
+        
+        // Update document statuses to reflect analysis
+        if (result && Array.isArray(documents)) {
+          for (const doc of documents) {
+            await apiClient.documents.updateDocumentStatus(doc.id, 'analyzed');
+          }
+        }
+        
+        return result;
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "analyze-documents",
+          projectId,
+          documentCount: documents?.length || 0
+        });
+        return null;
+      }
     },
     
-    analyzeWebsite: async (projectId: string, websiteUrl: string, clientIndustry: string) => {
+    analyzeWebsite: async (projectId: string, websiteUrl: string, clientIndustry: string): Promise<WebsiteAnalysisOutput> => {
       try {
         console.log(`Analyzing website: ${websiteUrl} for project ${projectId}`);
         
-        // Create URL for the Supabase Edge Function
-        const baseUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://your-project.supabase.co';
-        const url = `${baseUrl}/functions/v1/analyze-website-with-anthropic`;
-        
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        // Use the callEdgeFunction utility instead of direct fetch
+        const result = await callEdgeFunction<WebsiteAnalysisOutput>(
+          API_CONFIG.endpoints.edgeFunctions.analyzeWebsite,
+          {
             websiteUrl,
             projectId,
             clientIndustry: clientIndustry || 'technology'
-          }),
-        });
+          },
+          {
+            timeoutMs: API_CONFIG.timeouts.long, // Use longer timeout for website analysis
+            retries: 2 // Fewer retries for long-running operations
+          }
+        );
         
-        if (!response.ok) {
-          throw new Error(`Website analysis failed: ${response.statusText}`);
+        // If the analysis generated insights, store them
+        if (result.insights && Array.isArray(result.insights) && result.insights.length > 0) {
+          for (const insightData of result.insights) {
+            await insightService.createInsight(projectId, insightData);
+          }
         }
         
-        const data = await response.json();
-        return data;
+        return result;
       } catch (error) {
-        console.error('Error analyzing website:', error);
-        throw error;
+        const errorDetails = errorService.handleError(error, {
+          context: "analyze-website",
+          projectId,
+          websiteUrl
+        });
+        
+        return {
+          analysis: null,
+          error: errorDetails.message
+        };
       }
     }
   },
@@ -96,52 +239,124 @@ export const apiClient = {
   // Insights operations
   insights: {
     getInsightsForProject: async (projectId: string): Promise<StrategicInsight[]> => {
-      // Get insights from localStorage for now
       try {
-        const storedData = localStorage.getItem(`project_insights_${projectId}`);
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          return parsedData.insights || [];
+        const cacheKey = `insights-${projectId}`;
+        
+        // Try to get from cache first
+        const cached = apiCache.get<StrategicInsight[]>(cacheKey);
+        if (cached) {
+          return cached;
         }
-        return [];
+        
+        // Use the insight service
+        const insights = await insightService.getProjectInsights(projectId);
+        
+        // Cache the response
+        apiCache.set(cacheKey, insights);
+        
+        return insights;
       } catch (error) {
-        console.error('Error fetching insights:', error);
+        errorService.handleError(error, {
+          context: "get-insights-for-project",
+          projectId
+        });
         return [];
       }
     },
     
-    updateInsight: async (projectId: string, insightId: string, updatedContent: Record<string, any>): Promise<boolean> => {
+    getInsightById: async (projectId: string, insightId: string): Promise<StrategicInsight | null> => {
       try {
-        const storedData = localStorage.getItem(`project_insights_${projectId}`);
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          const insights = parsedData.insights || [];
-          
-          const updatedInsights = insights.map((insight: StrategicInsight) => {
-            if (insight.id === insightId) {
-              return {
-                ...insight,
-                content: {
-                  ...insight.content,
-                  ...updatedContent
-                }
-              };
-            }
-            return insight;
-          });
-          
-          const updatedData = {
-            ...parsedData,
-            insights: updatedInsights
-          };
-          
-          localStorage.setItem(`project_insights_${projectId}`, JSON.stringify(updatedData));
-          return true;
-        }
-        return false;
+        return await insightService.getInsightById(projectId, insightId);
       } catch (error) {
-        console.error('Error updating insight:', error);
+        errorService.handleError(error, {
+          context: "get-insight-by-id",
+          projectId,
+          insightId
+        });
+        return null;
+      }
+    },
+    
+    createInsight: async (projectId: string, insightData: Partial<InsightWithDocuments>, sourceDocumentIds: string[] = []): Promise<StrategicInsight | null> => {
+      try {
+        return await insightService.createInsight(projectId, insightData, sourceDocumentIds);
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "create-insight",
+          projectId
+        });
+        return null;
+      }
+    },
+    
+    updateInsight: async (projectId: string, insightId: string, updates: Partial<InsightWithDocuments>): Promise<StrategicInsight | null> => {
+      try {
+        return await insightService.updateInsight(projectId, insightId, updates);
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "update-insight",
+          projectId,
+          insightId
+        });
+        return null;
+      }
+    },
+    
+    deleteInsight: async (projectId: string, insightId: string): Promise<boolean> => {
+      try {
+        return await insightService.deleteInsight(projectId, insightId);
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "delete-insight",
+          projectId,
+          insightId
+        });
         return false;
+      }
+    },
+    
+    associateDocumentsWithInsight: async (
+      projectId: string,
+      insightId: string,
+      documentIds: string[]
+    ): Promise<boolean> => {
+      try {
+        return await insightService.associateDocuments(projectId, insightId, documentIds);
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "associate-documents-with-insight",
+          projectId,
+          insightId
+        });
+        return false;
+      }
+    },
+    
+    getDocumentsForInsight: async (
+      projectId: string,
+      insightId: string
+    ): Promise<Document[]> => {
+      try {
+        return await insightService.getAssociatedDocuments(projectId, insightId);
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "get-documents-for-insight",
+          projectId,
+          insightId
+        });
+        return [];
+      }
+    },
+    
+    cleanupOrphanedInsights: async (projectId: string): Promise<number> => {
+      try {
+        return await insightService.cleanupOrphanedInsights(projectId);
+      } catch (error) {
+        errorService.handleError(error, {
+          context: "cleanup-orphaned-insights",
+          projectId
+        });
+        return 0;
       }
     }
   }

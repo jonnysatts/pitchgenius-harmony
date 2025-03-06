@@ -1,215 +1,189 @@
-
 import { Document } from "@/lib/types";
-import { getMockDocuments } from "./mockDocuments";
+import { storage } from "../api/storageAdapter";
+import { STORAGE_KEYS, DOCUMENT_CONFIG } from "../api/config";
+import { documentService, DocumentWithLifecycle } from "./documentService";
+import { migrateDocumentStorage } from "./documentMigration";
+import { errorService, ErrorType } from "../error/errorService";
 
-const convertApiDocumentToModel = (doc: any): Document => {
-  return {
-    id: doc.id,
-    name: doc.name,
-    size: doc.size,
-    type: doc.type,
-    url: doc.url,
-    projectId: doc.project_id || doc.projectId || '',
-    createdAt: new Date(doc.created_at || doc.uploadedAt || doc.createdAt || Date.now()),
-    uploadedBy: doc.user_id || doc.uploadedBy || 'anonymous',
-    priority: doc.priority || 0,
-    uploadedAt: doc.uploaded_at || doc.uploadedAt || new Date().toISOString()
-  };
-};
+// Track if migration has been attempted
+let migrationAttempted = false;
 
-export const fetchProjectDocumentsFromApi = async (projectId: string): Promise<Document[]> => {
-  if (!projectId) {
-    console.error('No project ID provided to fetch documents');
-    return [];
+/**
+ * Ensure document migration has run before performing document operations
+ */
+async function ensureMigration() {
+  if (!migrationAttempted) {
+    console.log("Running document migration check...");
+    await migrateDocumentStorage();
+    migrationAttempted = true;
   }
+}
 
+/**
+ * @deprecated Use documentService.fetchProjectDocuments instead
+ * Fetch all documents for a project
+ */
+export async function fetchProjectDocumentsFromApi(projectId: string): Promise<Document[]> {
   try {
-    console.log('Fetching documents for specific project ID:', projectId);
+    // Ensure migration has run
+    await ensureMigration();
     
-    // Use a more specific storage key to prevent cross-project contamination
-    const storageKey = `project_documents_${projectId}`;
-    console.log('Looking for documents with storage key:', storageKey);
-    
-    const storedDocsJson = localStorage.getItem(storageKey);
-    
-    if (storedDocsJson) {
-      try {
-        const storedDocs = JSON.parse(storedDocsJson);
-        
-        if (Array.isArray(storedDocs) && storedDocs.length > 0) {
-          console.log(`Found ${storedDocs.length} stored documents for project ${projectId}`);
-          
-          // Ensure all documents have the correct project ID
-          const validatedDocs = storedDocs.map(doc => ({
-            ...doc,
-            projectId: projectId
-          }));
-          
-          // Save back the validated docs to ensure integrity
-          localStorage.setItem(storageKey, JSON.stringify(validatedDocs));
-          
-          return validatedDocs.map(convertApiDocumentToModel);
-        } else {
-          console.log(`No documents found in storage for project ${projectId} (empty array)`);
-        }
-      } catch (parseError) {
-        console.error(`Error parsing stored documents for project ${projectId}:`, parseError);
-      }
-    } else {
-      console.log(`No documents found in storage for project ${projectId} (no entry)`);
-    }
-    
-    // Only get mock documents if no stored documents exist
-    console.log('No stored documents found, checking for mock documents');
-    const mockDocuments = getMockDocuments(projectId);
-    
-    if (mockDocuments.length > 0) {
-      console.log(`Using ${mockDocuments.length} mock documents for project ${projectId}`);
-    } else {
-      console.log('No documents found for project:', projectId);
-    }
-    
-    return mockDocuments.map(convertApiDocumentToModel);
+    // Use document service
+    return await documentService.fetchProjectDocuments(projectId);
   } catch (error) {
-    console.error(`Error fetching documents for project ${projectId}:`, error);
+    errorService.handleError(error, {
+      context: "fetch-project-documents-legacy",
+      projectId
+    });
     return [];
   }
-};
+}
 
-export const uploadDocumentToApi = async (
+/**
+ * @deprecated Use documentService.uploadDocument instead
+ * Upload a document to a project
+ */
+export async function uploadDocumentToApi(
   projectId: string,
   file: File,
   priority: number = 0
-): Promise<Document | null> => {
-  if (!projectId) {
-    console.error('No project ID provided for document upload');
+): Promise<Document | null> {
+  try {
+    // Ensure migration has run
+    await ensureMigration();
+    
+    // Validate file type
+    if (!DOCUMENT_CONFIG.allowedDocumentTypes.includes(file.type)) {
+      throw new Error(`Unsupported file type: ${file.type}`);
+    }
+    
+    // Validate file size
+    if (file.size > DOCUMENT_CONFIG.maxDocumentSize) {
+      throw new Error(`File too large: ${(file.size / (1024 * 1024)).toFixed(2)}MB exceeds limit of ${DOCUMENT_CONFIG.maxDocumentSize / (1024 * 1024)}MB`);
+    }
+    
+    // Use document service
+    return await documentService.uploadDocument(projectId, file, priority);
+  } catch (error) {
+    errorService.handleError(error, {
+      context: "upload-document-legacy",
+      projectId,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size
+    });
     return null;
   }
+}
 
+/**
+ * @deprecated Use documentService.removeDocument instead
+ * Remove a document
+ */
+export async function removeDocument(documentId: string): Promise<boolean> {
   try {
-    console.log('Uploading document to specific project:', projectId, file.name);
+    // Ensure migration has run
+    await ensureMigration();
     
-    // Generate a unique ID for the document
-    const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Use document service
+    return await documentService.removeDocument(documentId);
+  } catch (error) {
+    errorService.handleError(error, {
+      context: "remove-document-legacy",
+      documentId
+    });
+    return false;
+  }
+}
+
+/**
+ * @deprecated Use apiClient.insights.associateDocumentsWithInsight instead
+ * Associate documents with an insight
+ */
+export async function associateDocumentsWithInsight(
+  projectId: string,
+  insightId: string,
+  documentIds: string[]
+): Promise<boolean> {
+  try {
+    // Ensure migration has run
+    await ensureMigration();
     
-    // Create a blob URL for the file
-    const blobUrl = URL.createObjectURL(file);
+    // Use document service
+    return await documentService.associateDocumentsWithInsight(
+      projectId,
+      insightId,
+      documentIds
+    );
+  } catch (error) {
+    errorService.handleError(error, {
+      context: "associate-documents-with-insight-legacy",
+      projectId,
+      insightId
+    });
+    return false;
+  }
+}
+
+/**
+ * @deprecated Use apiClient.documents.updateDocumentStatus instead
+ * Update document status
+ */
+export async function updateDocumentStatus(
+  documentId: string,
+  status: string,
+  error?: string
+): Promise<boolean> {
+  try {
+    // Ensure migration has run
+    await ensureMigration();
     
-    // Create document object
-    const now = new Date();
-    const newDocument: Document = {
-      id: docId,
-      projectId: projectId, // Ensure correct project ID is set
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: blobUrl,
-      createdAt: now,
-      uploadedAt: now.toISOString(),
-      uploadedBy: 'current_user',
-      priority: priority
-    };
+    // Use document service
+    return await documentService.updateDocumentStatus(
+      documentId,
+      status as any,
+      error
+    );
+  } catch (error) {
+    errorService.handleError(error, {
+      context: "update-document-status-legacy",
+      documentId,
+      status
+    });
+    return false;
+  }
+}
+
+/**
+ * Run document migration manually
+ */
+export async function runDocumentMigration(): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log("Starting manual document migration...");
+    const success = await migrateDocumentStorage();
     
-    // Save to localStorage with consistent key format and project ID
-    const storageKey = `project_documents_${projectId}`;
-    console.log(`Saving document to storage key: ${storageKey}`);
+    migrationAttempted = true;
     
-    // Get existing documents for this specific project
-    let documents: Document[] = [];
-    const existingDocs = localStorage.getItem(storageKey);
-    
-    if (existingDocs) {
-      try {
-        const parsed = JSON.parse(existingDocs);
-        if (Array.isArray(parsed)) {
-          documents = parsed;
-          console.log(`Found ${documents.length} existing documents for project ${projectId}`);
-        }
-      } catch (e) {
-        console.error(`Error parsing existing documents for project ${projectId}:`, e);
-      }
+    if (success) {
+      return {
+        success: true,
+        message: "Document migration completed successfully"
+      };
     } else {
-      console.log(`No existing documents found for project ${projectId}, creating new array`);
+      return {
+        success: false,
+        message: "Document migration failed"
+      };
     }
-    
-    // Add the new document and save back to localStorage
-    documents.push(newDocument);
-    localStorage.setItem(storageKey, JSON.stringify(documents));
-    
-    console.log(`Document saved to localStorage. Total documents for project ${projectId}: ${documents.length}`);
-    
-    return newDocument;
   } catch (error) {
-    console.error(`Error uploading document to project ${projectId}:`, error);
-    return null;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    errorService.handleError(error, {
+      context: "manual-document-migration"
+    });
+    
+    return {
+      success: false,
+      message: `Document migration failed: ${errorMessage}`
+    };
   }
-};
-
-export const removeDocumentFromApi = async (documentId: string): Promise<boolean> => {
-  if (!documentId) {
-    console.error('No document ID provided for document removal');
-    return false;
-  }
-
-  try {
-    console.log('Removing document:', documentId);
-    
-    // Search in all project document storage keys
-    const storageKeys = Object.keys(localStorage).filter(key => key.startsWith('project_documents_'));
-    
-    let documentRemoved = false;
-    let projectIdFound = null;
-    
-    for (const storageKey of storageKeys) {
-      const storedDocsJson = localStorage.getItem(storageKey);
-      if (storedDocsJson) {
-        try {
-          const storedDocs = JSON.parse(storedDocsJson);
-          
-          if (Array.isArray(storedDocs)) {
-            const documentToRemove = storedDocs.find(doc => doc.id === documentId);
-            
-            if (documentToRemove) {
-              projectIdFound = documentToRemove.projectId || storageKey.replace('project_documents_', '');
-              console.log(`Found document ${documentId} in project ${projectIdFound}`);
-            }
-            
-            // Filter out the document to be removed
-            const filteredDocs = storedDocs.filter(doc => doc.id !== documentId);
-            
-            // If the length changed, we found and removed the document
-            if (filteredDocs.length !== storedDocs.length) {
-              localStorage.setItem(storageKey, JSON.stringify(filteredDocs));
-              documentRemoved = true;
-              console.log(`Document ${documentId} removed from ${storageKey}`);
-              
-              // Revoke the blob URL if it exists
-              const removedDoc = storedDocs.find(doc => doc.id === documentId);
-              if (removedDoc && removedDoc.url && removedDoc.url.startsWith('blob:')) {
-                try {
-                  URL.revokeObjectURL(removedDoc.url);
-                  console.log(`Revoked blob URL for document ${documentId}`);
-                } catch (e) {
-                  console.warn('Could not revoke blob URL:', e);
-                }
-              }
-            }
-          }
-        } catch (parseError) {
-          console.error(`Error parsing documents from ${storageKey}:`, parseError);
-        }
-      }
-    }
-    
-    if (!documentRemoved) {
-      console.warn(`Document ${documentId} not found in any localStorage storage`);
-    } else if (projectIdFound) {
-      console.log(`Successfully removed document ${documentId} from project ${projectIdFound}`);
-    }
-    
-    return documentRemoved;
-  } catch (error) {
-    console.error('Error removing document:', error);
-    return false;
-  }
-};
+}
