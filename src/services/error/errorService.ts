@@ -1,185 +1,245 @@
-
 import { toast } from "sonner";
 
-// Error types to categorize different errors
+// Error types for better categorization
 export enum ErrorType {
-  API_ERROR = "API_ERROR",
-  NETWORK_ERROR = "NETWORK_ERROR",
-  AUTH_ERROR = "AUTH_ERROR",
-  VALIDATION_ERROR = "VALIDATION_ERROR",
-  ANALYSIS_ERROR = "ANALYSIS_ERROR",
-  CLAUDE_API_ERROR = "CLAUDE_API_ERROR",
-  UNKNOWN_ERROR = "UNKNOWN_ERROR"
+  // Document-related errors
+  DOCUMENT_UPLOAD = "document_upload",
+  DOCUMENT_FETCH = "document_fetch",
+  DOCUMENT_DELETE = "document_delete",
+  DOCUMENT_PROCESS = "document_process",
+  
+  // API-related errors
+  API_CONNECTION = "api_connection",
+  API_TIMEOUT = "api_timeout",
+  API_RESPONSE = "api_response",
+  
+  // Storage-related errors
+  STORAGE_WRITE = "storage_write",
+  STORAGE_READ = "storage_read",
+  STORAGE_DELETE = "storage_delete",
+  
+  // Authentication-related errors
+  AUTH_REQUIRED = "auth_required",
+  AUTH_EXPIRED = "auth_expired",
+  AUTH_INVALID = "auth_invalid",
+  
+  // Project-related errors
+  PROJECT_NOT_FOUND = "project_not_found",
+  PROJECT_INVALID = "project_invalid",
+  
+  // Validation errors
+  VALIDATION = "validation",
+  
+  // Other errors
+  UNKNOWN = "unknown"
 }
 
-// Structure for error details
-export interface ErrorDetails {
-  type: ErrorType;
-  message: string;
-  originalError?: any;
-  retriable: boolean;
-  context?: Record<string, any>;
+// Context for the error
+interface ErrorContext {
+  context: string;
+  [key: string]: any;
 }
 
-/**
- * Centralized error handling service
- */
+// Error service for centralized error handling
 class ErrorService {
-  // Log and format error for display/reporting
-  handleError(error: unknown, context?: Record<string, any>): ErrorDetails {
-    // Determine error type and create structured error details
-    const errorDetails = this.createErrorDetails(error, context);
-    
-    // Log the error for debugging
-    this.logError(errorDetails);
-    
-    // Show user-friendly notification if needed
-    this.notifyUser(errorDetails);
-    
-    return errorDetails;
+  // Keep track of shown errors to prevent duplicates
+  private shownErrors: Map<string, number> = new Map();
+  
+  // Create a unique key for an error to prevent duplicates
+  private createErrorKey(error: Error | string, context?: ErrorContext): string {
+    const errorMessage = typeof error === 'string' ? error : error.message;
+    const contextKey = context ? JSON.stringify(context) : '';
+    return `${errorMessage}-${contextKey}`;
   }
   
-  // Create standardized error details object
-  private createErrorDetails(error: unknown, context?: Record<string, any>): ErrorDetails {
-    // Default error details
-    const details: ErrorDetails = {
-      type: ErrorType.UNKNOWN_ERROR,
-      message: "An unexpected error occurred",
-      retriable: false,
-      context
-    };
+  // Determine error type based on error and context
+  private determineErrorType(error: Error | string, context?: ErrorContext): ErrorType {
+    const errorMessage = typeof error === 'string' ? error : error.message;
     
-    // Error is an Error object
-    if (error instanceof Error) {
-      details.message = error.message;
-      details.originalError = error;
-      
-      // Parse error message to determine type
-      if (error.message.includes("network") || error.message.includes("fetch")) {
-        details.type = ErrorType.NETWORK_ERROR;
-        details.retriable = true;
-      } else if (error.message.includes("authentication") || error.message.includes("auth") || 
-                error.message.includes("token") || error.message.includes("permission")) {
-        details.type = ErrorType.AUTH_ERROR;
-        details.retriable = false;
-      } else if (error.message.includes("Claude") || error.message.includes("AI") || 
-                error.message.includes("Anthropic")) {
-        details.type = ErrorType.CLAUDE_API_ERROR;
-        details.retriable = error.message.includes("rate limit") || 
-                          error.message.includes("overloaded") ||
-                          error.message.includes("timeout");
-      } else if (error.message.includes("validation") || error.message.includes("invalid")) {
-        details.type = ErrorType.VALIDATION_ERROR;
-        details.retriable = false;
-      } else if (error.message.includes("analysis") || error.message.includes("insight")) {
-        details.type = ErrorType.ANALYSIS_ERROR;
-        details.retriable = !error.message.includes("insufficient content");
-      }
-    } 
-    // Error is a string
-    else if (typeof error === "string") {
-      details.message = error;
-      
-      // Simple string categorization
-      if (error.includes("API") || error.includes("response")) {
-        details.type = ErrorType.API_ERROR;
-        details.retriable = true;
-      }
-    } 
-    // Error is an object with specific structure
-    else if (error && typeof error === "object") {
-      const errorObj = error as any;
-      details.message = errorObj.message || errorObj.error || JSON.stringify(error);
-      details.originalError = error;
-      
-      // Check for api error
-      if (errorObj.status || errorObj.statusCode) {
-        details.type = ErrorType.API_ERROR;
-        details.retriable = [408, 429, 500, 502, 503, 504].includes(errorObj.status || errorObj.statusCode);
-      }
+    // Document-related errors
+    if (context?.context?.includes('document-upload') || errorMessage.includes('upload')) {
+      return ErrorType.DOCUMENT_UPLOAD;
     }
     
-    return details;
-  }
-  
-  // Log error to console and potentially to monitoring service
-  private logError(errorDetails: ErrorDetails): void {
-    console.error("Error handled by ErrorService:", {
-      type: errorDetails.type,
-      message: errorDetails.message,
-      context: errorDetails.context,
-      originalError: errorDetails.originalError,
-      timestamp: new Date().toISOString()
-    });
-    
-    // In the future, this could send errors to a monitoring service like Sentry
-    // if (process.env.NODE_ENV === 'production') {
-    //   captureException(errorDetails);
-    // }
-  }
-  
-  // Show user-friendly notifications
-  private notifyUser(errorDetails: ErrorDetails): void {
-    // Skip notifications for validation errors which should be handled at component level
-    if (errorDetails.type === ErrorType.VALIDATION_ERROR) {
-      return;
+    if (context?.context?.includes('document-fetch') || errorMessage.includes('fetch document')) {
+      return ErrorType.DOCUMENT_FETCH;
     }
     
-    // Map error types to user-friendly messages
-    let title: string;
-    let description: string;
+    if (context?.context?.includes('document-delete') || errorMessage.includes('delete document') || errorMessage.includes('remove document')) {
+      return ErrorType.DOCUMENT_DELETE;
+    }
     
-    switch (errorDetails.type) {
-      case ErrorType.NETWORK_ERROR:
-        title = "Network Error";
-        description = "Please check your internet connection and try again.";
-        break;
-      case ErrorType.AUTH_ERROR:
-        title = "Authentication Error";
-        description = "Please sign in again to continue.";
-        break;
-      case ErrorType.CLAUDE_API_ERROR:
-        title = "AI Analysis Error";
-        description = errorDetails.retriable
-          ? "Claude AI is currently busy. Please try again in a few moments."
-          : "There was a problem with the AI analysis. Please check your content and try again.";
-        break;
-      case ErrorType.API_ERROR:
-        title = "Service Error";
-        description = errorDetails.retriable
-          ? "Our service is experiencing high demand. Please try again shortly."
-          : "We encountered an issue processing your request.";
-        break;
-      case ErrorType.ANALYSIS_ERROR:
-        title = "Analysis Error";
-        description = "We couldn't analyze your content. Please check your documents and try again.";
-        break;
+    if (context?.context?.includes('document-process') || errorMessage.includes('process document')) {
+      return ErrorType.DOCUMENT_PROCESS;
+    }
+    
+    // API-related errors
+    if (errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('offline')) {
+      return ErrorType.API_CONNECTION;
+    }
+    
+    if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+      return ErrorType.API_TIMEOUT;
+    }
+    
+    if (errorMessage.includes('response') || errorMessage.includes('status')) {
+      return ErrorType.API_RESPONSE;
+    }
+    
+    // Storage-related errors
+    if (context?.context?.includes('storage') && (errorMessage.includes('write') || errorMessage.includes('save'))) {
+      return ErrorType.STORAGE_WRITE;
+    }
+    
+    if (context?.context?.includes('storage') && (errorMessage.includes('read') || errorMessage.includes('get'))) {
+      return ErrorType.STORAGE_READ;
+    }
+    
+    if (context?.context?.includes('storage') && (errorMessage.includes('delete') || errorMessage.includes('remove'))) {
+      return ErrorType.STORAGE_DELETE;
+    }
+    
+    // Project-related errors
+    if (errorMessage.includes('project not found') || errorMessage.includes('project does not exist')) {
+      return ErrorType.PROJECT_NOT_FOUND;
+    }
+    
+    if (errorMessage.includes('project') && (errorMessage.includes('invalid') || errorMessage.includes('error'))) {
+      return ErrorType.PROJECT_INVALID;
+    }
+    
+    // Validation errors
+    if (
+      errorMessage.includes('invalid') || 
+      errorMessage.includes('validation') || 
+      errorMessage.includes('required') ||
+      errorMessage.includes('exceed') ||
+      errorMessage.includes('too large') ||
+      errorMessage.includes('unsupported')
+    ) {
+      return ErrorType.VALIDATION;
+    }
+    
+    return ErrorType.UNKNOWN;
+  }
+  
+  // Get a user-friendly message based on error type
+  private getUserFriendlyMessage(errorType: ErrorType, error: Error | string): string {
+    const errorMessage = typeof error === 'string' ? error : error.message;
+    
+    switch (errorType) {
+      case ErrorType.DOCUMENT_UPLOAD:
+        return "Failed to upload document. Please check your file and try again.";
+      
+      case ErrorType.DOCUMENT_FETCH:
+        return "Could not retrieve documents. Please try refreshing the page.";
+      
+      case ErrorType.DOCUMENT_DELETE:
+        return "Failed to delete document. Please try again later.";
+      
+      case ErrorType.DOCUMENT_PROCESS:
+        return "Document processing failed. The file may be corrupted or in an unsupported format.";
+      
+      case ErrorType.API_CONNECTION:
+        return "Connection error. Please check your internet connection and try again.";
+      
+      case ErrorType.API_TIMEOUT:
+        return "The request timed out. Please try again later.";
+      
+      case ErrorType.API_RESPONSE:
+        return "Server error. Our team has been notified and is working on a fix.";
+      
+      case ErrorType.STORAGE_WRITE:
+        return "Failed to save data. Please try again later.";
+      
+      case ErrorType.STORAGE_READ:
+        return "Failed to load data. Please refresh the page.";
+      
+      case ErrorType.STORAGE_DELETE:
+        return "Failed to delete data. Please try again later.";
+      
+      case ErrorType.PROJECT_NOT_FOUND:
+        return "Project not found. It may have been deleted or you may not have access to it.";
+      
+      case ErrorType.PROJECT_INVALID:
+        return "Invalid project data. Please try refreshing the page.";
+      
+      case ErrorType.VALIDATION:
+        return errorMessage;
+      
+      case ErrorType.UNKNOWN:
       default:
-        title = "Unexpected Error";
-        description = "Something went wrong. Please try again or contact support if the issue persists.";
+        return "An unexpected error occurred. Please try again or contact support if the issue persists.";
     }
+  }
+  
+  // Handle an error by logging it and showing a toast notification
+  public handleError(error: Error | string, context?: ErrorContext): void {
+    const errorMessage = typeof error === 'string' ? error : error.message;
+    const errorType = this.determineErrorType(error, context);
+    const errorKey = this.createErrorKey(error, context);
     
-    // Show toast notification
-    toast.error(title, {
-      description,
-      duration: 5000
-    });
+    // Log error details
+    console.error(`[${errorType}] Error:`, errorMessage, context);
+    
+    // Check if we've shown this error recently
+    const now = Date.now();
+    const lastShown = this.shownErrors.get(errorKey);
+    
+    // Only show the same error once every 5 seconds
+    if (!lastShown || (now - lastShown > 5000)) {
+      this.shownErrors.set(errorKey, now);
+      
+      // Get a user-friendly message
+      const userMessage = this.getUserFriendlyMessage(errorType, error);
+      
+      // Show a toast notification with the error
+      toast.error("Error", {
+        description: userMessage,
+        duration: 5000,
+      });
+    }
   }
   
-  // Method to create an analysis-specific error
-  createAnalysisError(message: string, retriable: boolean = true): Error {
-    const error = new Error(message);
-    error.name = "AnalysisError";
-    return error;
+  // Clear all tracked errors
+  public clearErrors(): void {
+    this.shownErrors.clear();
   }
   
-  // Method to create a Claude API-specific error
-  createClaudeApiError(message: string, retriable: boolean = true): Error {
-    const error = new Error(message);
-    error.name = "ClaudeApiError";
-    return error;
+  // Get suggestions for fixing an error
+  public getSuggestions(errorType: ErrorType): string[] {
+    switch (errorType) {
+      case ErrorType.DOCUMENT_UPLOAD:
+        return [
+          "Check that your file is not too large (max 25MB)",
+          "Make sure the file type is supported (PDF, DOC, DOCX, TXT, PPT, PPTX)",
+          "Try uploading a different file",
+          "Refresh the page and try again"
+        ];
+      
+      case ErrorType.API_CONNECTION:
+        return [
+          "Check your internet connection",
+          "Try again in a few minutes",
+          "Refresh the page"
+        ];
+      
+      case ErrorType.VALIDATION:
+        return [
+          "Review the error message carefully",
+          "Make sure all required fields are filled out",
+          "Check for incorrect formatting"
+        ];
+      
+      default:
+        return [
+          "Refresh the page and try again",
+          "Log out and log back in",
+          "Clear your browser cache and cookies"
+        ];
+    }
   }
 }
 
-// Export a singleton instance
+// Create a singleton instance
 export const errorService = new ErrorService();

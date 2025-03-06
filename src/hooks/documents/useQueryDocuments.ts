@@ -1,142 +1,209 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Document } from '@/lib/types';
+import { toast } from 'sonner';
+import { documentService } from '../../services/documents/documentService';
+import { errorService } from '../../services/error/errorService';
+import { DOCUMENT_CONFIG } from '../../services/api/config';
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Document } from "@/lib/types";
-import { fetchProjectDocuments, uploadDocumentToApi, removeDocumentFromApi } from "@/services/documents";
-import { useToast } from "@/hooks/use-toast";
-import { useErrorHandler } from "@/hooks/error/useErrorHandler";
+const DOCUMENTS_QUERY_KEY = 'project-documents';
 
 /**
- * Hook for managing document state with React Query
+ * React Query hook for document management with better project filtering
+ * and storage consistency
  */
 export const useQueryDocuments = (projectId: string) => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const { handleError } = useErrorHandler();
-  
-  // Query key for this project's documents
-  const documentsQueryKey = ['project', projectId, 'documents'];
 
-  // Fetch documents from API/storage
-  const documentsQuery = useQuery({
-    queryKey: documentsQueryKey,
+  // Generate a consistent query key that includes the projectId
+  const getQueryKey = () => [DOCUMENTS_QUERY_KEY, projectId];
+
+  // Fetch documents using the documentService
+  const {
+    data: documents = [],
+    isLoading,
+    error,
+    refetch
+  } = useQuery<Document[]>({
+    queryKey: getQueryKey(),
     queryFn: async () => {
+      if (!projectId) return [];
+      
       try {
-        if (!projectId) return [];
         console.log(`Fetching documents for project: ${projectId}`);
-        return await fetchProjectDocuments(projectId);
+        return await documentService.fetchProjectDocuments(projectId);
       } catch (err) {
-        // Transform error using error handler but still throw for React Query
-        const errorDetails = handleError(err, { 
-          context: 'fetching-documents', 
-          projectId 
+        errorService.handleError(err, {
+          context: 'document-fetch',
+          projectId
         });
-        
-        throw new Error(errorDetails.message);
+        return [];
       }
     },
-    enabled: !!projectId, // Only run if we have a projectId
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: true
   });
 
-  // Add documents mutation
-  const addDocumentsMutation = useMutation({
-    mutationFn: async (files: File[]): Promise<Document[]> => {
-      // Create a new array to hold all the uploaded documents
-      const uploadedDocuments: Document[] = [];
+  // Add document mutation
+  const { mutateAsync: addDocumentsMutation } = useMutation({
+    mutationFn: async (files: File[]) => {
+      if (!projectId) {
+        throw new Error('No project ID provided for document upload');
+      }
+
+      const currentDocs = queryClient.getQueryData<Document[]>(getQueryKey()) || [];
       
-      // Get current documents
-      const currentDocs = queryClient.getQueryData<Document[]>(documentsQueryKey) || [];
-      
-      // Process each file
+      // Check if we'd exceed the maximum number of documents per project
+      if (currentDocs.length + files.length > DOCUMENT_CONFIG.maxDocumentsPerProject) {
+        throw new Error(
+          `Too many documents. Maximum ${DOCUMENT_CONFIG.maxDocumentsPerProject} documents allowed per project.`
+        );
+      }
+
+      // Track upload progress
+      const uploadedDocs: Document[] = [];
+      const failedUploads: { file: File; error: string }[] = [];
+
+      // Upload each file and collect the results
       for (const file of files) {
         try {
-          // Upload the document
-          const newDoc = await uploadDocumentToApi(projectId, file);
-          if (newDoc) {
-            uploadedDocuments.push(newDoc);
-            console.log(`Successfully uploaded document: ${newDoc.name}`);
+          // Validate file size
+          if (file.size > DOCUMENT_CONFIG.maxDocumentSize) {
+            throw new Error(
+              `File too large: ${(file.size / (1024 * 1024)).toFixed(2)}MB exceeds limit of ${
+                DOCUMENT_CONFIG.maxDocumentSize / (1024 * 1024)
+              }MB`
+            );
+          }
+
+          // Validate file type
+          if (!DOCUMENT_CONFIG.allowedDocumentTypes.includes(file.type)) {
+            throw new Error(`Unsupported file type: ${file.type}`);
+          }
+
+          const uploadedDoc = await documentService.uploadDocument(projectId, file);
+          if (uploadedDoc) {
+            uploadedDocs.push(uploadedDoc);
           }
         } catch (err) {
-          console.error(`Error uploading document ${file.name}:`, err);
-          // Continue with other files even if one fails
+          console.error(`Error uploading ${file.name}:`, err);
+          failedUploads.push({
+            file,
+            error: err instanceof Error ? err.message : 'Unknown error'
+          });
+
+          errorService.handleError(err, {
+            context: 'document-upload',
+            projectId,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
+          });
         }
       }
-      
-      // Return the combined list
-      return [...currentDocs, ...uploadedDocuments];
+
+      // Show success/failure toasts
+      if (uploadedDocs.length > 0) {
+        toast.success(
+          `${uploadedDocs.length} ${uploadedDocs.length === 1 ? 'document' : 'documents'} uploaded`,
+          {
+            description: 'Your documents are ready for analysis',
+            duration: 4000
+          }
+        );
+      }
+
+      if (failedUploads.length > 0) {
+        toast.error(
+          `${failedUploads.length} ${failedUploads.length === 1 ? 'document' : 'documents'} failed to upload`,
+          {
+            description: failedUploads.map(f => `${f.file.name}: ${f.error}`).join(', '),
+            duration: 6000
+          }
+        );
+      }
+
+      return uploadedDocs;
     },
-    onSuccess: (newDocumentsList) => {
-      // Update query cache
-      queryClient.setQueryData(documentsQueryKey, newDocumentsList);
-      
-      // Show success toast
-      toast({
-        title: "Documents uploaded",
-        description: "Your documents were successfully uploaded",
-        variant: "default",
-      });
-    },
-    onError: (error) => {
-      handleError(error, { context: 'uploading-documents', projectId });
-      
-      toast({
-        title: "Error uploading documents",
-        description: "Failed to upload documents. Please try again.",
-        variant: "destructive",
+    onSuccess: (newDocs) => {
+      // Update the cache with the newly added documents
+      queryClient.setQueryData<Document[]>(getQueryKey(), (oldDocs = []) => {
+        // Ensure we don't duplicate documents by checking IDs
+        const existingIds = new Set(oldDocs.map(doc => doc.id));
+        const uniqueNewDocs = newDocs.filter(doc => !existingIds.has(doc.id));
+        
+        return [...oldDocs, ...uniqueNewDocs];
       });
     }
   });
 
   // Remove document mutation
-  const removeDocumentMutation = useMutation({
+  const { mutateAsync: removeDocumentMutation } = useMutation({
     mutationFn: async (documentId: string) => {
-      // Remove from API/storage
-      await removeDocumentFromApi(documentId);
+      if (!documentId) {
+        throw new Error('No document ID provided for removal');
+      }
+
+      const success = await documentService.removeDocument(documentId);
       
-      // Get current documents
-      const currentDocs = queryClient.getQueryData<Document[]>(documentsQueryKey) || [];
+      if (!success) {
+        throw new Error(`Failed to remove document ${documentId}`);
+      }
       
-      // Filter out the removed document
-      return currentDocs.filter(doc => doc.id !== documentId);
+      return documentId;
     },
-    onSuccess: (newDocumentsList) => {
-      // Update query cache
-      queryClient.setQueryData(documentsQueryKey, newDocumentsList);
+    onSuccess: (removedDocId) => {
+      // Update the cache to remove the deleted document
+      queryClient.setQueryData<Document[]>(getQueryKey(), (oldDocs = []) => {
+        return oldDocs.filter(doc => doc.id !== removedDocId);
+      });
       
-      // Show success toast
-      toast({
-        title: "Document removed",
-        description: "The document was successfully removed",
-        variant: "default",
+      toast.success('Document removed', {
+        description: 'The document has been successfully removed',
+        duration: 3000
       });
     },
     onError: (error) => {
-      handleError(error, { context: 'removing-document', projectId });
-      
-      toast({
-        title: "Error removing document",
-        description: "Failed to remove the document. Please try again.",
-        variant: "destructive",
+      errorService.handleError(error, {
+        context: 'document-delete'
       });
     }
   });
 
+  // Add multiple documents at once
+  const addDocuments = async (files: File[]) => {
+    try {
+      return await addDocumentsMutation(files);
+    } catch (error) {
+      console.error('Error adding documents:', error);
+      throw error;
+    }
+  };
+
+  // Remove a document
+  const removeDocument = async (documentId: string) => {
+    try {
+      return await removeDocumentMutation(documentId);
+    } catch (error) {
+      console.error('Error removing document:', error);
+      throw error;
+    }
+  };
+
+  // Refetch documents
+  const refetchDocuments = async () => {
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Error refetching documents:', error);
+    }
+  };
+
   return {
-    // Query results
-    documents: documentsQuery.data || [],
-    isLoading: documentsQuery.isLoading,
-    isFetching: documentsQuery.isFetching,
-    error: documentsQuery.error,
-    
-    // Mutations
-    addDocuments: (files: File[]) => addDocumentsMutation.mutate(files),
-    removeDocument: (documentId: string) => removeDocumentMutation.mutate(documentId),
-    
-    // Mutation states
-    isAddingDocuments: addDocumentsMutation.isPending,
-    isRemovingDocument: removeDocumentMutation.isPending,
-    
-    // Refetch
-    refetchDocuments: documentsQuery.refetch
+    documents: documents || [],
+    isLoading,
+    error,
+    addDocuments,
+    removeDocument,
+    refetchDocuments
   };
 };
